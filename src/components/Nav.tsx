@@ -9,15 +9,15 @@ const navLinks = [
 
 export default function Nav() {
   return (
-    <header className="fixed top-0 z-50 w-full border-b border-white/5 bg-navy-950/70 backdrop-blur-md">
+    <header className="fixed top-0 z-50 w-full border-b border-warm-300/30 bg-white/80 backdrop-blur-md">
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <a href="#top" className="text-lg font-bold tracking-tight text-white">
-          TDL <span className="text-cyan-accent">.</span>
+        <a href="#top" className="text-lg font-bold tracking-tight text-warm-800">
+          TDL <span className="text-brand">.</span>
         </a>
-        <ul className="hidden gap-8 text-sm text-white/70 md:flex">
+        <ul className="hidden gap-8 text-sm text-warm-600 md:flex">
           {navLinks.map((link) => (
             <li key={link.href}>
-              <a href={link.href} className="transition hover:text-cyan-accent">
+              <a href={link.href} className="transition hover:text-brand">
                 {link.label}
               </a>
             </li>
@@ -25,7 +25,7 @@ export default function Nav() {
         </ul>
         <a
           href="#contact"
-          className="rounded-full border border-cyan-accent/40 px-4 py-1.5 text-sm text-cyan-accent transition hover:bg-cyan-accent/10"
+          className="rounded-full border border-brand/40 px-4 py-1.5 text-sm text-brand transition hover:bg-brand/10"
         >
           문의하기
         </a>

@@ -11,7 +11,7 @@ interface WireProps {
 
 export function WireBox({
   size,
-  color = '#22d3ee',
+  color = '#736662',
   opacity = 1,
   position,
   rotation,
@@ -34,7 +34,7 @@ export function WireCylinder({
   radiusBottom,
   height,
   segments = 16,
-  color = '#22d3ee',
+  color = '#736662',
   opacity = 1,
   position,
   rotation,
@@ -61,7 +61,7 @@ export function WireCylinder({
 export function WireSphere({
   radius,
   segments = 12,
-  color = '#22d3ee',
+  color = '#736662',
   opacity = 1,
   position,
   rotation,
@@ -80,7 +80,7 @@ export function WireSphere({
 export function WireTorus({
   radius,
   tube,
-  color = '#22d3ee',
+  color = '#736662',
   opacity = 1,
   position,
   rotation,
@@ -99,7 +99,7 @@ export function WireTorus({
 export function PulseRing({
   active,
   position,
-  color = '#a3e635',
+  color = '#A72B2B',
   radius = 0.8,
   flat = true,
 }: {
@@ -143,7 +143,7 @@ export function PulseRing({
 
 export function HotspotDot({
   position,
-  color = '#a3e635',
+  color = '#A72B2B',
   scale = 1,
 }: {
   position: [number, number, number]

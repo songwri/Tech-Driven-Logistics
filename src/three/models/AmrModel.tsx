@@ -42,8 +42,8 @@ export default function AmrModel({ onActiveIndexChange, paused }: TechModelProps
     }
   })
 
-  const bodyColor = activeIndex === 0 ? '#a3e635' : '#22d3ee'
-  const sensorColor = activeIndex === 1 ? '#a3e635' : '#3b82f6'
+  const bodyColor = activeIndex === 0 ? '#A72B2B' : '#736662'
+  const sensorColor = activeIndex === 1 ? '#A72B2B' : '#ACA8A7'
 
   return (
     <group position={[0, 0.4, 0]}>
@@ -55,7 +55,7 @@ export default function AmrModel({ onActiveIndexChange, paused }: TechModelProps
             radiusTop={0.16}
             radiusBottom={0.16}
             height={0.12}
-            color="#3b82f6"
+            color="#ACA8A7"
             position={offset}
             rotation={[0, 0, Math.PI / 2]}
           />
@@ -64,12 +64,12 @@ export default function AmrModel({ onActiveIndexChange, paused }: TechModelProps
           <WireCylinder radiusTop={0.12} radiusBottom={0.14} height={0.16} color={sensorColor} />
         </group>
         <PulseRing active={activeIndex === 0} position={[0, -0.18, 0]} radius={0.9} />
-        <PulseRing active={activeIndex === 3} position={[0, -0.1, 0]} radius={1.05} color="#a3e635" flat={false} />
+        <PulseRing active={activeIndex === 3} position={[0, -0.1, 0]} radius={1.05} color="#A72B2B" flat={false} />
       </group>
 
       <Line
         points={PATH_POINTS}
-        color={activeIndex === 2 ? '#a3e635' : '#22d3ee'}
+        color={activeIndex === 2 ? '#A72B2B' : '#736662'}
         dashed
         dashSize={0.12}
         gapSize={0.08}

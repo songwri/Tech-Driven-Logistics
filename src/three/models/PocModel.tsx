@@ -43,23 +43,23 @@ export default function PocModel({ onActiveIndexChange, paused }: TechModelProps
     })
   })
 
-  const coreColor = activeIndex === 0 ? '#a3e635' : '#22d3ee'
-  const nodeColor = activeIndex === 1 ? '#a3e635' : '#3b82f6'
+  const coreColor = activeIndex === 0 ? '#A72B2B' : '#736662'
+  const nodeColor = activeIndex === 1 ? '#A72B2B' : '#ACA8A7'
 
   return (
     <group position={[0, 0, 0]}>
       <group ref={coreRef}>
         <WireSphere radius={0.55} segments={16} color={coreColor} />
       </group>
-      <PulseRing active={activeIndex === 2} position={[0, 0, 0]} radius={0.9} color="#a3e635" flat={false} />
+      <PulseRing active={activeIndex === 2} position={[0, 0, 0]} radius={0.9} color="#A72B2B" flat={false} />
 
       {NODE_POSITIONS.map((position, i) => (
         <group key={i}>
           <WireBox size={[0.22, 0.22, 0.22]} color={nodeColor} position={position} />
-          <Line points={[position, [0, 0, 0]]} color="#22d3ee" transparent opacity={0.25} />
+          <Line points={[position, [0, 0, 0]]} color="#736662" transparent opacity={0.25} />
           <mesh ref={(el) => { dataDotRefs.current[i] = el }} visible={false}>
             <sphereGeometry args={[0.05, 10, 10]} />
-            <meshBasicMaterial color="#a3e635" />
+            <meshBasicMaterial color="#A72B2B" />
           </mesh>
         </group>
       ))}

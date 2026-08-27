@@ -34,10 +34,10 @@ export default function ScrollIntro() {
     <div ref={containerRef} id="top" className="relative h-[230vh]">
       <div id="strategy" className="absolute left-0 top-[36%]" />
 
-      <div className="sticky top-0 h-screen overflow-hidden">
-        <HeroBackground progress={progress} className="absolute inset-0 opacity-50" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.25),transparent_45%),radial-gradient(circle_at_80%_60%,rgba(34,211,238,0.18),transparent_50%)]" />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-navy-950/30 via-transparent to-navy-950" />
+      <div className="sticky top-0 h-screen overflow-hidden bg-white">
+        <HeroBackground progress={progress} className="absolute inset-0 opacity-60" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(167,43,43,0.07),transparent_45%),radial-gradient(circle_at_80%_60%,rgba(83,74,71,0.05),transparent_50%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-white" />
 
         <div
           style={{
@@ -48,28 +48,28 @@ export default function ScrollIntro() {
           className="absolute inset-0 flex items-center pt-16"
         >
           <div className="mx-auto max-w-3xl px-6 text-center md:text-left">
-            <p className="mb-4 text-sm font-semibold uppercase tracking-[0.3em] text-cyan-accent">
-              TDL · Tech Driven Logistics
+            <p className="mb-4 text-sm font-semibold uppercase tracking-[0.3em] text-brand">
+              Tech Innovation Team
             </p>
-            <h1 className="text-4xl font-bold leading-tight text-white md:text-6xl">
-              기술이 물류를 이끄는 것이 아니라,
-              <br />
-              <span className="text-gradient-accent">물류 운영의 기본 구조가</span> 됩니다
+            <h1 className="text-4xl font-bold leading-tight text-warm-800 md:text-6xl">
+              <span className="text-brand">TDL,</span> Tech Driven Logistics
             </h1>
-            <p className="mx-auto mt-6 max-w-xl text-lg text-white/70 md:mx-0">
-              자동화, 로봇, 자율주행, 신기술 PoC로 기술기반 운영체계를 구축하고
-              고객맞춤형 물류서비스와 사업 경쟁력을 만듭니다.
+            <p className="mt-4 text-xl font-semibold leading-snug text-warm-800 md:text-2xl">
+              고객맞춤형 물류 서비스를 제공하는 기술 기반 물류 운영 체계
+            </p>
+            <p className="mx-auto mt-6 max-w-xl text-lg text-warm-600 md:mx-0">
+              자동화, 로봇, 자율주행, 신기술 PoC로 그 구조를 현장에 구현합니다.
             </p>
             <div className="mt-10 flex flex-wrap justify-center gap-4 md:justify-start">
               <a
                 href="#strategy"
-                className="rounded-full bg-cyan-accent px-6 py-3 font-semibold text-navy-950 transition hover:brightness-110"
+                className="rounded-full bg-brand px-6 py-3 font-semibold text-white transition hover:brightness-110"
               >
                 TDL 전략 보기
               </a>
               <a
                 href="#tech-map"
-                className="rounded-full border border-white/20 px-6 py-3 font-semibold text-white transition hover:border-cyan-accent hover:text-cyan-accent"
+                className="rounded-full border border-warm-300 px-6 py-3 font-semibold text-warm-800 transition hover:border-brand hover:text-brand"
               >
                 기술 체험하기
               </a>
@@ -88,17 +88,17 @@ export default function ScrollIntro() {
           <div className="mx-auto w-full max-w-6xl px-6">
             <div className="grid gap-12 md:grid-cols-2">
               <div>
-                <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-cyan-accent">
+                <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-brand">
                   TDL Strategy
                 </p>
-                <h2 className="text-3xl font-bold text-white md:text-4xl">
+                <h2 className="text-3xl font-bold text-warm-800 md:text-4xl">
                   전략이 현장의 구조가 되기까지
                 </h2>
-                <p className="mt-6 text-white/70">
+                <p className="mt-6 text-warm-600">
                   TDL은 네 가지 축의 실행으로 &ldquo;기술이 물류 운영의 기본 구조가 되는&rdquo; 회사를 완성합니다.
                 </p>
               </div>
-              <ul className="space-y-3 text-white/80">
+              <ul className="space-y-3 text-warm-800">
                 <li>· 기술기반 운영체계 구축</li>
                 <li>· 고객맞춤형 물류서비스 제공</li>
                 <li>· 자동화와 로봇 기반의 생산성 혁신</li>
@@ -108,8 +108,8 @@ export default function ScrollIntro() {
             <div className="mt-10 grid gap-6 md:grid-cols-3">
               {pillars.map((pillar) => (
                 <div key={pillar.title} className="glass-panel rounded-xl p-6">
-                  <h3 className="text-lg font-semibold text-cyan-accent">{pillar.title}</h3>
-                  <p className="mt-3 text-sm text-white/70">{pillar.description}</p>
+                  <h3 className="text-lg font-semibold text-brand">{pillar.title}</h3>
+                  <p className="mt-3 text-sm text-warm-600">{pillar.description}</p>
                 </div>
               ))}
             </div>

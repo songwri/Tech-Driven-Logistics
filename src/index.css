@@ -1,15 +1,11 @@
 @import "tailwindcss";
 
 @theme {
-  --color-navy-950: #050914;
-  --color-navy-900: #0a1128;
-  --color-navy-800: #101a3a;
-  --color-navy-700: #17244d;
-  --color-charcoal-900: #14161c;
-  --color-charcoal-800: #1c1f27;
-  --color-cyan-accent: #22d3ee;
-  --color-electric-blue: #3b82f6;
-  --color-lime-accent: #a3e635;
+  --color-brand: #a72b2b;
+  --color-warm-800: #534a47;
+  --color-warm-600: #736662;
+  --color-warm-300: #aca8a7;
+  --color-cream: #f3f2f1;
 
   --font-sans: "Noto Sans KR", "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
@@ -19,33 +15,33 @@ html {
 }
 
 body {
-  background-color: var(--color-navy-950);
-  color: #e6eaf5;
+  background-color: #ffffff;
+  color: var(--color-warm-800);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
 ::selection {
-  background: rgba(34, 211, 238, 0.35);
-  color: #ffffff;
+  background: rgba(167, 43, 43, 0.2);
+  color: var(--color-warm-800);
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-cyan-accent);
+  outline: 2px solid var(--color-brand);
   outline-offset: 3px;
   border-radius: 4px;
 }
 
 .glass-panel {
-  background: rgba(16, 26, 58, 0.55);
+  background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(148, 197, 255, 0.15);
+  border: 1px solid rgba(83, 74, 71, 0.12);
 }
 
 .text-gradient-accent {
-  background: linear-gradient(90deg, var(--color-cyan-accent), var(--color-electric-blue));
+  background: linear-gradient(90deg, var(--color-brand), var(--color-warm-800));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -53,10 +49,10 @@ body {
 
 @keyframes pulse-ring {
   0% {
-    box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.45);
+    box-shadow: 0 0 0 0 rgba(167, 43, 43, 0.35);
   }
   100% {
-    box-shadow: 0 0 0 18px rgba(34, 211, 238, 0);
+    box-shadow: 0 0 0 18px rgba(167, 43, 43, 0);
   }
 }
 

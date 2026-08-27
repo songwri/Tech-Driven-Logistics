@@ -33,11 +33,11 @@ export default function RobotArmModel({ onActiveIndexChange, paused }: TechModel
     if (clawRightRef.current) clawRightRef.current.rotation.z = -0.3 - grip * 0.4
   })
 
-  const colorFor = (index: number) => (activeIndex === index ? '#a3e635' : '#22d3ee')
+  const colorFor = (index: number) => (activeIndex === index ? '#A72B2B' : '#736662')
 
   return (
     <group position={[0, -1.4, 0]}>
-      <WireCylinder radiusTop={0.9} radiusBottom={0.9} height={0.3} color="#3b82f6" />
+      <WireCylinder radiusTop={0.9} radiusBottom={0.9} height={0.3} color="#ACA8A7" />
 
       <group ref={baseRef} position={[0, 0.15, 0]}>
         <WireCylinder radiusTop={0.45} radiusBottom={0.5} height={0.5} color={colorFor(0)} position={[0, 0.25, 0]} />

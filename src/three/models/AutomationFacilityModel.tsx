@@ -44,16 +44,16 @@ export default function AutomationFacilityModel({ onActiveIndexChange, paused }:
     }
   })
 
-  const conveyorColor = activeIndex === 0 ? '#a3e635' : '#22d3ee'
-  const sorterColor = activeIndex === 1 ? '#a3e635' : '#3b82f6'
-  const shuttleColor = activeIndex === 2 ? '#a3e635' : '#22d3ee'
+  const conveyorColor = activeIndex === 0 ? '#A72B2B' : '#736662'
+  const sorterColor = activeIndex === 1 ? '#A72B2B' : '#ACA8A7'
+  const shuttleColor = activeIndex === 2 ? '#A72B2B' : '#736662'
 
   return (
     <group position={[0, -0.2, 0]}>
       <WireBox size={[CONVEYOR_LENGTH, 0.06, 0.7]} color={conveyorColor} position={[0, 0, 0]} />
       {Array.from({ length: PACKAGE_COUNT }).map((_, i) => (
         <group key={i} ref={(el) => { packageRefs.current[i] = el }} position={[0, 0.18, 0]}>
-          <WireBox size={[0.22, 0.22, 0.22]} color="#22d3ee" />
+          <WireBox size={[0.22, 0.22, 0.22]} color="#736662" />
         </group>
       ))}
 
@@ -64,10 +64,10 @@ export default function AutomationFacilityModel({ onActiveIndexChange, paused }:
 
       <group position={[-CONVEYOR_LENGTH / 2 - 0.7, 0, 0.4]}>
         {RACK_LEVELS.map((y, i) => (
-          <WireBox key={i} size={[0.5, 0.02, 0.5]} color="#3b82f6" position={[0, y, 0]} />
+          <WireBox key={i} size={[0.5, 0.02, 0.5]} color="#ACA8A7" position={[0, y, 0]} />
         ))}
-        <WireBox size={[0.5, 1.1, 0.02]} color="#3b82f6" position={[-0.24, -0.1, -0.24]} />
-        <WireBox size={[0.5, 1.1, 0.02]} color="#3b82f6" position={[0.24, -0.1, -0.24]} />
+        <WireBox size={[0.5, 1.1, 0.02]} color="#ACA8A7" position={[-0.24, -0.1, -0.24]} />
+        <WireBox size={[0.5, 1.1, 0.02]} color="#ACA8A7" position={[0.24, -0.1, -0.24]} />
         <group ref={shuttleRef}>
           <WireBox size={[0.4, 0.16, 0.4]} color={shuttleColor} />
         </group>

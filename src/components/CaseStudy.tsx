@@ -20,7 +20,7 @@ const cases = [
 
 export default function CaseStudy() {
   return (
-    <section id="case-study" className="bg-navy-900/50 py-28">
+    <section id="case-study" className="bg-cream py-28">
       <div className="mx-auto max-w-7xl px-6">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -28,10 +28,10 @@ export default function CaseStudy() {
           viewport={{ once: true, amount: 0.4 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
         >
-          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-cyan-accent">
+          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-brand">
             Case Study
           </p>
-          <h2 className="text-3xl font-bold text-white md:text-4xl">기술 적용 사례 · 성과</h2>
+          <h2 className="text-3xl font-bold text-warm-800 md:text-4xl">기술 적용 사례 · 성과</h2>
         </motion.div>
 
         <div className="mt-12 grid gap-6 md:grid-cols-3">
@@ -44,11 +44,11 @@ export default function CaseStudy() {
               transition={{ duration: 0.5, delay: i * 0.1, ease: 'easeOut' }}
               className="glass-panel rounded-xl p-6"
             >
-              <span className="text-xs font-semibold uppercase tracking-wider text-lime-accent">
+              <span className="text-xs font-semibold uppercase tracking-wider text-brand">
                 {item.metric}
               </span>
-              <h3 className="mt-2 text-lg font-semibold text-white">{item.title}</h3>
-              <p className="mt-3 text-sm text-white/70">{item.description}</p>
+              <h3 className="mt-2 text-lg font-semibold text-warm-800">{item.title}</h3>
+              <p className="mt-3 text-sm text-warm-600">{item.description}</p>
             </motion.div>
           ))}
         </div>

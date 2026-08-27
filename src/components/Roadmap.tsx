@@ -17,10 +17,10 @@ export default function Roadmap() {
         viewport={{ once: true, amount: 0.4 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
       >
-        <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-cyan-accent">
+        <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-brand">
           Roadmap
         </p>
-        <h2 className="text-3xl font-bold text-white md:text-4xl">실행 우선순위</h2>
+        <h2 className="text-3xl font-bold text-warm-800 md:text-4xl">실행 우선순위</h2>
       </motion.div>
 
       <ol className="mt-12 grid gap-4 md:grid-cols-5">
@@ -33,9 +33,9 @@ export default function Roadmap() {
             transition={{ duration: 0.5, delay: i * 0.08, ease: 'easeOut' }}
             className="glass-panel rounded-xl p-5"
           >
-            <span className="text-xs font-semibold text-cyan-accent">{phase.step}</span>
-            <h3 className="mt-2 text-base font-semibold text-white">{phase.title}</h3>
-            <p className="mt-2 text-xs text-white/60">{phase.description}</p>
+            <span className="text-xs font-semibold text-brand">{phase.step}</span>
+            <h3 className="mt-2 text-base font-semibold text-warm-800">{phase.title}</h3>
+            <p className="mt-2 text-xs text-warm-600">{phase.description}</p>
           </motion.li>
         ))}
       </ol>
