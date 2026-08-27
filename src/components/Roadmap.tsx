@@ -1,3 +1,5 @@
+import { motion } from 'framer-motion'
+
 const phases = [
   { step: '1단계', title: '전략 · 구조 확정', description: 'TDL 메시지 정리, 기술 카테고리 및 대표 기술 선정' },
   { step: '2단계', title: '콘텐츠 수집', description: '영상 · GIF 확보, 기술 설명 작성, 사례 및 성과 정리' },
@@ -9,18 +11,32 @@ const phases = [
 export default function Roadmap() {
   return (
     <section id="roadmap" className="mx-auto max-w-7xl px-6 py-28">
-      <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-cyan-accent">
-        Roadmap
-      </p>
-      <h2 className="text-3xl font-bold text-white md:text-4xl">실행 우선순위</h2>
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.4 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+      >
+        <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-cyan-accent">
+          Roadmap
+        </p>
+        <h2 className="text-3xl font-bold text-white md:text-4xl">실행 우선순위</h2>
+      </motion.div>
 
       <ol className="mt-12 grid gap-4 md:grid-cols-5">
-        {phases.map((phase) => (
-          <li key={phase.step} className="glass-panel rounded-xl p-5">
+        {phases.map((phase, i) => (
+          <motion.li
+            key={phase.step}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.4 }}
+            transition={{ duration: 0.5, delay: i * 0.08, ease: 'easeOut' }}
+            className="glass-panel rounded-xl p-5"
+          >
             <span className="text-xs font-semibold text-cyan-accent">{phase.step}</span>
             <h3 className="mt-2 text-base font-semibold text-white">{phase.title}</h3>
             <p className="mt-2 text-xs text-white/60">{phase.description}</p>
-          </li>
+          </motion.li>
         ))}
       </ol>
     </section>

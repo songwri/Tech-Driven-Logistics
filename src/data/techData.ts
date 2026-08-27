@@ -8,7 +8,7 @@ export interface TechItem {
   name: string
   englishName: string
   tagline: string
-  mediaCaption: string
+  sceneCaption: string
   overlayPoints: OverlayPoint[]
   effects: string[]
   keywords: string[]
@@ -20,7 +20,7 @@ export const techItems: TechItem[] = [
     name: '로봇팔',
     englishName: 'Robot Arm Automation',
     tagline: '정밀한 반복 작업을 자동화하는 핵심 장치',
-    mediaCaption: '로봇팔 피킹 · 적재 · 이송 동작 영상',
+    sceneCaption: '로봇팔 피킹 · 적재 · 이송 동작을 3D 와이어프레임으로 재현',
     overlayPoints: [
       { label: 'Base Joint', description: '회전 반경 최적화' },
       { label: 'Shoulder Joint', description: '하중 안정성 확보' },
@@ -36,7 +36,7 @@ export const techItems: TechItem[] = [
     name: 'AMR / AGV',
     englishName: 'Autonomous Mobile Robot',
     tagline: '센터 내 자율주행으로 물류 흐름을 최적화',
-    mediaCaption: '센터 내 주행 · 경로 탐색 · 장애물 회피 영상',
+    sceneCaption: '센터 내 자율주행 경로와 장애물 회피 로직을 재현',
     overlayPoints: [
       { label: 'SLAM 위치 인식', description: '실시간 자기 위치 추정' },
       { label: '라이다 · 비전 센서', description: '주변 환경 인식' },
@@ -51,7 +51,7 @@ export const techItems: TechItem[] = [
     name: '자율주행 차량',
     englishName: 'Autonomous Driving',
     tagline: '도로 · 야드 환경에서의 자율주행 기술 검증',
-    mediaCaption: '도로 · 야드 주행 및 차선 인식 영상',
+    sceneCaption: '도로 주행 시 센서 융합과 차선 인식 과정을 재현',
     overlayPoints: [
       { label: '센서 융합', description: '카메라 · 레이더 · 라이다 통합 인식' },
       { label: '차선 인식', description: '주행 차로 실시간 추적' },
@@ -66,7 +66,7 @@ export const techItems: TechItem[] = [
     name: '자동화 설비',
     englishName: 'Automation Facility',
     tagline: '컨베이어 · 소터 기반의 물류 흐름 자동화',
-    mediaCaption: '컨베이어 · 소터 · 셔틀 시스템 흐름 영상',
+    sceneCaption: '컨베이어 · 소터 · 셔틀 시스템의 흐름을 재현',
     overlayPoints: [
       { label: '컨베이어 라인', description: '연속 이송 흐름 구성' },
       { label: '소터 · 분류기', description: '자동 분류 및 라우팅' },
@@ -80,7 +80,7 @@ export const techItems: TechItem[] = [
     name: '신기술 PoC',
     englishName: 'New Tech PoC',
     tagline: '실험 → 검증 → 적용으로 이어지는 기술 실증 체계',
-    mediaCaption: '테스트 장비 · 실험 데이터 · 검증 대시보드',
+    sceneCaption: '실험 → 데이터 수집 → 검증으로 이어지는 PoC 흐름을 재현',
     overlayPoints: [
       { label: '실험 설계', description: '가설 수립 및 테스트베드 구성' },
       { label: '데이터 수집', description: '센서 · 로그 기반 실증 데이터 확보' },

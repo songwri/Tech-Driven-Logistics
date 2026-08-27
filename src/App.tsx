@@ -1,6 +1,5 @@
 import Nav from './components/Nav'
-import Hero from './components/Hero'
-import TdlStrategy from './components/TdlStrategy'
+import ScrollIntro from './components/ScrollIntro'
 import TeamIntro from './components/TeamIntro'
 import TechMap from './components/TechMap'
 import CaseStudy from './components/CaseStudy'
@@ -13,8 +12,7 @@ export default function App() {
     <div className="min-h-screen bg-navy-950">
       <Nav />
       <main>
-        <Hero />
-        <TdlStrategy />
+        <ScrollIntro />
         <TeamIntro />
         <TechMap />
         <CaseStudy />

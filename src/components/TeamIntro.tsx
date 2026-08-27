@@ -1,3 +1,5 @@
+import { motion } from 'framer-motion'
+
 const points = [
   '자동화 설비 검토 및 적용',
   '물류로봇 도입 및 운영 최적화',
@@ -9,7 +11,13 @@ const points = [
 export default function TeamIntro() {
   return (
     <section id="team" className="bg-navy-900/50 py-28">
-      <div className="mx-auto max-w-5xl px-6 text-center">
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.4 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+        className="mx-auto max-w-5xl px-6 text-center"
+      >
         <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-cyan-accent">
           Tech Innovation Team
         </p>
@@ -25,7 +33,7 @@ export default function TeamIntro() {
             </li>
           ))}
         </ul>
-      </div>
+      </motion.div>
     </section>
   )
 }

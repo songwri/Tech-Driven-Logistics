@@ -11,7 +11,7 @@
   --color-electric-blue: #3b82f6;
   --color-lime-accent: #a3e635;
 
-  --font-sans: "Pretendard", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Noto Sans KR", "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 html {
@@ -22,6 +22,19 @@ body {
   background-color: var(--color-navy-950);
   color: #e6eaf5;
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.35);
+  color: #ffffff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-cyan-accent);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
 .glass-panel {
