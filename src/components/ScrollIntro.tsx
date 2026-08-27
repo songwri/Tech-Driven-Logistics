@@ -1,5 +1,6 @@
 import { lazy, Suspense, useRef } from 'react'
 import { useScrollProgress, clampMap } from '../hooks/useScrollProgress'
+import BlueprintFrame from './BlueprintFrame'
 
 const HeroBackground = lazy(() => import('../three/HeroBackground'))
 
@@ -51,13 +52,16 @@ export default function ScrollIntro() {
           className="absolute inset-0 flex items-center pt-16"
         >
           <div className="mx-auto max-w-3xl px-6 text-center md:text-left">
-            <p className="mb-4 text-sm font-semibold uppercase tracking-[0.3em] text-brand">
+            <p className="mb-4 font-mono text-xs uppercase tracking-[0.3em] text-brand">
               Tech Innovation Team
             </p>
-            <h1 className="text-4xl font-bold leading-tight text-warm-800 md:text-6xl">
-              <span className="text-brand">TDL,</span> Tech Driven Logistics
+            <h1 className="font-display text-7xl font-bold leading-[0.9] text-warm-800 md:text-8xl">
+              TDL<span className="text-brand">.</span>
             </h1>
-            <p className="mt-4 text-xl font-semibold leading-snug text-warm-800 md:text-2xl">
+            <p className="mt-3 font-mono text-sm uppercase tracking-[0.25em] text-warm-600">
+              Tech Driven Logistics
+            </p>
+            <p className="mt-6 text-xl font-semibold leading-snug text-warm-800 md:text-2xl">
               고객맞춤형 물류 서비스를 제공하는 기술 기반 물류 운영 체계
             </p>
             <p className="mx-auto mt-6 max-w-xl text-lg text-warm-600 md:mx-0">
@@ -91,7 +95,7 @@ export default function ScrollIntro() {
           <div className="mx-auto w-full max-w-6xl px-6">
             <div className="grid gap-12 md:grid-cols-2">
               <div>
-                <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-brand">
+                <p className="mb-3 font-mono text-xs uppercase tracking-[0.3em] text-brand">
                   TDL Strategy
                 </p>
                 <h2 className="text-3xl font-bold text-warm-800 md:text-4xl">
@@ -109,9 +113,11 @@ export default function ScrollIntro() {
               </ul>
             </div>
             <div className="mt-10 grid gap-6 md:grid-cols-3">
-              {pillars.map((pillar) => (
-                <div key={pillar.title} className="glass-panel rounded-xl p-6">
-                  <h3 className="text-lg font-semibold text-brand">{pillar.title}</h3>
+              {pillars.map((pillar, i) => (
+                <div key={pillar.title} className="relative border border-warm-300/50 bg-white/80 p-6">
+                  <BlueprintFrame size={12} />
+                  <span className="font-mono text-xs text-warm-300">0{i + 1}</span>
+                  <h3 className="mt-1 text-lg font-semibold text-brand">{pillar.title}</h3>
                   <p className="mt-3 text-sm text-warm-600">{pillar.description}</p>
                 </div>
               ))}

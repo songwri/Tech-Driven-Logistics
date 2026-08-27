@@ -9,7 +9,7 @@ export default function ContactCta() {
         viewport={{ once: true, amount: 0.4 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
       >
-        <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-brand">
+        <p className="mb-3 font-mono text-xs uppercase tracking-[0.3em] text-brand">
           Contact / Collaboration
         </p>
         <h2 className="text-3xl font-bold text-warm-800 md:text-4xl">

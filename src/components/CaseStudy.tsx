@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import BlueprintFrame from './BlueprintFrame'
 
 const cases = [
   {
@@ -28,13 +29,13 @@ export default function CaseStudy() {
           viewport={{ once: true, amount: 0.4 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
         >
-          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-brand">
+          <p className="mb-3 font-mono text-xs uppercase tracking-[0.3em] text-brand">
             Case Study
           </p>
           <h2 className="text-3xl font-bold text-warm-800 md:text-4xl">기술 적용 사례 · 성과</h2>
         </motion.div>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
+        <div className="mt-12 grid gap-5 md:grid-cols-3">
           {cases.map((item, i) => (
             <motion.div
               key={item.title}
@@ -42,9 +43,10 @@ export default function CaseStudy() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.4 }}
               transition={{ duration: 0.5, delay: i * 0.1, ease: 'easeOut' }}
-              className="glass-panel rounded-xl p-6"
+              className="relative border border-warm-300/50 bg-white p-6"
             >
-              <span className="text-xs font-semibold uppercase tracking-wider text-brand">
+              <BlueprintFrame size={14} />
+              <span className="font-mono text-xs uppercase tracking-wider text-brand">
                 {item.metric}
               </span>
               <h3 className="mt-2 text-lg font-semibold text-warm-800">{item.title}</h3>

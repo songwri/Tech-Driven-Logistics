@@ -18,7 +18,7 @@ export default function TeamIntro() {
         transition={{ duration: 0.6, ease: 'easeOut' }}
         className="mx-auto max-w-5xl px-6 text-center"
       >
-        <p className="mb-3 text-sm font-semibold uppercase tracking-[0.3em] text-brand">
+        <p className="mb-3 font-mono text-xs uppercase tracking-[0.3em] text-brand">
           Tech Innovation Team
         </p>
         <h2 className="text-3xl font-bold text-warm-800 md:text-4xl">
@@ -26,9 +26,13 @@ export default function TeamIntro() {
           <br />
           기술을 현장에 구현하는 팀입니다
         </h2>
-        <ul className="mx-auto mt-10 grid max-w-3xl gap-4 text-left text-warm-600 md:grid-cols-2">
-          {points.map((point) => (
-            <li key={point} className="glass-panel rounded-lg px-4 py-3 text-sm">
+        <ul className="mx-auto mt-10 grid max-w-3xl gap-3 text-left text-warm-600 md:grid-cols-2">
+          {points.map((point, i) => (
+            <li
+              key={point}
+              className="flex items-baseline gap-3 border border-warm-300/50 bg-white px-4 py-3 text-sm"
+            >
+              <span className="font-mono text-xs text-brand">{String(i + 1).padStart(2, '0')}</span>
               {point}
             </li>
           ))}

@@ -15,10 +15,10 @@ export default function Nav() {
   return (
     <header className="fixed top-0 z-50 w-full border-b border-warm-300/30 bg-white/80 backdrop-blur-md">
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <a href="#top" className="text-lg font-bold tracking-tight text-warm-800">
+        <a href="#top" className="font-display text-lg font-bold text-warm-800">
           TDL <span className="text-brand">.</span>
         </a>
-        <ul className="hidden gap-8 text-sm text-warm-600 md:flex">
+        <ul className="hidden gap-8 font-mono text-xs uppercase tracking-wide text-warm-600 md:flex">
           {navLinks.map((link) => (
             <li key={link.href}>
               <a href={link.href} className="transition hover:text-brand">
