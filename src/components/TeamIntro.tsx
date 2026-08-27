@@ -1,4 +1,6 @@
-import { motion } from 'framer-motion'
+import { useEffect, useRef, useState, type RefObject } from 'react'
+import BlueprintFrame from './BlueprintFrame'
+import { useScrollProgress, clampMap } from '../hooks/useScrollProgress'
 
 const points = [
   '자동화 설비 검토 및 적용',
@@ -8,36 +10,68 @@ const points = [
   '현장 적용 가능한 기술만 선별하여 실증',
 ]
 
+/** How far the horizontal track overflows the viewport, measured live so it
+ *  stays correct across breakpoints instead of guessing card/gap widths. */
+function useMaxScrollX(trackRef: RefObject<HTMLDivElement | null>) {
+  const [maxScrollX, setMaxScrollX] = useState(0)
+
+  useEffect(() => {
+    const update = () => {
+      const el = trackRef.current
+      if (!el) return
+      setMaxScrollX(Math.max(0, el.scrollWidth - window.innerWidth))
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [trackRef])
+
+  return maxScrollX
+}
+
 export default function TeamIntro() {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const trackRef = useRef<HTMLDivElement>(null)
+  const progress = useScrollProgress(containerRef)
+  const maxScrollX = useMaxScrollX(trackRef)
+
+  const panX = progress * maxScrollX
+  const hintOpacity = clampMap(progress, [0, 0.12], [1, 0])
+
   return (
-    <section id="team" className="bg-cream py-28">
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.4 }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
-        className="mx-auto max-w-5xl px-6 text-center"
-      >
-        <p className="mb-3 font-mono text-xs uppercase tracking-[0.3em] text-brand">
-          Tech Innovation Team
-        </p>
-        <h2 className="text-3xl font-bold text-warm-800 md:text-4xl">
-          우리는 기술을 검토하는 팀이 아니라,
-          <br />
-          기술을 현장에 구현하는 팀입니다
-        </h2>
-        <ul className="mx-auto mt-10 grid max-w-3xl gap-3 text-left text-warm-600 md:grid-cols-2">
+    <section id="team" ref={containerRef} className="relative bg-cream" style={{ height: '240vh' }}>
+      <div className="sticky top-0 flex h-screen flex-col justify-center overflow-hidden">
+        <div className="px-6 md:px-16">
+          <p className="mb-3 font-mono text-xs uppercase tracking-[0.3em] text-brand">
+            Tech Innovation Team
+          </p>
+          <h2 className="max-w-xl text-2xl font-bold text-warm-800 md:text-4xl">
+            우리는 기술을 검토하는 팀이 아니라,
+            <br />
+            기술을 현장에 구현하는 팀입니다
+          </h2>
+          <p style={{ opacity: hintOpacity }} className="mt-4 font-mono text-xs text-warm-600">
+            SCROLL TO EXPLORE →
+          </p>
+        </div>
+
+        <div
+          ref={trackRef}
+          className="mt-10 flex gap-6 px-6 will-change-transform md:px-16"
+          style={{ transform: `translateX(${-panX}px)` }}
+        >
           {points.map((point, i) => (
-            <li
+            <div
               key={point}
-              className="flex items-baseline gap-3 border border-warm-300/50 bg-white px-4 py-3 text-sm"
+              className="relative flex h-56 w-72 shrink-0 flex-col justify-end border border-warm-300/50 bg-white p-6 md:w-80"
             >
+              <BlueprintFrame size={14} />
               <span className="font-mono text-xs text-brand">{String(i + 1).padStart(2, '0')}</span>
-              {point}
-            </li>
+              <p className="mt-2 text-base font-semibold text-warm-800">{point}</p>
+            </div>
           ))}
-        </ul>
-      </motion.div>
+        </div>
+      </div>
     </section>
   )
 }
