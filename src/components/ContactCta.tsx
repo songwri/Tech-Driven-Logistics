@@ -19,7 +19,7 @@ export default function ContactCta() {
           Tech Innovation Team과의 협업, 기술 도입 문의를 환영합니다.
         </p>
         <a
-          href="mailto:tech-innovation@example.com"
+          href="mailto:daehyun.kim1@lxpantos.com"
           className="mt-8 inline-block rounded-full bg-brand px-8 py-3 font-semibold text-white transition hover:brightness-110"
         >
           협업 문의하기

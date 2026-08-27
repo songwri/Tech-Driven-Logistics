@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { motion } from 'framer-motion'
 import { techItems } from '../data/techData'
 import TechDetailOverlay from './TechDetailOverlay'
-import TechPreview from '../three/TechPreview'
+
+const TechPreview = lazy(() => import('../three/TechPreview'))
 
 export default function TechMap() {
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -41,7 +42,9 @@ export default function TechMap() {
             className="glass-panel group overflow-hidden rounded-xl text-left transition hover:border-brand/50 hover:bg-cream"
           >
             <div className="aspect-video w-full border-b border-warm-300/40 bg-cream">
-              <TechPreview techId={tech.id} className="h-full w-full pointer-events-none" />
+              <Suspense fallback={null}>
+                <TechPreview techId={tech.id} className="h-full w-full pointer-events-none" />
+              </Suspense>
             </div>
             <div className="p-6">
               <p className="text-xs font-semibold uppercase tracking-wider text-brand">

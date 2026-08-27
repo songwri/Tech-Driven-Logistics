@@ -1,6 +1,7 @@
-import { useRef } from 'react'
-import HeroBackground from '../three/HeroBackground'
+import { lazy, Suspense, useRef } from 'react'
 import { useScrollProgress, clampMap } from '../hooks/useScrollProgress'
+
+const HeroBackground = lazy(() => import('../three/HeroBackground'))
 
 const pillars = [
   {
@@ -35,7 +36,9 @@ export default function ScrollIntro() {
       <div id="strategy" className="absolute left-0 top-[36%]" />
 
       <div className="sticky top-0 h-screen overflow-hidden bg-white">
-        <HeroBackground progress={progress} className="absolute inset-0 opacity-60" />
+        <Suspense fallback={null}>
+          <HeroBackground progress={progress} className="absolute inset-0 opacity-60" />
+        </Suspense>
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(167,43,43,0.07),transparent_45%),radial-gradient(circle_at_80%_60%,rgba(83,74,71,0.05),transparent_50%)]" />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-white" />
 

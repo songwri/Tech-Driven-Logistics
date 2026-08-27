@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import type { TechItem } from '../data/techData'
-import TechShowcase from '../three/TechShowcase'
+
+const TechShowcase = lazy(() => import('../three/TechShowcase'))
 
 interface TechDetailOverlayProps {
   tech: TechItem
@@ -49,11 +50,13 @@ export default function TechDetailOverlay({ tech, onClose }: TechDetailOverlayPr
 
         <div className="mt-6 grid gap-6 md:grid-cols-[1.2fr_1fr]">
           <div className="relative aspect-video overflow-hidden rounded-xl border border-warm-300/40 bg-cream">
-            <TechShowcase
-              techId={tech.id}
-              onActiveIndexChange={setActiveIndex}
-              className="h-full w-full"
-            />
+            <Suspense fallback={null}>
+              <TechShowcase
+                techId={tech.id}
+                onActiveIndexChange={setActiveIndex}
+                className="h-full w-full"
+              />
+            </Suspense>
             <p className="pointer-events-none absolute bottom-3 left-4 right-4 text-xs text-warm-600">
               {tech.sceneCaption} · 드래그로 회전해 보세요
             </p>
