@@ -55,9 +55,14 @@ npm run lint
 
 ## TDL Lab 예약 · 방명록
 
-첫 화면은 TDL Lab 쇼룸 예약과 방명록으로 진입하는 전체화면 3D 히어로입니다
-(`src/components/LabGate.tsx` + `src/three/HeroLabScene.tsx` — 휴머노이드가 케이스를
-AMR에 넘기고 AMR이 반출하는 16초 루프). 상단 내비게이션은 이 화면을 지나야 나타납니다.
+첫 화면은 TDL Lab 쇼룸 예약과 방명록으로 진입하는 전체화면 영상 히어로입니다
+(`src/components/LabGate.tsx`). 상단 내비게이션은 이 화면을 지나야 나타납니다.
+
+배경 영상은 `public/media/tdl-lab-hero.{webm,mp4}`이며 포스터 이미지가 함께 있습니다.
+원본(720p·11Mbps·14MB)을 웹용으로 재인코딩해 WebM 2.2MB / MP4 2.6MB로 줄였고,
+WebM을 먼저 시도한 뒤 MP4로 폴백합니다. 영상 자체가 밝아 CSS 필터로 밝기를 낮추고
+좌측에 짙은 스크림을 깔아 흰 글씨 대비를 확보했습니다. 영상을 교체할 때는 같은
+파일명으로 바꿔 넣으면 됩니다.
 
 백엔드는 **토큰이 필요 없는 Google Apps Script 웹앱**입니다. 설정 절차는
 `apps-script/README.md`를 참고하세요. 저장소 변수 `VITE_LAB_API`에 웹앱 URL을 넣으면
