@@ -28,7 +28,7 @@ jobs:
       - run: npm run lint
       - run: npm run build
         env:
-          # Set under Settings → Secrets and variables → Actions → Variables.
+          # Apps Script 웹앱 URL. Settings → Secrets and variables → Actions → Variables.
           # Until it exists the guestbook falls back to browser-local storage.
           VITE_LAB_API: ${{ vars.VITE_LAB_API }}
       - uses: actions/upload-pages-artifact@v3

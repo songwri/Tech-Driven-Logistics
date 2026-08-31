@@ -8,6 +8,7 @@ import TdlLab from './components/TdlLab'
 import CaseStudy from './components/CaseStudy'
 import Roadmap from './components/Roadmap'
 import ContactCta from './components/ContactCta'
+import GuestbookSection from './components/GuestbookSection'
 import Footer from './components/Footer'
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
           <CaseStudy />
           <Roadmap />
           <ContactCta />
+          <GuestbookSection />
         </main>
         <Footer />
       </div>

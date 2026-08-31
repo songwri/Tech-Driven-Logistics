@@ -1,25 +1,8 @@
-import { CalendarCheck, PenLine } from 'lucide-react'
+import { lazy, Suspense } from 'react'
+import { ArrowRight, CalendarCheck, PenLine } from 'lucide-react'
 import { useLab } from '@/lib/labContext'
-import BlueprintFrame from './BlueprintFrame'
 
-const actions = [
-  {
-    id: 'reservation' as const,
-    index: '01',
-    icon: CalendarCheck,
-    label: '쇼룸 방문 예약',
-    english: 'Book a Visit',
-    description: '자동화·로봇·자율주행 기술을 현장에서 직접 확인하세요.',
-  },
-  {
-    id: 'guestbook' as const,
-    index: '02',
-    icon: PenLine,
-    label: '방명록 남기기',
-    english: 'Leave a Note',
-    description: '다녀가신 소감을 남겨주세요. 다음 방문자에게 전달됩니다.',
-  },
-]
+const HeroLabScene = lazy(() => import('@/three/HeroLabScene'))
 
 export default function LabGate() {
   const { entries, openReservation, openGuestbook } = useLab()
@@ -30,59 +13,85 @@ export default function LabGate() {
       : null
 
   return (
-    <section id="lab-gate" className="relative flex min-h-screen items-center bg-white pt-24">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_75%_25%,rgba(167,43,43,0.06),transparent_50%)]" />
+    <section id="lab-gate" className="relative h-screen w-full overflow-hidden bg-[#0c0e11]">
+      <Suspense fallback={null}>
+        <HeroLabScene className="absolute inset-0" />
+      </Suspense>
 
-      <div className="mx-auto w-full max-w-6xl px-6">
-        <p className="font-mono text-xs uppercase tracking-[0.3em] text-brand">
-          TDL Lab · Offline Showroom
-        </p>
-        <h1 className="mt-4 max-w-2xl text-3xl font-bold leading-tight text-warm-800 md:text-5xl">
-          기술은 설명이 아니라
-          <br />
-          <span className="text-brand">현장에서 확인</span>하는 것입니다
-        </h1>
-        <p className="mt-5 max-w-xl text-warm-600">
-          테크이노베이션팀이 운영하는 오프라인 쇼룸, TDL Lab에서 실제 동작하는 물류 기술을 만나보세요.
-        </p>
+      {/* legibility scrims — kept off the right side so the handoff stays visible */}
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,rgba(12,14,17,0.92)_0%,rgba(12,14,17,0.62)_34%,rgba(12,14,17,0.05)_62%,transparent_100%)]" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0c0e11] to-transparent" />
 
-        <div className="mt-12 grid gap-5 md:grid-cols-2">
-          {actions.map((action) => {
-            const Icon = action.icon
-            return (
+      <div className="absolute inset-0 flex items-center">
+        <div className="mx-auto w-full max-w-7xl px-6 md:px-12">
+          <div className="max-w-2xl">
+            <p className="font-mono text-[11px] uppercase tracking-[0.4em] text-brand">
+              TDL Lab · Offline Showroom
+            </p>
+
+            <h1 className="mt-6 font-display text-[2.1rem] font-bold leading-[1.12] text-white md:text-[3.4rem]">
+              <span className="block whitespace-nowrap">휴머노이드와 AMR이</span>
+              <span className="block whitespace-nowrap">함께 일하는 현장을</span>
+              <span className="block whitespace-nowrap">
+                <span className="text-brand">직접 확인</span>하세요
+              </span>
+            </h1>
+
+            <p className="mt-6 max-w-md text-[15px] leading-relaxed text-white/60">
+              테크이노베이션팀이 검증한 물류 자동화·로봇·자율주행 기술이 실제로 움직이는
+              공간, TDL Lab에서 만나보세요.
+            </p>
+
+            <div className="mt-10 flex flex-col gap-3 sm:flex-row">
               <button
-                key={action.id}
                 type="button"
-                onClick={action.id === 'reservation' ? openReservation : openGuestbook}
-                className="group relative border border-warm-300/50 bg-white p-8 text-left transition hover:border-brand hover:bg-cream"
+                onClick={openReservation}
+                className="group inline-flex items-center justify-between gap-6 bg-brand px-7 py-4 text-left text-white transition hover:brightness-110"
               >
-                <BlueprintFrame />
-                <span className="absolute right-4 top-4 font-mono text-[11px] text-warm-300">
-                  {action.index}
+                <span className="flex items-center gap-3">
+                  <CalendarCheck width={20} height={20} strokeWidth={1.5} />
+                  <span>
+                    <span className="block font-mono text-[10px] uppercase tracking-[0.2em] text-white/70">
+                      Book a Visit
+                    </span>
+                    <span className="block text-[15px] font-semibold">쇼룸 방문 예약</span>
+                  </span>
                 </span>
-
-                <Icon className="text-brand" width={28} height={28} strokeWidth={1.5} />
-                <p className="mt-5 font-mono text-[11px] uppercase tracking-wider text-brand">
-                  {action.english}
-                </p>
-                <h2 className="mt-1.5 text-xl font-bold text-warm-800">{action.label}</h2>
-                <p className="mt-2 text-sm text-warm-600">{action.description}</p>
-                <span className="mt-5 inline-block font-mono text-xs text-warm-600 transition group-hover:text-brand">
-                  바로가기 →
-                </span>
+                <ArrowRight width={16} height={16} className="transition group-hover:translate-x-1" />
               </button>
-            )
-          })}
-        </div>
 
-        <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-[11px] uppercase tracking-wider text-warm-600">
-          {averageRating && (
-            <span>
-              방문자 평가 <span className="text-brand">{averageRating}</span> / 5.0 · {entries.length}건
-            </span>
-          )}
-          <span className="text-warm-300">Scroll — 팀과 TDL Lab 소개 보기 ↓</span>
+              <button
+                type="button"
+                onClick={openGuestbook}
+                className="group inline-flex items-center justify-between gap-6 border border-white/20 px-7 py-4 text-left text-white backdrop-blur-sm transition hover:border-white/60 hover:bg-white/5"
+              >
+                <span className="flex items-center gap-3">
+                  <PenLine width={20} height={20} strokeWidth={1.5} />
+                  <span>
+                    <span className="block font-mono text-[10px] uppercase tracking-[0.2em] text-white/50">
+                      Leave a Note
+                    </span>
+                    <span className="block text-[15px] font-semibold">방명록 남기기</span>
+                  </span>
+                </span>
+                <ArrowRight width={16} height={16} className="transition group-hover:translate-x-1" />
+              </button>
+            </div>
+
+            {averageRating && (
+              <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.2em] text-white/40">
+                방문자 평가 <span className="text-brand">{averageRating}</span> / 5.0 ·{' '}
+                {entries.length}건
+              </p>
+            )}
+          </div>
         </div>
+      </div>
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-8 flex justify-center">
+        <span className="animate-pulse font-mono text-[10px] uppercase tracking-[0.3em] text-white/35">
+          Scroll ↓
+        </span>
       </div>
     </section>
   )

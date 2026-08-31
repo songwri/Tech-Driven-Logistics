@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLab } from '@/lib/labContext'
 
 const navLinks = [
@@ -14,8 +14,30 @@ export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { openReservation } = useLab()
 
+  // The hero is a full-bleed 3D stage — the bar only appears once it's scrolled past.
+  const [revealed, setRevealed] = useState(() => window.scrollY > window.innerHeight * 0.85)
+
+  useEffect(() => {
+    const update = () => {
+      const past = window.scrollY > window.innerHeight * 0.85
+      setRevealed(past)
+      if (!past) setMenuOpen(false)
+    }
+    window.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
+    }
+  }, [])
+
   return (
-    <header className="fixed top-0 z-50 w-full border-b border-warm-300/30 bg-white/80 backdrop-blur-md">
+    <header
+      className={`fixed top-0 z-50 w-full border-b border-warm-300/30 bg-white/80 backdrop-blur-md transition-all duration-500 ${
+        revealed ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-full opacity-0'
+      }`}
+      aria-hidden={!revealed}
+    >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         <a href="#lab-gate" className="font-display text-lg font-bold text-warm-800">
           TDL <span className="text-brand">.</span>

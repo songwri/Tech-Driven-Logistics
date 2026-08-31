@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion'
 import { useLab } from '@/lib/labContext'
-import { GuestbookWall } from './ui/GuestbookColumns'
 import { Button } from './ui/Button'
 import BlueprintFrame from './BlueprintFrame'
 
@@ -20,7 +19,7 @@ const labPoints = [
 ]
 
 export default function TdlLab() {
-  const { entries, loading, error, openReservation, openGuestbook } = useLab()
+  const { openReservation } = useLab()
 
   return (
     <section id="tdl-lab" className="bg-cream py-28">
@@ -61,29 +60,12 @@ export default function TdlLab() {
 
         <div className="mt-8 flex flex-wrap gap-3">
           <Button onClick={openReservation}>쇼룸 방문 예약</Button>
-          <Button variant="outline" onClick={openGuestbook}>
-            방명록 남기기
-          </Button>
-        </div>
-
-        <div className="mt-20">
-          <p className="mb-3 font-mono text-xs uppercase tracking-[0.3em] text-brand">Guestbook</p>
-          <h3 className="text-2xl font-bold text-warm-800 md:text-3xl">방문자들이 남긴 기록</h3>
-          <p className="mt-3 text-sm text-warm-600">
-            방문자 보호를 위해 이름과 소속은 일부만 표시됩니다.
-          </p>
-
-          <div className="mt-10">
-            {loading ? (
-              <p className="py-12 text-center font-mono text-xs uppercase tracking-wider text-warm-300">
-                Loading…
-              </p>
-            ) : error ? (
-              <p className="border border-brand/40 bg-brand/5 px-4 py-3 text-sm text-brand">{error}</p>
-            ) : (
-              <GuestbookWall entries={entries} />
-            )}
-          </div>
+          <a
+            href="#guestbook"
+            className="inline-flex items-center rounded-full border border-warm-300 px-6 py-2.5 text-sm font-semibold text-warm-800 transition hover:border-brand hover:text-brand"
+          >
+            방문자 기록 보기
+          </a>
         </div>
       </div>
     </section>

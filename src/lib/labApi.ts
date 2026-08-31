@@ -53,12 +53,31 @@ function writeLocal(entries: GuestbookEntry[]) {
   }
 }
 
+/**
+ * Apps Script web apps don't answer CORS preflights, so posts go out as
+ * `text/plain` to stay a "simple request". The body is still JSON.
+ */
+async function post<T>(payload: Record<string, unknown>): Promise<T> {
+  const response = await fetch(API_BASE as string, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload),
+    redirect: 'follow',
+  })
+  if (!response.ok) throw new Error(`요청에 실패했습니다 (${response.status})`)
+
+  const data = (await response.json()) as T & { error?: string }
+  if (data.error) throw new Error(data.error)
+  return data
+}
+
 export async function fetchGuestbook(): Promise<GuestbookEntry[]> {
   if (!API_BASE) return readLocal()
 
-  const response = await fetch(`${API_BASE}/api/guestbook`)
+  const response = await fetch(API_BASE)
   if (!response.ok) throw new Error(`방명록을 불러오지 못했습니다 (${response.status})`)
-  const data = (await response.json()) as { entries?: GuestbookEntry[] }
+  const data = (await response.json()) as { entries?: GuestbookEntry[]; error?: string }
+  if (data.error) throw new Error(data.error)
   return data.entries ?? []
 }
 
@@ -77,16 +96,7 @@ export async function submitGuestbook(draft: GuestbookDraft): Promise<GuestbookE
     return entry
   }
 
-  const response = await fetch(`${API_BASE}/api/guestbook`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(draft),
-  })
-  if (!response.ok) {
-    const detail = await response.text()
-    throw new Error(detail || `방명록 등록에 실패했습니다 (${response.status})`)
-  }
-  const data = (await response.json()) as { entry: GuestbookEntry }
+  const data = await post<{ entry: GuestbookEntry }>({ type: 'guestbook', ...draft })
   return data.entry
 }
 
@@ -96,13 +106,5 @@ export async function submitReservation(draft: ReservationDraft): Promise<void> 
     throw new Error('예약 접수 서버가 아직 연결되지 않았습니다.')
   }
 
-  const response = await fetch(`${API_BASE}/api/reservation`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(draft),
-  })
-  if (!response.ok) {
-    const detail = await response.text()
-    throw new Error(detail || `예약 신청에 실패했습니다 (${response.status})`)
-  }
+  await post<{ ok: true }>({ type: 'reservation', ...draft })
 }
