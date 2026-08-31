@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "react-day-picker/style.css";
 
 @theme {
   --color-brand: #a72b2b;
@@ -69,4 +70,26 @@ body {
 
 .hotspot-pulse {
   animation: pulse-ring 2s ease-out infinite;
+}
+
+.tdl-calendar {
+  --rdp-accent-color: var(--color-brand);
+  --rdp-accent-background-color: color-mix(in srgb, var(--color-brand) 10%, transparent);
+  --rdp-today-color: var(--color-brand);
+  --rdp-day-height: 2.25rem;
+  --rdp-day-width: 2.25rem;
+  --rdp-weekday-text-transform: none;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  color: var(--color-warm-800);
+}
+
+.tdl-calendar .rdp-weekday {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--color-warm-600);
+}
+
+.tdl-calendar .rdp-caption_label {
+  font-weight: 600;
 }

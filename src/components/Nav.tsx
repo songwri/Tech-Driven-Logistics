@@ -1,21 +1,23 @@
 import { useState } from 'react'
+import { useLab } from '@/lib/labContext'
 
 const navLinks = [
   { href: '#strategy', label: 'About TDL' },
-  { href: '#team', label: 'Tech Innovation Team' },
+  { href: '#team', label: 'Team' },
   { href: '#tech-map', label: 'Technology' },
+  { href: '#tdl-lab', label: 'TDL Lab' },
   { href: '#case-study', label: 'Case Study' },
-  { href: '#roadmap', label: 'Roadmap' },
   { href: '#contact', label: 'Contact' },
 ]
 
 export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const { openReservation } = useLab()
 
   return (
     <header className="fixed top-0 z-50 w-full border-b border-warm-300/30 bg-white/80 backdrop-blur-md">
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <a href="#top" className="font-display text-lg font-bold text-warm-800">
+        <a href="#lab-gate" className="font-display text-lg font-bold text-warm-800">
           TDL <span className="text-brand">.</span>
         </a>
         <ul className="hidden gap-8 font-mono text-xs uppercase tracking-wide text-warm-600 md:flex">
@@ -28,12 +30,13 @@ export default function Nav() {
           ))}
         </ul>
         <div className="flex items-center gap-3">
-          <a
-            href="#contact"
-            className="rounded-full border border-brand/40 px-4 py-1.5 text-sm text-brand transition hover:bg-brand/10"
+          <button
+            type="button"
+            onClick={openReservation}
+            className="rounded-full bg-brand px-4 py-1.5 text-sm font-semibold text-white transition hover:brightness-110"
           >
-            문의하기
-          </a>
+            방문 예약
+          </button>
           <button
             type="button"
             onClick={() => setMenuOpen((open) => !open)}
