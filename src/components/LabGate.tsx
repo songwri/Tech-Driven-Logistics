@@ -39,7 +39,7 @@ export default function LabGate() {
         <div className="mx-auto w-full max-w-7xl px-6 md:px-12">
           <div className="max-w-2xl [text-shadow:0_2px_24px_rgba(0,0,0,0.65)]">
             <p className="font-mono text-[11px] uppercase tracking-[0.4em] text-brand">
-              TDL Lab · Offline Showroom
+              TDL Lab · Visit & Experience
             </p>
 
             <h1 className="mt-6 font-display text-[2.2rem] font-bold leading-[1.12] text-white md:text-[3.5rem]">
@@ -66,7 +66,7 @@ export default function LabGate() {
                     <span className="block font-mono text-[10px] uppercase tracking-[0.2em] text-white/70">
                       Book a Visit
                     </span>
-                    <span className="block text-[15px] font-semibold">쇼룸 방문 예약</span>
+                    <span className="block text-[15px] font-semibold">TDL 방문 예약</span>
                   </span>
                 </span>
                 <ArrowRight width={16} height={16} className="transition group-hover:translate-x-1" />

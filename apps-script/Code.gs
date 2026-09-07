@@ -21,7 +21,8 @@ var GUESTBOOK_HEADERS = [
   'id', 'createdAt', '표시이름', '표시소속', '직함', '평가', '메시지', '실명', '실제소속',
 ];
 var RESERVATION_HEADERS = [
-  'createdAt', '방문희망일', '회사명', '인원', '투어대표자', '연락처', '이메일', '요청사항',
+  'createdAt', '방문희망일', '시간대', '회사명', '인원', '투어대표자', '연락처', '이메일',
+  '방문차량', '요청사항',
 ];
 
 function sheet_(name, headers) {
@@ -121,27 +122,42 @@ function addGuestbook_(payload) {
 
 function addReservation_(payload) {
   var date = requireText_(payload.date, '방문 희망일', 10);
+  var time = requireText_(payload.time, '방문 시간대', 10);
   var company = requireText_(payload.company, '회사명', 60);
   var leadName = requireText_(payload.leadName, '투어 대표자', 40);
   var phone = requireText_(payload.phone, '연락처', 30);
   var email = requireText_(payload.email, '이메일', 120);
+  var vehicles = String(payload.vehicles == null ? '' : payload.vehicles).trim().slice(0, 200);
   var note = String(payload.note == null ? '' : payload.note).trim().slice(0, 300);
   var headcount = Number(payload.headcount);
   if (!(headcount >= 1 && headcount <= 50)) {
     throw new Error('방문 인원은 1~50명 사이로 입력해 주세요.');
   }
 
+  // 월(1)·수(3)·금(5), 10:00 / 14:00 운영
+  var weekday = new Date(date + 'T00:00:00').getDay();
+  if ([1, 3, 5].indexOf(weekday) === -1) {
+    throw new Error('방문은 월·수·금만 가능합니다.');
+  }
+  if (['10:00', '14:00'].indexOf(time) === -1) {
+    throw new Error('방문 시간대는 10:00 또는 14:00만 선택할 수 있습니다.');
+  }
+
   sheet_(RESERVATION_SHEET, RESERVATION_HEADERS).appendRow([
-    new Date().toISOString(), date, company, headcount, leadName, phone, email, note,
+    new Date().toISOString(), date, time, company, headcount, leadName, phone, email,
+    vehicles, note,
   ]);
 
-  MailApp.sendEmail(
-    MAIL_TO,
-    '[TDL Lab] 방문 예약 신청 · ' + company + ' ' + date,
-    ['방문 희망일: ' + date, '회사명: ' + company, '방문 인원: ' + headcount + '명',
-     '투어 대표자: ' + leadName, '연락처: ' + phone, '이메일: ' + email,
-     '요청사항: ' + (note || '-')].join('\n'),
-  );
+  MailApp.sendEmail({
+    to: MAIL_TO,
+    replyTo: email,
+    subject: '[TDL Lab] 방문 예약 신청 · ' + company + ' ' + date + ' ' + time,
+    body: ['방문 희망일: ' + date + ' ' + time, '회사명: ' + company,
+      '방문 인원: ' + headcount + '명', '투어 대표자: ' + leadName,
+      '연락처: ' + phone, '이메일: ' + email,
+      '방문 차량: ' + (vehicles || '-'),
+      '요청사항: ' + (note || '-')].join('\n'),
+  });
 
   return { ok: true };
 }

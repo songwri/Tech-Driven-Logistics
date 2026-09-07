@@ -55,7 +55,7 @@ npm run lint
 
 ## TDL Lab 예약 · 방명록
 
-첫 화면은 TDL Lab 쇼룸 예약과 방명록으로 진입하는 전체화면 영상 히어로입니다
+첫 화면은 TDL 방문 예약과 방명록으로 진입하는 전체화면 영상 히어로입니다
 (`src/components/LabGate.tsx`). 상단 내비게이션은 이 화면을 지나야 나타납니다.
 
 배경 영상은 `public/media/tdl-lab-hero.{webm,mp4}`이며 포스터 이미지가 함께 있습니다.

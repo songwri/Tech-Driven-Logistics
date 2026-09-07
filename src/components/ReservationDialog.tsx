@@ -12,17 +12,32 @@ interface ReservationDialogProps {
   onClose: () => void
 }
 
+/** Tours run on Mondays, Wednesdays and Fridays only — everything else is off. */
+const CLOSED_WEEKDAYS = [0, 2, 4, 6]
+const TIME_SLOTS = ['10:00', '14:00']
+
 function toDateKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
+function formatDate(date: Date) {
+  return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  }).format(date)
+}
+
 export default function ReservationDialog({ entries, onClose }: ReservationDialogProps) {
   const [date, setDate] = useState<Date | undefined>()
+  const [time, setTime] = useState('')
   const [headcount, setHeadcount] = useState('')
   const [company, setCompany] = useState('')
   const [leadName, setLeadName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
+  const [vehicles, setVehicles] = useState('')
   const [note, setNote] = useState('')
   const [status, setStatus] = useState<'idle' | 'sending' | 'done'>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -32,7 +47,11 @@ export default function ReservationDialog({ entries, onClose }: ReservationDialo
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!date) {
-      setError('방문 희망 날짜를 선택해 주세요.')
+      setError('방문 희망일을 선택해 주세요. (월·수·금만 가능합니다)')
+      return
+    }
+    if (!time) {
+      setError('방문 시간대를 선택해 주세요.')
       return
     }
 
@@ -41,11 +60,13 @@ export default function ReservationDialog({ entries, onClose }: ReservationDialo
     try {
       await submitReservation({
         date: toDateKey(date),
+        time,
         headcount: Number(headcount),
         company: company.trim(),
         leadName: leadName.trim(),
         phone: phone.trim(),
         email: email.trim(),
+        vehicles: vehicles.trim() || undefined,
         note: note.trim() || undefined,
       })
       setStatus('done')
@@ -64,11 +85,16 @@ export default function ReservationDialog({ entries, onClose }: ReservationDialo
         onClose={onClose}
         className="max-w-lg"
       >
-        <div className="flex items-center gap-3 border border-warm-300/50 bg-cream p-4">
-          <Check className="text-brand" />
-          <p className="text-sm text-warm-800">
-            {date && toDateKey(date)} · {company} · {headcount}명
-          </p>
+        <div className="flex items-start gap-3 border border-warm-300/50 bg-cream p-4">
+          <Check className="mt-0.5 shrink-0 text-brand" />
+          <div className="text-sm text-warm-800">
+            <p>
+              {date && formatDate(date)} {time}
+            </p>
+            <p className="mt-1 text-warm-600">
+              {company} · {headcount}명
+            </p>
+          </div>
         </div>
         <Button className="mt-6 w-full" onClick={onClose}>
           닫기
@@ -80,8 +106,8 @@ export default function ReservationDialog({ entries, onClose }: ReservationDialo
   return (
     <Modal
       eyebrow="TDL Lab Visit"
-      title="쇼룸 방문 예약"
-      description="방문 희망일과 인원을 남겨주시면 담당자가 일정 확정 후 연락드립니다."
+      title="TDL 방문 예약"
+      description="방문은 월·수·금 10:00 / 14:00 두 개 시간대로 운영됩니다."
       onClose={onClose}
       className="max-w-5xl"
     >
@@ -104,12 +130,35 @@ export default function ReservationDialog({ entries, onClose }: ReservationDialo
             mode="single"
             selected={date}
             onSelect={setDate}
-            disabled={{ before: new Date() }}
+            disabled={[{ before: new Date() }, { dayOfWeek: CLOSED_WEEKDAYS }]}
           />
           <p className="mt-2 flex items-center gap-2 border-t border-warm-300/40 pt-2 font-mono text-[11px] text-warm-600">
             <CalendarDays width={14} height={14} />
-            {date ? toDateKey(date) : '방문 희망일을 선택하세요'}
+            {date ? `${toDateKey(date)} 선택됨` : '월 · 수 · 금만 선택 가능'}
           </p>
+
+          <div className="mt-3">
+            <p className="font-mono text-[11px] uppercase tracking-wider text-warm-600">
+              방문 시간대 <span className="text-brand">*</span>
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {TIME_SLOTS.map((slot) => (
+                <button
+                  key={slot}
+                  type="button"
+                  onClick={() => setTime(slot)}
+                  aria-pressed={time === slot}
+                  className={`border px-3 py-2 font-mono text-sm transition ${
+                    time === slot
+                      ? 'border-brand bg-brand text-white'
+                      : 'border-warm-300/60 text-warm-800 hover:border-brand hover:text-brand'
+                  }`}
+                >
+                  {slot}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -147,6 +196,18 @@ export default function ReservationDialog({ entries, onClose }: ReservationDialo
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="name@company.com"
+              />
+            </Field>
+          </div>
+          <div className="sm:col-span-2">
+            <Field
+              label="방문 차량"
+              hint="주차 등록에 사용됩니다. 차량이 여러 대면 쉼표(,)로 구분해 주세요."
+            >
+              <Input
+                value={vehicles}
+                onChange={(e) => setVehicles(e.target.value)}
+                placeholder="12가3456, 34나5678"
               />
             </Field>
           </div>

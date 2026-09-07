@@ -36,7 +36,7 @@ export default function TdlLab() {
           </h2>
           <p className="mt-4 max-w-2xl text-warm-600">
             TDL Lab은 테크이노베이션팀이 검증한 물류 기술을 실제 동작 상태로 전시하는 오프라인
-            쇼룸입니다. 고객사·협력사 방문을 상시 받고 있습니다.
+            공간입니다. 고객사·협력사 방문을 상시 받고 있습니다.
           </p>
         </motion.div>
 
@@ -59,7 +59,7 @@ export default function TdlLab() {
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3">
-          <Button onClick={openReservation}>쇼룸 방문 예약</Button>
+          <Button onClick={openReservation}>TDL 방문 예약</Button>
           <a
             href="#guestbook"
             className="inline-flex items-center rounded-full border border-warm-300 px-6 py-2.5 text-sm font-semibold text-warm-800 transition hover:border-brand hover:text-brand"

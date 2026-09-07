@@ -3,11 +3,11 @@ import BlueprintFrame from './BlueprintFrame'
 import { useScrollProgress, clampMap } from '../hooks/useScrollProgress'
 
 const points = [
-  '자동화 설비 검토 및 적용',
-  '물류로봇 도입 및 운영 최적화',
-  '자율주행 기술 검증',
-  '신기술 PoC 설계 및 사업화 검토',
-  '현장 적용 가능한 기술만 선별하여 실증',
+  { label: '자동화 설비 검토 및 적용', image: 'team-01.jpg' },
+  { label: '물류로봇 도입 및 운영 최적화', image: 'team-02.jpg' },
+  { label: '자율주행 기술 검증', image: 'team-03.jpg' },
+  { label: '신기술 PoC 설계 및 사업화 검토', image: 'team-04.jpg' },
+  { label: '현장 적용 가능한 기술만 선별하여 실증', image: 'team-05.jpg' },
 ]
 
 /** How far the horizontal track overflows the viewport, measured live so it
@@ -62,12 +62,24 @@ export default function TeamIntro() {
         >
           {points.map((point, i) => (
             <div
-              key={point}
-              className="relative flex h-56 w-72 shrink-0 flex-col justify-end border border-warm-300/50 bg-white p-6 md:w-80"
+              key={point.label}
+              className="relative flex w-72 shrink-0 flex-col border border-warm-300/50 bg-white md:w-80"
             >
               <BlueprintFrame size={14} />
-              <span className="font-mono text-xs text-brand">{String(i + 1).padStart(2, '0')}</span>
-              <p className="mt-2 text-base font-semibold text-warm-800">{point}</p>
+              <div className="aspect-[16/10] w-full overflow-hidden border-b border-warm-300/40 bg-cream">
+                <img
+                  src={`${import.meta.env.BASE_URL}media/${point.image}`}
+                  alt=""
+                  loading="lazy"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="p-6">
+                <span className="font-mono text-xs text-brand">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <p className="mt-2 text-base font-semibold text-warm-800">{point.label}</p>
+              </div>
             </div>
           ))}
         </div>

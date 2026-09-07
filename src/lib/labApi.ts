@@ -21,11 +21,15 @@ export interface GuestbookDraft {
 
 export interface ReservationDraft {
   date: string
+  /** '10:00' | '14:00' — the two slots the lab runs tours in. */
+  time: string
   headcount: number
   company: string
   leadName: string
   phone: string
   email: string
+  /** Comma-separated plate numbers for gate registration. */
+  vehicles?: string
   note?: string
 }
 
