@@ -31,6 +31,17 @@ jobs:
           # Apps Script 웹앱 URL. Settings → Secrets and variables → Actions → Variables.
           # Until it exists the guestbook falls back to browser-local storage.
           VITE_LAB_API: ${{ vars.VITE_LAB_API }}
+
+      # Vite inlines the URL at build time, so the bundle is the source of truth
+      # for whether the reservation/guestbook backend is actually wired up.
+      - name: Verify backend wiring
+        run: |
+          if grep -rq "script.google.com/macros" dist/assets/*.js; then
+            echo "::notice::VITE_LAB_API 연결됨 — 예약 메일과 방명록 저장이 동작합니다."
+          else
+            echo "::warning::VITE_LAB_API 미설정 — 방명록은 브라우저 로컬 저장으로만 동작하고 예약은 접수되지 않습니다."
+          fi
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
