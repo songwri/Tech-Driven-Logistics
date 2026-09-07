@@ -55,7 +55,7 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
           <Input value={name} onChange={(e) => setName(e.target.value)} required placeholder="홍길동" />
         </Field>
         <Field label="소속" required>
-          <Input value={company} onChange={(e) => setCompany(e.target.value)} required placeholder="LG전자" />
+          <Input value={company} onChange={(e) => setCompany(e.target.value)} required placeholder="LX판토스" />
         </Field>
         <div className="sm:col-span-2">
           <Field label="직함" required>

@@ -5,7 +5,7 @@
  *
  *   홍길동      → 홍**
  *   David Kim  → D** K**
- *   LG전자      → L**
+ *   LX판토스    → L**
  */
 function maskToken(token: string) {
   const trimmed = token.trim()
