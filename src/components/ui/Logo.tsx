@@ -19,8 +19,8 @@ export function Logo({
     <img
       src={src}
       alt="TDL · Tech Driven Logistics"
-      width={265}
-      height={96}
+      width={597}
+      height={240}
       className={cn('h-8 w-auto select-none', className)}
       draggable={false}
     />

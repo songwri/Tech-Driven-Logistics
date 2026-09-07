@@ -1,6 +1,7 @@
 import { lazy, Suspense, useRef } from 'react'
 import { useScrollProgress, clampMap } from '../hooks/useScrollProgress'
 import BlueprintFrame from './BlueprintFrame'
+import { Logo } from './ui/Logo'
 
 const HeroBackground = lazy(() => import('../three/HeroBackground'))
 
@@ -55,8 +56,9 @@ export default function ScrollIntro() {
             <p className="mb-4 font-mono text-xs uppercase tracking-[0.3em] text-brand">
               Tech Innovation Team
             </p>
-            <h1 className="font-display text-7xl font-bold leading-[0.9] text-warm-800 md:text-8xl">
-              TDL<span className="text-brand">.</span>
+            <h1>
+              <Logo className="mx-auto h-20 md:mx-0 md:h-28" />
+              <span className="sr-only">TDL Lab</span>
             </h1>
             <p className="mt-3 font-mono text-sm uppercase tracking-[0.25em] text-warm-600">
               Tech Driven Logistics
