@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLab } from '@/lib/labContext'
+import { Logo } from './ui/Logo'
 
 const navLinks = [
   { href: '#strategy', label: 'About TDL' },
@@ -39,8 +40,8 @@ export default function Nav() {
       aria-hidden={!revealed}
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <a href="#lab-gate" className="font-display text-lg font-bold text-warm-800">
-          TDL <span className="text-brand">.</span>
+        <a href="#lab-gate" aria-label="TDL 홈으로" className="shrink-0">
+          <Logo className="h-7 md:h-8" />
         </a>
         <ul className="hidden gap-8 font-mono text-xs uppercase tracking-wide text-warm-600 md:flex">
           {navLinks.map((link) => (

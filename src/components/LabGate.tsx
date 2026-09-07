@@ -1,5 +1,6 @@
 import { ArrowRight, CalendarCheck, PenLine } from 'lucide-react'
 import { useLab } from '@/lib/labContext'
+import { Logo } from './ui/Logo'
 
 const MEDIA = `${import.meta.env.BASE_URL}media/tdl-lab-hero`
 const POSTER = `${MEDIA}.jpg`
@@ -38,6 +39,8 @@ export default function LabGate() {
       <div className="absolute inset-0 flex items-center">
         <div className="mx-auto w-full max-w-7xl px-6 md:px-12">
           <div className="max-w-2xl [text-shadow:0_2px_24px_rgba(0,0,0,0.65)]">
+            <Logo tone="light" className="mb-8 h-10 md:h-11" />
+
             <p className="font-mono text-[11px] uppercase tracking-[0.4em] text-brand">
               TDL Lab · Visit & Experience
             </p>
