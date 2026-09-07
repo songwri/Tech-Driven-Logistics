@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { CalendarDays, Check } from 'lucide-react'
 import { Modal } from './ui/Modal'
 import { Calendar } from './ui/Calendar'
@@ -9,6 +9,10 @@ import { submitReservation, isLiveBackend, type GuestbookEntry } from '@/lib/lab
 
 interface ReservationDialogProps {
   entries: GuestbookEntry[]
+  /** 'YYYY-MM-DD HH:mm' slots already confirmed by the team. */
+  blockedSlots: string[]
+  /** Whole days that are unavailable (both slots taken, or a closure). */
+  blockedDays: string[]
   onClose: () => void
 }
 
@@ -29,7 +33,12 @@ function formatDate(date: Date) {
   }).format(date)
 }
 
-export default function ReservationDialog({ entries, onClose }: ReservationDialogProps) {
+export default function ReservationDialog({
+  entries,
+  blockedSlots,
+  blockedDays,
+  onClose,
+}: ReservationDialogProps) {
   const [date, setDate] = useState<Date | undefined>()
   const [time, setTime] = useState('')
   const [headcount, setHeadcount] = useState('')
@@ -44,6 +53,17 @@ export default function ReservationDialog({ entries, onClose }: ReservationDialo
 
   const recentEntries = entries.slice(0, 3)
 
+  const takenDays = useMemo(
+    () => blockedDays.map((day) => new Date(`${day}T00:00:00`)),
+    [blockedDays],
+  )
+  const takenSlots = useMemo(() => new Set(blockedSlots), [blockedSlots])
+  const isSlotTaken = (slot: string) => Boolean(date) && takenSlots.has(`${toDateKey(date!)} ${slot}`)
+
+  // A day that gets confirmed while the dialog is open would otherwise leave a
+  // now-unavailable slot selected.
+  const selectedSlotTaken = Boolean(time) && isSlotTaken(time)
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!date) {
@@ -52,6 +72,10 @@ export default function ReservationDialog({ entries, onClose }: ReservationDialo
     }
     if (!time) {
       setError('방문 시간대를 선택해 주세요.')
+      return
+    }
+    if (selectedSlotTaken) {
+      setError('이미 확정된 시간대입니다. 다른 날짜나 시간대를 선택해 주세요.')
       return
     }
 
@@ -130,7 +154,8 @@ export default function ReservationDialog({ entries, onClose }: ReservationDialo
             mode="single"
             selected={date}
             onSelect={setDate}
-            disabled={[{ before: new Date() }, { dayOfWeek: CLOSED_WEEKDAYS }]}
+            startMonth={new Date()}
+            disabled={[{ before: new Date() }, { dayOfWeek: CLOSED_WEEKDAYS }, ...takenDays]}
           />
           <p className="mt-2 flex items-center gap-2 border-t border-warm-300/40 pt-2 font-mono text-[11px] text-warm-600">
             <CalendarDays width={14} height={14} />
@@ -142,22 +167,34 @@ export default function ReservationDialog({ entries, onClose }: ReservationDialo
               방문 시간대 <span className="text-brand">*</span>
             </p>
             <div className="mt-2 grid grid-cols-2 gap-2">
-              {TIME_SLOTS.map((slot) => (
-                <button
-                  key={slot}
-                  type="button"
-                  onClick={() => setTime(slot)}
-                  aria-pressed={time === slot}
-                  className={`border px-3 py-2 font-mono text-sm transition ${
-                    time === slot
-                      ? 'border-brand bg-brand text-white'
-                      : 'border-warm-300/60 text-warm-800 hover:border-brand hover:text-brand'
-                  }`}
-                >
-                  {slot}
-                </button>
-              ))}
+              {TIME_SLOTS.map((slot) => {
+                const taken = isSlotTaken(slot)
+                return (
+                  <button
+                    key={slot}
+                    type="button"
+                    onClick={() => setTime(slot)}
+                    disabled={taken}
+                    aria-pressed={time === slot}
+                    title={taken ? '이미 확정된 시간대입니다' : undefined}
+                    className={`border px-3 py-2 font-mono text-sm transition ${
+                      taken
+                        ? 'cursor-not-allowed border-warm-300/40 bg-warm-300/10 text-warm-300 line-through'
+                        : time === slot
+                          ? 'border-brand bg-brand text-white'
+                          : 'border-warm-300/60 text-warm-800 hover:border-brand hover:text-brand'
+                    }`}
+                  >
+                    {slot}
+                  </button>
+                )
+              })}
             </div>
+            {date && (isSlotTaken('10:00') || isSlotTaken('14:00')) && (
+              <p className="mt-2 font-mono text-[11px] text-warm-600">
+                취소선이 그어진 시간대는 이미 확정된 방문이 있습니다.
+              </p>
+            )}
           </div>
         </div>
 

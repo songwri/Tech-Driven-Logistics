@@ -75,14 +75,26 @@ async function post<T>(payload: Record<string, unknown>): Promise<T> {
   return data
 }
 
-export async function fetchGuestbook(): Promise<GuestbookEntry[]> {
-  if (!API_BASE) return readLocal()
+export interface LabSnapshot {
+  entries: GuestbookEntry[]
+  /** 'YYYY-MM-DD HH:mm' slots already confirmed or blocked by the team. */
+  blockedSlots: string[]
+  /** Whole days that are unavailable (both slots taken, or a closure). */
+  blockedDays: string[]
+}
+
+export async function fetchLab(): Promise<LabSnapshot> {
+  if (!API_BASE) return { entries: readLocal(), blockedSlots: [], blockedDays: [] }
 
   const response = await fetch(API_BASE)
   if (!response.ok) throw new Error(`방명록을 불러오지 못했습니다 (${response.status})`)
-  const data = (await response.json()) as { entries?: GuestbookEntry[]; error?: string }
+  const data = (await response.json()) as Partial<LabSnapshot> & { error?: string }
   if (data.error) throw new Error(data.error)
-  return data.entries ?? []
+  return {
+    entries: data.entries ?? [],
+    blockedSlots: data.blockedSlots ?? [],
+    blockedDays: data.blockedDays ?? [],
+  }
 }
 
 export async function submitGuestbook(draft: GuestbookDraft): Promise<GuestbookEntry> {

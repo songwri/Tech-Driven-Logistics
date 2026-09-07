@@ -3,6 +3,8 @@ import type { GuestbookEntry } from './labApi'
 
 export interface LabContextValue {
   entries: GuestbookEntry[]
+  blockedSlots: string[]
+  blockedDays: string[]
   loading: boolean
   error: string | null
   openReservation: () => void
