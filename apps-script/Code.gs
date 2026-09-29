@@ -52,6 +52,7 @@ var VISIT_HEADERS = [
   'id', '신청일시', '상태', '투어', '방문일', '시간', '방문구분', '고객구분', '업체명', '업종',
   '방문목적', '담당자', '담당자직책', '담당자조직', '담당자연락처', '담당자이메일', '담당자의견',
   '방문인원', '방문자명단', '요청사항', '개인정보동의', '관리자메모', '토큰', '수정일시', '방문자JSON',
+  '투어언어', '외국어', '통역동반',
 ];
 var BLOCKED_HEADERS = ['날짜', '시간대(비우면 종일)', '사유'];
 
@@ -280,7 +281,8 @@ function rowToRequest_(row, col) {
   } catch (error) {
     visitors = [];
   }
-  var category = String(get('방문구분')).trim() === '내부' ? 'internal' : 'external';
+  var category = String(get('방문구분')).indexOf('내부') !== -1 ? 'internal' : 'external';
+  var foreign = String(get('투어언어')).trim() === '외국어';
   var clientText = String(get('고객구분')).trim();
   return {
     id: String(get('id')),
@@ -291,6 +293,9 @@ function rowToRequest_(row, col) {
     slot: normalizeSlot_(get('시간')),
     category: category,
     clientType: category === 'external' ? (clientText.indexOf('신규') !== -1 ? 'new' : 'existing') : undefined,
+    language: foreign ? 'foreign' : 'ko',
+    foreignLanguage: foreign ? String(get('외국어')) : '',
+    interpreter: foreign && String(get('통역동반')).trim() === '동반',
     company: String(get('업체명')),
     industries: splitList_(get('업종')),
     purposes: splitList_(get('방문목적')),
@@ -353,8 +358,11 @@ function writeVisit_(rowNumber, request, extra) {
   set('투어', TOURS[request.tour].label);
   set('방문일', request.date);
   set('시간', request.slot);
-  set('방문구분', request.category === 'internal' ? '내부' : '외부');
+  set('방문구분', request.category === 'internal' ? '내부 방문' : '고객 방문');
   set('고객구분', request.category === 'internal' ? '' : (request.clientType === 'new' ? '신규 고객사' : '기존 고객사'));
+  set('투어언어', request.language === 'foreign' ? '외국어' : '한국어');
+  set('외국어', request.language === 'foreign' ? request.foreignLanguage : '');
+  set('통역동반', request.language === 'foreign' ? (request.interpreter ? '동반' : '없음') : '');
   set('업체명', request.company);
   set('업종', request.industries.join(', '));
   set('방문목적', request.purposes.join(', '));
@@ -419,6 +427,11 @@ function sanitizeVisit_(payload, requireConsent) {
 
   var category = payload.category === 'internal' ? 'internal' : 'external';
   var clientType = category === 'external' ? (payload.clientType === 'new' ? 'new' : 'existing') : undefined;
+  var language = payload.language === 'foreign' ? 'foreign' : 'ko';
+  var foreignLanguage = language === 'foreign' ? optionalText_(payload.foreignLanguage, 40).replace(/,/g, ' ') : '';
+  if (language === 'foreign' && (!foreignLanguage || foreignLanguage === '기타')) {
+    throw new Error('투어 진행 언어를 선택해 주세요.');
+  }
   var industries = (payload.industries || []).map(function (item) { return optionalText_(item, 50).replace(/,/g, ' '); })
     .filter(function (item) { return item; });
   var purposes = (payload.purposes || []).map(function (item) { return optionalText_(item, 50).replace(/,/g, ' '); })
@@ -439,6 +452,9 @@ function sanitizeVisit_(payload, requireConsent) {
     slot: slot,
     category: category,
     clientType: clientType,
+    language: language,
+    foreignLanguage: foreignLanguage,
+    interpreter: language === 'foreign' && payload.interpreter === true,
     company: requireText_(payload.company, category === 'external' ? '업체명' : '방문 조직명', 60),
     industries: category === 'external' ? industries : [],
     purposes: purposes,
@@ -609,6 +625,14 @@ function button_(href, label, filled) {
 }
 
 
+/** '한국어' 또는 '<b>영어</b> · 고객사 통역 동반' */
+function languageText_(r) {
+  if (r.language !== 'foreign') return '한국어';
+  var name = String(r.foreignLanguage).replace(/^기타:\s*/, '') || '외국어';
+  return '<b style="color:' + BRAND + ';">' + escapeHtml_(name) + '</b> · '
+    + (r.interpreter ? '고객사 통역 동반' : '통역 없음 (해당 언어 안내 인력 필요)');
+}
+
 function listOrNone_(items) {
   return items && items.length ? escapeHtml_(items.join(', ')) : '<span style="color:#aca8a7;">없음</span>';
 }
@@ -658,8 +682,9 @@ function reservationMailHtml_(r, token) {
   ].join('');
 
   var detail = rows_([
-    ['방문 구분', r.category === 'internal' ? '내부'
-      : '외부 · ' + (r.clientType === 'new' ? '신규 고객사' : '기존 고객사')],
+    ['방문 유형', r.category === 'internal' ? '내부 방문'
+      : '고객 방문 · ' + (r.clientType === 'new' ? '신규 고객사' : '기존 고객사')],
+    ['투어 언어', languageText_(r)],
     [r.category === 'internal' ? '방문 조직' : '업체명', escapeHtml_(r.company)],
     ['업종', listOrNone_(r.industries)],
     ['방문 목적', listOrNone_(r.purposes)],
@@ -707,6 +732,7 @@ function notifyHost_(r) {
     subject: '[TDL Lab] 방문 예약 ' + (approved ? '확정' : '불가') + ' 안내 · ' + r.date + ' ' + r.slot,
     htmlBody: mailShell_(approved ? '방문 일정 확정' : '방문 예약 결과 안내', lead, scheduleBox_(r) + rows_([
       [r.category === 'internal' ? '방문 조직' : '업체명', escapeHtml_(r.company)],
+      ['투어 언어', languageText_(r)],
       ['방문 인원', r.visitors.length + '명'],
     ])),
   });

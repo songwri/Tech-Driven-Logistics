@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
+import { rampColor } from './ramp'
 
 export interface Datum {
   label: string
@@ -10,22 +11,24 @@ export interface Datum {
 }
 
 function niceMax(value: number) {
-  if (value <= 5) return 5
+  // 중간 눈금(절반)이 정수로 떨어지는 값만 고른다.
+  if (value <= 4) return 4
   const magnitude = 10 ** Math.floor(Math.log10(value))
-  const steps = [1, 2, 2.5, 5, 10]
+  const steps = [1, 2, 3, 4, 5, 6, 8, 10]
   for (const step of steps) if (step * magnitude >= value) return step * magnitude
   return 10 * magnitude
 }
 
 /**
  * 세로 막대 차트. 막대 위에 값을 직접 표기하고(색만으로 읽지 않도록),
- * 마우스를 올리면 비율까지 보여줍니다.
+ * 마우스를 올리면 비율까지 보여줍니다. 색을 따로 주지 않은 막대는
+ * 값이 클수록 진한 파랑 그라데이션으로 칠합니다.
  */
 export function ColumnChart({
   data,
   height = 180,
   unit = '건',
-  color = 'var(--color-brand)',
+  color,
   total,
 }: {
   data: Datum[]
@@ -36,7 +39,8 @@ export function ColumnChart({
   total?: number
 }) {
   const [hover, setHover] = useState<number | null>(null)
-  const max = niceMax(Math.max(0, ...data.map((datum) => datum.value)))
+  const peak = Math.max(0, ...data.map((datum) => datum.value))
+  const max = niceMax(peak)
   const sum = total ?? data.reduce((acc, datum) => acc + datum.value, 0)
   const ticks = [0, 0.5, 1]
 
@@ -99,7 +103,7 @@ export function ColumnChart({
                     style={{
                       height: `${barHeight}%`,
                       minHeight: datum.value > 0 ? 2 : 0,
-                      background: datum.color ?? color,
+                      background: datum.color ?? color ?? rampColor(peak > 0 ? datum.value / peak : 0),
                       opacity: datum.dim ? 0.3 : 1,
                       filter: hover === index ? 'brightness(0.9)' : undefined,
                     }}

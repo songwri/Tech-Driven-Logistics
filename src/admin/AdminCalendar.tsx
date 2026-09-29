@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { OPEN_WEEKDAYS, TOURS, TOUR_BY_ID, toDateKey, type VisitRequest } from '@/lib/visit'
 import { STATUS_TONE } from './statusTone'
@@ -84,6 +84,9 @@ export function AdminCalendar({ month, onMonthChange, requests, selectedDate, on
           <StatusBadge status="pending" />
           <StatusBadge status="approved" />
           <StatusBadge status="rejected" />
+          <span className="inline-flex items-center gap-1">
+            <Globe width={11} height={11} /> 외국어 투어
+          </span>
         </div>
       </div>
 
@@ -165,6 +168,9 @@ export function AdminCalendar({ month, onMonthChange, requests, selectedDate, on
                     >
                       <span className="shrink-0 font-mono text-[10px] opacity-80">{request.slot.slice(0, 5)}</span>
                       <span className="truncate font-medium">{request.company}</span>
+                      {request.language === 'foreign' && (
+                        <Globe width={10} height={10} className="ml-auto shrink-0" aria-label="외국어 투어" />
+                      )}
                     </button>
                   ))}
                   {list.length > MAX_CHIPS && (

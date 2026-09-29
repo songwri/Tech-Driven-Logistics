@@ -1,5 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
+import { Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { downloadWorkbook } from '@/lib/xlsx'
 import {
   INDUSTRIES,
   JOBS,
@@ -11,12 +13,14 @@ import {
   type VisitRequest,
 } from '@/lib/visit'
 import { ColumnChart, DonutChart, type Datum } from './charts'
+import { StatsGrid } from './StatsGrid'
+import { buildStatsSheets, monthlyRows, yearlyRows } from './statsData'
 
-/** 고객 구분 색 (투어 색과 겹치지 않는 3색, 팔레트 검증 완료) */
+/** 방문 유형 색 (투어 색과 겹치지 않는 3색, 팔레트 검증 완료) */
 const SEGMENTS = [
-  { label: '외부 · 기존', color: '#4a3aa7' },
-  { label: '외부 · 신규', color: '#e87ba4' },
-  { label: '내부', color: '#eda100' },
+  { label: '고객 · 기존', color: '#4a3aa7' },
+  { label: '고객 · 신규', color: '#e87ba4' },
+  { label: '내부 방문', color: '#eda100' },
 ]
 
 type Period = 'year' | 'month'
@@ -86,6 +90,7 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
   const [period, setPeriod] = useState<Period>('year')
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [basis, setBasis] = useState<Basis>('all')
+  const [gridView, setGridView] = useState<'month' | 'year'>('month')
 
   const basisRequests = useMemo(
     () => (basis === 'approved' ? requests.filter((request) => request.status === 'approved') : requests),
@@ -125,6 +130,17 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
   const industries = countBy(external, (request) => request.industries.map(baseOption), [...INDUSTRIES, OTHER])
     .filter((datum) => datum.value > 0)
     .sort((a, b) => b.value - a.value)
+  const languages: Datum[] = [
+    { label: '한국어', value: scoped.filter((request) => request.language !== 'foreign').length },
+    {
+      label: '외국어 · 통역 동반',
+      value: scoped.filter((request) => request.language === 'foreign' && request.interpreter).length,
+    },
+    {
+      label: '외국어 · 통역 없음',
+      value: scoped.filter((request) => request.language === 'foreign' && !request.interpreter).length,
+    },
+  ]
   const jobs = JOBS.map((job) => ({
     label: job,
     value: scoped.reduce((sum, request) => sum + request.visitors.filter((visitor) => visitor.jobs.includes(job)).length, 0),
@@ -143,6 +159,16 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
     value: basisRequests.filter((request) => request.date.startsWith(`${item}-`)).length,
     dim: item !== year,
   }))
+
+  const gridRows = gridView === 'month' ? monthlyRows(requests, year) : yearlyRows(requests, years)
+
+  const exportExcel = () => {
+    const fileLabel = period === 'year' ? `${year}` : `${year}-${String(month).padStart(2, '0')}`
+    downloadWorkbook(
+      `TDL_visit_stats_${fileLabel}.xlsx`,
+      buildStatsSheets({ requests, periodRequests: allInPeriod, scoped, year, years, periodLabel }),
+    )
+  }
 
   const kpis = [
     {
@@ -214,6 +240,13 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
           ]}
         />
         <span className="ml-auto font-mono text-[11px] text-warm-600">방문일 기준 · {periodLabel}</span>
+        <button
+          type="button"
+          onClick={exportExcel}
+          className="inline-flex items-center gap-1.5 border border-[#1e6b2e] bg-[#1e6b2e] px-3 py-1.5 text-[13px] font-semibold text-white transition hover:brightness-110"
+        >
+          <Download width={14} height={14} /> 엑셀 다운로드
+        </button>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -244,7 +277,7 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
         <Card title="방문 목적" subtitle={`${periodLabel} · 복수 선택 포함`}>
           <ColumnChart data={purposes} total={scoped.length} />
         </Card>
-        <Card title="고객 구분" subtitle={periodLabel}>
+        <Card title="방문 유형" subtitle={periodLabel}>
           <div className="flex min-h-[208px] items-center justify-center">
             <DonutChart data={segments} />
           </div>
@@ -260,18 +293,43 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
         </Card>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_2fr]">
+      <div className="grid gap-5 lg:grid-cols-2">
         <Card title="투어 종류" subtitle={periodLabel}>
           <ColumnChart data={tours} height={160} />
         </Card>
-        <Card title="업종 (외부 방문)" subtitle={`${periodLabel} · 많은 순`}>
-          <ColumnChart data={industries} height={160} total={external.length} />
+        <Card title="투어 언어" subtitle={`${periodLabel} · 방문 측 통역 동반 여부`}>
+          <ColumnChart data={languages} height={160} />
         </Card>
       </div>
+
+      <Card title="업종 (고객 방문)" subtitle={`${periodLabel} · 많은 순`}>
+        <ColumnChart data={industries} height={160} total={external.length} />
+      </Card>
 
       <Card title="방문자 직무" subtitle={`${periodLabel} · 방문자 수 기준`}>
         <ColumnChart data={jobs} height={140} unit="명" />
       </Card>
+
+      <section className="border border-warm-300/50 bg-white p-5">
+        <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-[15px] font-bold text-warm-800">기간별 통계표</h3>
+            <p className="font-mono text-[11px] text-warm-600">
+              전체 신청 기준 · 열마다 값이 클수록 진하게 표시 · 엑셀에는 월별/연도별/항목별/예약 목록 시트가 함께 저장됩니다
+            </p>
+          </div>
+          <Segmented
+            label="표 단위"
+            value={gridView}
+            onChange={setGridView}
+            options={[
+              { value: 'month', label: `${year}년 월별` },
+              { value: 'year', label: '연도별' },
+            ]}
+          />
+        </header>
+        <StatsGrid rows={gridRows} firstHeader={gridView === 'month' ? '월' : '연도'} />
+      </section>
     </div>
   )
 }

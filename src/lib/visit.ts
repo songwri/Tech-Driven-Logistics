@@ -8,6 +8,7 @@ export type TourType = 'combined' | 'center' | 'lab'
 export type VisitStatus = 'pending' | 'approved' | 'rejected'
 export type VisitCategory = 'internal' | 'external'
 export type ClientType = 'existing' | 'new'
+export type TourLanguage = 'ko' | 'foreign'
 /** 센터와 TDL Lab은 한 번에 한 팀만 안내합니다. */
 export type Resource = 'center' | 'lab'
 
@@ -74,8 +75,8 @@ export const STATUS_LABEL: Record<VisitStatus, string> = {
 }
 
 export const CATEGORY_LABEL: Record<VisitCategory, string> = {
-  internal: '내부',
-  external: '외부',
+  internal: '내부 방문',
+  external: '고객 방문',
 }
 
 export const CLIENT_TYPE_LABEL: Record<ClientType, string> = {
@@ -106,6 +107,14 @@ export const JOBS = [
   'R&D/연구개발',
 ]
 
+export const TOUR_LANGUAGE_LABEL: Record<TourLanguage, string> = {
+  ko: '한국어',
+  foreign: '외국어',
+}
+
+/** 외국어 투어에서 고를 수 있는 언어 (그 외는 '기타: 직접입력') */
+export const FOREIGN_LANGUAGES = ['영어', '중국어', '일본어', '베트남어']
+
 export const MAX_VISITORS = 30
 export const OTHER = '기타'
 
@@ -133,8 +142,14 @@ export interface VisitDraft {
   /** 'HH:mm-HH:mm' */
   slot: string
   category: VisitCategory
-  /** 외부 방문일 때만 */
+  /** 고객 방문일 때만 */
   clientType?: ClientType
+  /** 투어 진행 언어 */
+  language: TourLanguage
+  /** 외국어 투어일 때 언어 ('영어', '기타: 태국어' 등) */
+  foreignLanguage: string
+  /** 방문 측(고객사)에서 통역이 동반되는지 */
+  interpreter: boolean
   company: string
   /** '기타: 직접입력' 형태로 기타 항목이 들어올 수 있습니다. */
   industries: string[]
@@ -247,18 +262,28 @@ export function baseOption(value: string) {
   return value.startsWith(OTHER) ? OTHER : value
 }
 
+/** '한국어' 또는 '영어 · 통역 동반' 형태 */
+export function languageSummary(request: Pick<VisitDraft, 'language' | 'foreignLanguage' | 'interpreter'>) {
+  if (request.language !== 'foreign') return TOUR_LANGUAGE_LABEL.ko
+  const name = request.foreignLanguage.replace(/^기타:\s*/, '') || TOUR_LANGUAGE_LABEL.foreign
+  return `${name} · ${request.interpreter ? '통역 동반' : '통역 없음'}`
+}
+
 export function clientSegment(request: Pick<VisitDraft, 'category' | 'clientType'>) {
-  if (request.category === 'internal') return '내부'
-  return request.clientType === 'new' ? '외부 · 신규' : '외부 · 기존'
+  if (request.category === 'internal') return '내부 방문'
+  return request.clientType === 'new' ? '고객 · 신규' : '고객 · 기존'
 }
 
 /** 제출 전 칩 선택 항목 검사 (input required 로는 잡히지 않는 부분). */
 export function validateVisitDraft(draft: VisitDraft): string | null {
   if (!draft.date) return '방문 희망일을 선택해 주세요. (월·수·금만 가능합니다)'
   if (!draft.slot) return '방문 시간을 선택해 주세요.'
-  if (draft.category === 'external' && !draft.clientType) return '고객 구분(기존/신규)을 선택해 주세요.'
+  if (draft.category === 'external' && !draft.clientType) return '고객 유형(기존/신규)을 선택해 주세요.'
   if (draft.category === 'external' && draft.industries.length === 0) return '업종을 하나 이상 선택해 주세요.'
   if (draft.industries.includes(OTHER)) return '기타 업종을 입력해 주세요.'
+  if (draft.language === 'foreign' && (!draft.foreignLanguage || draft.foreignLanguage === OTHER)) {
+    return '투어 진행 언어를 선택해 주세요.'
+  }
   if (draft.purposes.length === 0) return '방문 목적을 하나 이상 선택해 주세요.'
   if (draft.purposes.includes(OTHER)) return '기타 방문 목적을 입력해 주세요.'
   if (draft.visitors.length === 0) return '방문자를 한 명 이상 등록해 주세요.'

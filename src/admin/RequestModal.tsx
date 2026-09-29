@@ -10,6 +10,7 @@ import {
   clientSegment,
   formatDateLong,
   formatSlot,
+  languageSummary,
   type VisitRequest,
   type VisitStatus,
   validateVisitDraft,
@@ -177,6 +178,11 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
         <div>
           <SectionTitle>방문 정보</SectionTitle>
           <Row label="구분">{clientSegment(request)}</Row>
+          <Row label="투어 언어">
+            <span className={request.language === 'foreign' ? 'font-semibold text-brand' : undefined}>
+              {languageSummary(request)}
+            </span>
+          </Row>
           {request.category === 'external' && <Row label="업종">{request.industries.join(', ')}</Row>}
           <Row label="방문 목적">{request.purposes.join(', ')}</Row>
           <Row label="담당자 의견">{request.hostComment}</Row>

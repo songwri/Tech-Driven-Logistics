@@ -9,9 +9,12 @@ import {
   JOBS,
   MAX_VISITORS,
   OTHER,
+  FOREIGN_LANGUAGES,
   PURPOSES,
+  TOUR_LANGUAGE_LABEL,
   emptyVisitor,
   type ClientType,
+  type TourLanguage,
   type VisitCategory,
   type VisitDraft,
   type VisitHost,
@@ -194,21 +197,135 @@ export function PrivacyConsent({ checked, onChange }: { checked: boolean; onChan
   )
 }
 
+const CATEGORY_HINT: Record<VisitCategory, string> = {
+  internal: '임직원 · 사내 조직 · 해외법인 등',
+  external: '기존 고객사 · 신규(잠재) 고객사',
+}
+
+function RadioDot({ active }: { active: boolean }) {
+  return (
+    <span
+      className={cn(
+        'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border',
+        active ? 'border-brand' : 'border-warm-300',
+      )}
+    >
+      {active && <span className="h-2 w-2 rounded-full bg-brand" />}
+    </span>
+  )
+}
+
+/** 투어 진행 언어 · 외국어 종류 · 방문 측 통역 동반 여부 */
+function LanguageFields({ draft, onChange }: { draft: VisitDraft; onChange: Patch }) {
+  const foreign = draft.language === 'foreign'
+  const isPreset = FOREIGN_LANGUAGES.includes(draft.foreignLanguage)
+  const otherText = draft.foreignLanguage.startsWith(OTHER) ? draft.foreignLanguage.replace(/^기타:?\s*/, '') : ''
+  return (
+    <div className="border border-warm-300/50 bg-cream/40 p-4">
+      <div className="grid gap-4 md:grid-cols-[auto_1fr]">
+        <div>
+          <FieldLabel required>투어 진행 언어</FieldLabel>
+          <div className="mt-1.5 flex gap-2" role="radiogroup">
+            {(Object.keys(TOUR_LANGUAGE_LABEL) as TourLanguage[]).map((language) => (
+              <Chip
+                key={language}
+                multi={false}
+                selected={draft.language === language}
+                onClick={() =>
+                  onChange(
+                    language === 'ko'
+                      ? { language, foreignLanguage: '', interpreter: false }
+                      : { language, foreignLanguage: draft.foreignLanguage || FOREIGN_LANGUAGES[0] },
+                  )
+                }
+                className="min-w-20 justify-center bg-white"
+              >
+                {TOUR_LANGUAGE_LABEL[language]}
+              </Chip>
+            ))}
+          </div>
+        </div>
+
+        {foreign && (
+          <div>
+            <FieldLabel required>언어</FieldLabel>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2" role="radiogroup">
+              {FOREIGN_LANGUAGES.map((language) => (
+                <Chip
+                  key={language}
+                  multi={false}
+                  selected={draft.foreignLanguage === language}
+                  onClick={() => onChange({ foreignLanguage: language })}
+                  className="bg-white"
+                >
+                  {language}
+                </Chip>
+              ))}
+              <Chip
+                multi={false}
+                selected={!isPreset && draft.foreignLanguage.startsWith(OTHER)}
+                onClick={() => onChange({ foreignLanguage: OTHER })}
+                className="bg-white"
+              >
+                {OTHER}
+              </Chip>
+              {!isPreset && draft.foreignLanguage.startsWith(OTHER) && (
+                <Input
+                  value={otherText}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/,/g, ' ')
+                    onChange({ foreignLanguage: cleaned ? `${OTHER}: ${cleaned}` : OTHER })
+                  }}
+                  placeholder="언어 직접 입력"
+                  maxLength={30}
+                  className="max-w-40 py-1.5"
+                  autoFocus
+                />
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {foreign && (
+        <div className="mt-4 border-t border-warm-300/40 pt-3">
+          <FieldLabel required>방문 측(고객사) 통역 동반</FieldLabel>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2" role="radiogroup">
+            <Chip multi={false} selected={draft.interpreter} onClick={() => onChange({ interpreter: true })} className="bg-white">
+              통역 동반
+            </Chip>
+            <Chip multi={false} selected={!draft.interpreter} onClick={() => onChange({ interpreter: false })} className="bg-white">
+              통역 없음
+            </Chip>
+            <span className="text-[12px] text-warm-600">
+              {draft.interpreter
+                ? '고객사 통역이 함께 오면 한국어로 안내하고 통역이 전달합니다.'
+                : '통역 없이 오시는 경우 해당 언어로 안내 가능한 인력을 배정합니다.'}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ------------------------------------------------ 방문 구분 · 고객사 */
 
 export function VisitInfoFields({ draft, onChange }: { draft: VisitDraft; onChange: Patch }) {
   const external = draft.category === 'external'
   return (
     <div className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <FieldLabel required>방문 구분</FieldLabel>
-          <div className="mt-1.5 flex flex-wrap gap-2" role="radiogroup">
-            {(Object.keys(CATEGORY_LABEL) as VisitCategory[]).map((category) => (
-              <Chip
+      <div>
+        <FieldLabel required>방문 유형</FieldLabel>
+        <div className="mt-1.5 grid gap-2 sm:grid-cols-2" role="radiogroup">
+          {(Object.keys(CATEGORY_LABEL) as VisitCategory[]).map((category) => {
+            const active = draft.category === category
+            return (
+              <button
                 key={category}
-                multi={false}
-                selected={draft.category === category}
+                type="button"
+                role="radio"
+                aria-checked={active}
                 onClick={() =>
                   onChange({
                     category,
@@ -216,34 +333,57 @@ export function VisitInfoFields({ draft, onChange }: { draft: VisitDraft; onChan
                     industries: category === 'external' ? draft.industries : [],
                   })
                 }
-                className="min-w-20 justify-center"
+                className={cn(
+                  'flex items-center gap-3 border px-4 py-3 text-left transition',
+                  active ? 'border-brand bg-brand/5' : 'border-warm-300/60 hover:border-brand/60',
+                )}
               >
-                {CATEGORY_LABEL[category]}
-              </Chip>
-            ))}
-            {external &&
-              (Object.keys(CLIENT_TYPE_LABEL) as ClientType[]).map((clientType) => (
+                <RadioDot active={active} />
+                <span>
+                  <span className={cn('block text-sm font-semibold', active ? 'text-brand' : 'text-warm-800')}>
+                    {CATEGORY_LABEL[category]}
+                  </span>
+                  <span className="block text-[12px] text-warm-600">{CATEGORY_HINT[category]}</span>
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        {external && (
+          <div>
+            <FieldLabel required>고객 유형</FieldLabel>
+            <div className="mt-1.5 flex flex-wrap gap-2" role="radiogroup">
+              {(Object.keys(CLIENT_TYPE_LABEL) as ClientType[]).map((clientType) => (
                 <Chip
                   key={clientType}
                   multi={false}
                   selected={draft.clientType === clientType}
                   onClick={() => onChange({ clientType })}
+                  className="min-w-28 justify-center"
                 >
                   {CLIENT_TYPE_LABEL[clientType]}
                 </Chip>
               ))}
+            </div>
           </div>
+        )}
+        <div className={external ? undefined : 'sm:col-span-2'}>
+          <Field label={external ? '업체명' : '방문 조직명'} required>
+            <Input
+              value={draft.company}
+              onChange={(e) => onChange({ company: e.target.value })}
+              required
+              maxLength={60}
+              placeholder={external ? 'LX판토스' : '예) CL사업담당 풀필먼트팀'}
+            />
+          </Field>
         </div>
-        <Field label={external ? '업체명' : '방문 조직명'} required>
-          <Input
-            value={draft.company}
-            onChange={(e) => onChange({ company: e.target.value })}
-            required
-            maxLength={60}
-            placeholder={external ? 'LX판토스' : '예) CL사업담당 풀필먼트팀'}
-          />
-        </Field>
       </div>
+
+      <LanguageFields draft={draft} onChange={onChange} />
 
       {external && (
         <div>

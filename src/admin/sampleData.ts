@@ -93,6 +93,9 @@ function mock(
     slot,
     category: 'external',
     clientType,
+    language: 'ko',
+    foreignLanguage: '',
+    interpreter: false,
     company,
     industries,
     purposes,
@@ -197,6 +200,9 @@ function generate(): VisitRequest[] {
           category: internal ? 'internal' : 'external',
           clientType: internal ? undefined : random() < 0.55 ? 'existing' : 'new',
           company: internal ? pick(['CL사업담당', '경영지원팀', 'IT전략팀', '해외법인 교육단']) : company,
+          ...(random() < 0.2
+            ? { language: 'foreign' as const, foreignLanguage: pick(['영어', '영어', '중국어', '일본어', '베트남어']), interpreter: random() < 0.5 }
+            : { language: 'ko' as const, foreignLanguage: '', interpreter: false }),
           industries: internal ? [] : industries,
           purposes: internal ? ['교육'] : [pick(PURPOSE_POOL)],
           host: { ...toHost(pick(HOSTS)) },
@@ -216,6 +222,12 @@ function toHost([name, title, org]: [string, string, string]) {
   return { name, title, org, phone: '010-0000-0000', email: 'host@lxpantos.example' }
 }
 
+/** 목업 중 외국어 투어 예시 */
+const FOREIGN_MOCKS: Record<string, Pick<VisitRequest, 'language' | 'foreignLanguage' | 'interpreter'>> = {
+  m6: { language: 'foreign', foreignLanguage: '영어', interpreter: false },
+  m9: { language: 'foreign', foreignLanguage: '일본어', interpreter: true },
+}
+
 export function buildSampleRequests(): VisitRequest[] {
-  return [...MOCKUP, ...generate()]
+  return [...MOCKUP.map((request) => ({ ...request, ...FOREIGN_MOCKS[request.id] })), ...generate()]
 }

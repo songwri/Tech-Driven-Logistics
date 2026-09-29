@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Check, Search, X } from 'lucide-react'
+import { Check, Globe, Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   STATUS_LABEL,
@@ -7,6 +7,7 @@ import {
   clientSegment,
   formatDateShort,
   formatSlot,
+  languageSummary,
   type TourType,
   type VisitRequest,
   type VisitStatus,
@@ -106,13 +107,14 @@ export function RequestTable({ requests, scopeLabel, onOpen, onSetStatus, busyId
       </p>
 
       <div className="overflow-x-auto p-4 pt-2">
-        <table className="w-full min-w-[920px] border-collapse text-[13px]">
+        <table className="w-full min-w-[1040px] border-collapse text-[13px]">
           <thead>
             <tr className="border-b-2 border-warm-300/50 text-left font-mono text-[11px] text-warm-600">
               <th className="py-2 pl-3 pr-2 font-semibold">방문일</th>
               <th className="px-2 py-2 font-semibold">시간</th>
               <th className="px-2 py-2 font-semibold">투어</th>
               <th className="px-2 py-2 font-semibold">구분</th>
+              <th className="px-2 py-2 font-semibold">언어</th>
               <th className="px-2 py-2 font-semibold">업체 / 조직</th>
               <th className="px-2 py-2 font-semibold">담당자</th>
               <th className="px-2 py-2 text-right font-semibold">인원</th>
@@ -123,7 +125,7 @@ export function RequestTable({ requests, scopeLabel, onOpen, onSetStatus, busyId
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={9} className="py-10 text-center text-warm-600">
+                <td colSpan={10} className="py-10 text-center text-warm-600">
                   조건에 맞는 예약 요청이 없습니다.
                 </td>
               </tr>
@@ -145,6 +147,16 @@ export function RequestTable({ requests, scopeLabel, onOpen, onSetStatus, busyId
                   <TourTag tour={request.tour} className={request.status === 'rejected' ? 'opacity-60' : undefined} />
                 </td>
                 <td className="whitespace-nowrap px-2 py-2.5">{clientSegment(request)}</td>
+                <td className="whitespace-nowrap px-2 py-2.5 text-[12px]">
+                  {request.language === 'foreign' ? (
+                    <span className="inline-flex items-center gap-1 font-semibold">
+                      <Globe width={12} height={12} className="shrink-0" />
+                      {languageSummary(request)}
+                    </span>
+                  ) : (
+                    <span className="opacity-60">한국어</span>
+                  )}
+                </td>
                 <td className="max-w-56 truncate px-2 py-2.5 font-semibold">{request.company}</td>
                 <td className="whitespace-nowrap px-2 py-2.5">
                   {request.host.name}
