@@ -15,6 +15,11 @@ export default defineConfig({
   base: '/Tech-Driven-Logistics/',
   build: {
     rollupOptions: {
+      // 방문자 사이트(/)와 관리자 대시보드(/admin/)를 각각의 페이지로 빌드한다.
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        admin: fileURLToPath(new URL('./admin/index.html', import.meta.url)),
+      },
       output: {
         // Keep the rarely-changing 3D/animation runtime in its own cacheable
         // chunk, separate from our own model code which changes more often.

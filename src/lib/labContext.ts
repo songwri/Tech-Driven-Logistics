@@ -1,10 +1,11 @@
 import { createContext, useContext } from 'react'
 import type { GuestbookEntry } from './labApi'
+import type { BusySegment } from './visit'
 
 export interface LabContextValue {
   entries: GuestbookEntry[]
-  blockedSlots: string[]
-  blockedDays: string[]
+  busy: BusySegment[]
+  closedDays: string[]
   loading: boolean
   error: string | null
   openReservation: () => void
