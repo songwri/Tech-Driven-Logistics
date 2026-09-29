@@ -1,4 +1,5 @@
 import { maskCompany, maskName } from './mask'
+import type { BusySegment, VisitDraft } from './visit'
 
 export interface GuestbookEntry {
   id: string
@@ -17,20 +18,6 @@ export interface GuestbookDraft {
   role: string
   rating: number
   message: string
-}
-
-export interface ReservationDraft {
-  date: string
-  /** '10:00' | '14:00' — the two slots the lab runs tours in. */
-  time: string
-  headcount: number
-  company: string
-  leadName: string
-  phone: string
-  email: string
-  /** Comma-separated plate numbers for gate registration. */
-  vehicles?: string
-  note?: string
 }
 
 const API_BASE = (import.meta.env.VITE_LAB_API as string | undefined)?.replace(/\/$/, '')
@@ -77,14 +64,14 @@ async function post<T>(payload: Record<string, unknown>): Promise<T> {
 
 export interface LabSnapshot {
   entries: GuestbookEntry[]
-  /** 'YYYY-MM-DD HH:mm' slots already confirmed or blocked by the team. */
-  blockedSlots: string[]
-  /** Whole days that are unavailable (both slots taken, or a closure). */
-  blockedDays: string[]
+  /** 승인된 예약·휴무가 점유한 시간 구간. 개인정보는 담기지 않습니다. */
+  busy: BusySegment[]
+  /** 종일 휴무일 */
+  closedDays: string[]
 }
 
 export async function fetchLab(): Promise<LabSnapshot> {
-  if (!API_BASE) return { entries: readLocal(), blockedSlots: [], blockedDays: [] }
+  if (!API_BASE) return { entries: readLocal(), busy: [], closedDays: [] }
 
   const response = await fetch(API_BASE)
   if (!response.ok) throw new Error(`방명록을 불러오지 못했습니다 (${response.status})`)
@@ -92,8 +79,8 @@ export async function fetchLab(): Promise<LabSnapshot> {
   if (data.error) throw new Error(data.error)
   return {
     entries: data.entries ?? [],
-    blockedSlots: data.blockedSlots ?? [],
-    blockedDays: data.blockedDays ?? [],
+    busy: data.busy ?? [],
+    closedDays: data.closedDays ?? [],
   }
 }
 
@@ -116,11 +103,16 @@ export async function submitGuestbook(draft: GuestbookDraft): Promise<GuestbookE
   return data.entry
 }
 
-export async function submitReservation(draft: ReservationDraft): Promise<void> {
+export async function submitReservation(draft: VisitDraft): Promise<void> {
   if (!API_BASE) {
     // Nothing to send to — surfaced by the form so nobody assumes it was booked.
     throw new Error('예약 접수 서버가 아직 연결되지 않았습니다.')
   }
 
   await post<{ ok: true }>({ type: 'reservation', ...draft })
+}
+
+/** 관리자 API는 Apps Script의 ADMIN_KEY 스크립트 속성과 같은 키를 요구합니다. */
+export async function adminRequest<T>(key: string, action: string, params: Record<string, unknown> = {}) {
+  return post<T>({ type: 'admin', key, action, ...params })
 }
