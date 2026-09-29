@@ -1,8 +1,7 @@
-import { useState, type ReactNode } from 'react'
+import { lazy, Suspense, useState, type ReactNode } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Field'
-import { SchedulePicker } from '@/components/visit/SchedulePicker'
 import { HostFields, SectionTitle, VisitInfoFields, VisitorsFields } from '@/components/visit/VisitFields'
 import {
   TOUR_BY_ID,
@@ -16,6 +15,11 @@ import {
   validateVisitDraft,
 } from '@/lib/visit'
 import { StatusBadge, TourTag } from './status'
+
+// 달력 라이브러리(react-day-picker)는 '정보 수정'을 열 때만 받는다.
+const SchedulePicker = lazy(() =>
+  import('@/components/visit/SchedulePicker').then((module) => ({ default: module.SchedulePicker })),
+)
 
 interface RequestModalProps {
   request: VisitRequest
@@ -77,14 +81,16 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
           <div className="grid gap-8 md:grid-cols-[320px_1fr]">
             <section>
               <SectionTitle>방문 일정</SectionTitle>
-              <SchedulePicker
-                tour={draft.tour}
-                date={draft.date}
-                slot={draft.slot}
-                busy={busyFromRequests(requests, request.id)}
-                closedDays={[]}
-                onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
-              />
+              <Suspense fallback={<p className="py-10 text-center text-sm text-warm-600">달력 불러오는 중…</p>}>
+                <SchedulePicker
+                  tour={draft.tour}
+                  date={draft.date}
+                  slot={draft.slot}
+                  busy={busyFromRequests(requests, request.id)}
+                  closedDays={[]}
+                  onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
+                />
+              </Suspense>
             </section>
             <section className="space-y-6">
               <div>

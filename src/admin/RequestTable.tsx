@@ -21,13 +21,23 @@ interface RequestTableProps {
   onOpen: (id: string) => void
   onSetStatus: (id: string, status: VisitStatus) => void
   busyId: string | null
+  /** 상단 요약 카드에서도 바꿀 수 있도록 상태 필터는 부모가 가진다. */
+  status: StatusFilter
+  onStatusChange: (status: StatusFilter) => void
 }
 
-type StatusFilter = 'all' | VisitStatus
+export type StatusFilter = 'all' | VisitStatus
 const STATUS_FILTERS: StatusFilter[] = ['all', 'pending', 'approved', 'rejected']
 
-export function RequestTable({ requests, scopeLabel, onOpen, onSetStatus, busyId }: RequestTableProps) {
-  const [status, setStatus] = useState<StatusFilter>('all')
+export function RequestTable({
+  requests,
+  scopeLabel,
+  onOpen,
+  onSetStatus,
+  busyId,
+  status,
+  onStatusChange: setStatus,
+}: RequestTableProps) {
   const [tour, setTour] = useState<'all' | TourType>('all')
   const [query, setQuery] = useState('')
 
@@ -106,7 +116,64 @@ export function RequestTable({ requests, scopeLabel, onOpen, onSetStatus, busyId
         {scopeLabel} · {rows.length}건
       </p>
 
-      <div className="overflow-x-auto p-4 pt-2">
+      {/* 모바일: 카드 목록 */}
+      <ul className="space-y-2 p-3 md:hidden">
+        {rows.length === 0 && <li className="py-8 text-center text-sm text-warm-600">조건에 맞는 예약 요청이 없습니다.</li>}
+        {rows.map((request) => (
+          <li
+            key={request.id}
+            onClick={() => onOpen(request.id)}
+            className={cn(
+              'cursor-pointer border border-warm-300/40 p-3 transition',
+              STATUS_TONE[request.status].row,
+              request.status === 'pending' && 'shadow-[inset_3px_0_0_#f59f00]',
+              request.status === 'approved' && 'shadow-[inset_3px_0_0_#2f9e44]',
+            )}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[13px] font-bold">
+                  {formatDateShort(request.date)} <span className="font-mono font-normal">{formatSlot(request.slot)}</span>
+                </p>
+                <p className="mt-0.5 truncate text-[14px] font-semibold">{request.company}</p>
+              </div>
+              <StatusBadge status={request.status} />
+            </div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
+              <TourTag tour={request.tour} />
+              <span>{clientSegment(request)}</span>
+              <span>{request.visitors.length}명</span>
+              {request.language === 'foreign' && (
+                <span className="inline-flex items-center gap-1 font-semibold">
+                  <Globe width={12} height={12} /> {languageSummary(request)}
+                </span>
+              )}
+            </div>
+            {request.status === 'pending' && (
+              <div className="mt-2 flex gap-2" onClick={(event) => event.stopPropagation()}>
+                <button
+                  type="button"
+                  disabled={busyId === request.id}
+                  onClick={() => onSetStatus(request.id, 'approved')}
+                  className="flex-1 border border-[#2f9e44] bg-white py-1.5 text-[13px] font-semibold text-[#2b8a3e] disabled:opacity-50"
+                >
+                  승인
+                </button>
+                <button
+                  type="button"
+                  disabled={busyId === request.id}
+                  onClick={() => onSetStatus(request.id, 'rejected')}
+                  className="flex-1 border border-warm-300 bg-white py-1.5 text-[13px] font-semibold text-warm-600 disabled:opacity-50"
+                >
+                  거절
+                </button>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      <div className="hidden overflow-x-auto p-4 pt-2 md:block">
         <table className="w-full min-w-[1040px] border-collapse text-[13px]">
           <thead>
             <tr className="border-b-2 border-warm-300/50 text-left font-mono text-[11px] text-warm-600">

@@ -7,7 +7,7 @@ import { Field, Input } from '@/components/ui/Field'
 import { formatDateShort, toDateKey, type VisitStatus } from '@/lib/visit'
 import { useAdminData } from './useAdminData'
 import { AdminCalendar } from './AdminCalendar'
-import { RequestTable } from './RequestTable'
+import { RequestTable, type StatusFilter } from './RequestTable'
 import { RequestModal } from './RequestModal'
 import { StatsView } from './StatsView'
 
@@ -51,6 +51,15 @@ export default function AdminApp() {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [scope, setScope] = useState<'month' | 'upcoming' | 'all'>('month')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+
+  /** 요약 카드를 누르면 해당 조건으로 아래 목록을 바로 보여준다. */
+  const focusList = (nextScope: 'month' | 'upcoming' | 'all', nextStatus: StatusFilter) => {
+    setSelectedDate(null)
+    setScope(nextScope)
+    setStatusFilter(nextStatus)
+    document.getElementById('request-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   const { requests } = data
   const today = toDateKey(new Date())
@@ -65,7 +74,8 @@ export default function AdminApp() {
         value: requests.filter((request) => request.status === 'pending').length,
         unit: '건',
         accent: 'text-[#c2410c]',
-        hint: '전체 기간',
+        hint: '전체 기간 · 눌러서 목록 보기',
+        focus: ['all', 'pending'] as const,
       },
       {
         label: '다가오는 확정 방문',
@@ -73,6 +83,7 @@ export default function AdminApp() {
         unit: '건',
         accent: 'text-[#2b8a3e]',
         hint: `예정 인원 ${upcomingApproved.reduce((sum, request) => sum + request.visitors.length, 0)}명`,
+        focus: ['upcoming', 'approved'] as const,
       },
       {
         label: `${month.getMonth() + 1}월 신청`,
@@ -80,6 +91,7 @@ export default function AdminApp() {
         unit: '건',
         accent: 'text-warm-800',
         hint: `승인 ${inMonth.filter((request) => request.status === 'approved').length} · 거절 ${inMonth.filter((request) => request.status === 'rejected').length}`,
+        focus: ['month', 'all'] as const,
       },
       {
         label: `${month.getMonth() + 1}월 방문 인원`,
@@ -87,6 +99,7 @@ export default function AdminApp() {
         unit: '명',
         accent: 'text-warm-800',
         hint: '승인 건 기준',
+        focus: ['month', 'approved'] as const,
       },
     ]
   }, [requests, monthPrefix, month, today])
@@ -203,14 +216,19 @@ export default function AdminApp() {
             <>
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 {summary.map((card) => (
-                  <div key={card.label} className="border border-warm-300/50 bg-white px-4 py-3">
+                  <button
+                    key={card.label}
+                    type="button"
+                    onClick={() => focusList(card.focus[0], card.focus[1])}
+                    className="border border-warm-300/50 bg-white px-4 py-3 text-left transition hover:border-warm-800"
+                  >
                     <p className="font-mono text-[11px] text-warm-600">{card.label}</p>
                     <p className={cn('mt-1 text-3xl font-bold', card.accent)}>
                       {card.value}
                       <span className="ml-0.5 text-base font-semibold text-warm-600">{card.unit}</span>
                     </p>
                     <p className="text-[11px] text-warm-600">{card.hint}</p>
-                  </div>
+                  </button>
                 ))}
               </div>
 
@@ -226,7 +244,7 @@ export default function AdminApp() {
                 onOpen={setOpenId}
               />
 
-              <section>
+              <section id="request-list" className="scroll-mt-4">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                   <h2 className="text-lg font-bold text-warm-800">예약 요청 관리</h2>
                   <div className="flex flex-wrap items-center gap-2">
@@ -279,6 +297,8 @@ export default function AdminApp() {
                   onOpen={setOpenId}
                   onSetStatus={(id, status) => void setStatus(id, status)}
                   busyId={busyId}
+                  status={statusFilter}
+                  onStatusChange={setStatusFilter}
                 />
               </section>
             </>

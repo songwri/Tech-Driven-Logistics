@@ -388,9 +388,11 @@ function writeVisit_(rowNumber, request, extra) {
 
 /** 승인된 예약과 blocked 시트에서 '신청 불가' 구간을 만든다. */
 function busy_(excludeId) {
+  // 지난 날짜는 신청·승인 판단에 쓰이지 않으므로 빼서 응답을 가볍게 유지한다.
+  var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
   var busy = [];
   readVisits_().forEach(function (request) {
-    if (request.status !== 'approved' || request.id === excludeId) return;
+    if (request.status !== 'approved' || request.id === excludeId || request.date < today) return;
     busy = busy.concat(segmentsOf_(request.tour, request.date, request.slot));
   });
 
@@ -398,7 +400,7 @@ function busy_(excludeId) {
   var blocked = sheet_(BLOCKED_SHEET, BLOCKED_HEADERS).getDataRange().getValues();
   for (var b = 1; b < blocked.length; b++) {
     var date = normalizeDateKey_(blocked[b][0]);
-    if (!date) continue;
+    if (!date || date < today) continue;
     var time = normalizeSlot_(blocked[b][1]);
     if (!time) {
       closedDays[date] = true;

@@ -90,8 +90,8 @@ export function AdminCalendar({ month, onMonthChange, requests, selectedDate, on
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <div className="grid min-w-[720px] grid-cols-7">
+      <div className="sm:overflow-x-auto">
+        <div className="grid grid-cols-7 sm:min-w-[720px]">
           {WEEKDAYS.map((name, index) => (
             <div
               key={name}
@@ -106,7 +106,7 @@ export function AdminCalendar({ month, onMonthChange, requests, selectedDate, on
           ))}
           {cells.map((day, index) => {
             if (day === null) {
-              return <div key={`empty-${index}`} className="min-h-28 border-b border-r border-warm-300/20 bg-cream/30" />
+              return <div key={`empty-${index}`} className="min-h-14 border-b border-r border-warm-300/20 bg-cream/30 sm:min-h-28" />
             }
             const key = toDateKey(new Date(year, monthIndex, day))
             const weekday = index % 7
@@ -129,7 +129,7 @@ export function AdminCalendar({ month, onMonthChange, requests, selectedDate, on
                 aria-pressed={selected}
                 aria-label={`${monthIndex + 1}월 ${day}일 예약 ${list.length}건`}
                 className={cn(
-                  'group min-h-28 cursor-pointer border-b border-r border-warm-300/30 p-1.5 text-left transition',
+                  'group min-h-14 cursor-pointer border-b border-r border-warm-300/30 p-1 text-left transition sm:min-h-28 sm:p-1.5',
                   open ? 'bg-white hover:bg-cream/60' : 'bg-cream/50 hover:bg-cream',
                   selected && 'relative z-10 outline outline-2 -outline-offset-2 outline-brand',
                 )}
@@ -145,12 +145,28 @@ export function AdminCalendar({ month, onMonthChange, requests, selectedDate, on
                     {day}
                   </span>
                   {pending > 0 && (
-                    <span className="rounded-full bg-[#fff4e6] px-1.5 font-mono text-[10px] font-bold text-[#c2410c]">
+                    <span className="hidden rounded-full sm:inline bg-[#fff4e6] px-1.5 font-mono text-[10px] font-bold text-[#c2410c]">
                       대기 {pending}
                     </span>
                   )}
                 </div>
-                <div className="space-y-1">
+                {/* 모바일: 날짜 칸이 좁아 예약을 점으로만 표시 (투어 색 · 상태 모양) — 누르면 아래 목록에 그날 예약 */}
+                {list.length > 0 && (
+                  <div className="flex flex-wrap gap-0.5 sm:hidden" aria-hidden>
+                    {list.map((request) => (
+                      <span
+                        key={request.id}
+                        className={cn(
+                          'h-2 w-2 rounded-full',
+                          request.status === 'rejected' && 'opacity-30',
+                          request.status === 'pending' && 'ring-2 ring-[#f59f00] ring-offset-1',
+                        )}
+                        style={{ background: TOUR_BY_ID[request.tour].color }}
+                      />
+                    ))}
+                  </div>
+                )}
+                <div className="hidden space-y-1 sm:block">
                   {list.slice(0, MAX_CHIPS).map((request) => (
                     <button
                       key={request.id}

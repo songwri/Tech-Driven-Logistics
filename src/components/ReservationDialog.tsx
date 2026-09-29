@@ -19,6 +19,7 @@ import {
   formatDateLong,
   formatSlot,
   isSlotBusy,
+  languageSummary,
   type BusySegment,
   type VisitDraft,
   validateVisitDraft,
@@ -147,7 +148,7 @@ export default function ReservationDialog({ entries, busy, closedDays, onClose }
       className="max-w-6xl"
     >
       {recentEntries.length > 0 && (
-        <div className="mb-8">
+        <div className="mb-8 hidden md:block">
           <p className="mb-3 font-mono text-[11px] uppercase tracking-wider text-warm-600">
             먼저 다녀간 방문자들의 기록
           </p>
@@ -212,21 +213,43 @@ export default function ReservationDialog({ entries, busy, closedDays, onClose }
           />
         </section>
 
-        <div className="space-y-3 border-t border-warm-300/40 pt-5">
-          <p className="border-l-2 border-brand bg-cream px-4 py-3 text-[13px] text-warm-800">
-            예약 신청 시 담당자에게 승인 요청이 전달되며, 일정 확정 후 입력하신 이메일로 확정 안내가 발송됩니다.
-          </p>
-          {error && <p className="border border-brand/40 bg-brand/5 px-3 py-2 text-sm text-brand">{error}</p>}
+        <p className="border-l-2 border-brand bg-cream px-4 py-3 text-[13px] text-warm-800">
+          예약 신청 시 담당자에게 승인 요청이 전달되며, 일정 확정 후 입력하신 이메일로 확정 안내가 발송됩니다.
           {!isLiveBackend && (
-            <p className="font-mono text-[11px] text-warm-600">※ 예약 접수 서버 연결 전입니다. 연결 후 정상 접수됩니다.</p>
+            <span className="mt-1 block font-mono text-[11px] text-warm-600">
+              ※ 예약 접수 서버 연결 전입니다. 연결 후 정상 접수됩니다.
+            </span>
           )}
-          <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>
-              취소
-            </Button>
-            <Button type="submit" disabled={status === 'sending'}>
-              {status === 'sending' ? '접수 중…' : '예약 신청하기'}
-            </Button>
+        </p>
+
+        {/* 긴 양식이라 선택 요약 · 오류 · 신청 버튼을 화면 하단에 고정한다.
+            (-bottom-4 + pb-7: 오버레이의 p-4 여백까지 덮어 뒤 내용이 비치지 않게) */}
+        <div className="sticky -bottom-4 z-10 -mx-6 border-t border-warm-300/50 bg-white/95 px-6 pb-7 pt-3 backdrop-blur md:-mx-8 md:px-8">
+          {error && (
+            <p role="alert" className="mb-2 border border-brand/40 bg-brand/5 px-3 py-2 text-sm text-brand">
+              {error}
+            </p>
+          )}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="min-w-0 text-[13px] text-warm-800">
+              <b>{tour.label}</b>
+              <span className="text-warm-600">
+                {' · '}
+                {draft.date ? formatDateLong(draft.date) : '날짜 미선택'}
+                {' · '}
+                {draft.slot ? formatSlot(draft.slot) : '시간 미선택'}
+                {' · '}방문자 {draft.visitors.length}명
+                {draft.language === 'foreign' && ` · ${languageSummary(draft)}`}
+              </span>
+            </p>
+            <div className="flex shrink-0 gap-2">
+              <Button type="button" variant="outline" onClick={onClose} className="hidden sm:inline-flex">
+                취소
+              </Button>
+              <Button type="submit" disabled={status === 'sending'}>
+                {status === 'sending' ? '접수 중…' : '예약 신청하기'}
+              </Button>
+            </div>
           </div>
         </div>
       </form>
