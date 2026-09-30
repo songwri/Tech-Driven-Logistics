@@ -22,6 +22,9 @@ export interface GuestbookDraft {
 
 const API_BASE = (import.meta.env.VITE_LAB_API as string | undefined)?.replace(/\/$/, '')
 
+/** 사이트가 연결된 Apps Script 웹앱 주소 (VITE_LAB_API). 공개 번들에 들어가는 값이라 화면에 보여줘도 된다. */
+export const SERVER_URL = API_BASE ?? ''
+
 /** With no worker configured the forms still work, but only in this browser. */
 export const isLiveBackend = Boolean(API_BASE)
 
@@ -186,9 +189,9 @@ export async function fetchServerVersion(key: string): Promise<ServerVersion> {
 }
 
 export const outdatedServerMessage = (server: ServerVersion) =>
-  `구글 Apps Script 서버가 이전 버전(${server.version})이라 이 기능을 쓸 수 없습니다. ` +
-  '저장소의 apps-script/Code.gs 를 Apps Script 편집기에 붙여넣고 저장한 뒤, ' +
-  '배포 관리 → 기존 배포(연필) → 버전: 새 버전 → 배포 로 다시 배포해 주세요.'
+  `사이트가 연결된 Apps Script 배포가 이전 버전(${server.version})이라 이 기능을 쓸 수 없습니다. ` +
+  `연결된 주소: ${SERVER_URL} — 배포 관리에서 이 주소(배포 ID)의 배포를 연필로 열어 버전: 새 버전 → 배포 해 주세요. ` +
+  '(주소 끝이 /dev 인 테스트 배포는 항상 최신 코드로 돌아가 테스트가 통과해도, 사이트가 쓰는 /exec 배포는 고른 버전에 고정됩니다)'
 
 /** 관리자 API는 Apps Script의 ADMIN_KEY 스크립트 속성과 같은 키를 요구합니다. */
 export async function adminRequest<T>(key: string, action: string, params: Record<string, unknown> = {}) {

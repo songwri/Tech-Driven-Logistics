@@ -5,6 +5,7 @@ import { Logo } from '@/components/ui/Logo'
 import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Field'
 import { formatDateShort, headcountOf, isConfirmed, isCounted, toDateKey, type VisitStatus } from '@/lib/visit'
+import { SERVER_URL } from '@/lib/labApi'
 import { useAdminData } from './useAdminData'
 import { AdminCalendar } from './AdminCalendar'
 import { RequestTable, type StatusFilter } from './RequestTable'
@@ -269,13 +270,17 @@ export default function AdminApp() {
           {data.outdatedServer && (
             <div className="border border-[#ffc078] bg-[#fff4e6] px-4 py-3 text-sm text-[#9a3412]" role="alert">
               <p className="font-semibold">
-                구글 Apps Script 서버가 이전 버전({data.outdatedServer.version})입니다. 재배포가 필요합니다.
+                사이트가 연결된 Apps Script 배포가 이전 버전({data.outdatedServer.version})입니다. 재배포가 필요합니다.
               </p>
               <p className="mt-1 text-[13px] leading-relaxed">
-                이 상태에서는 기존 이력 가져오기 · 수기 등록 · 완료/취소 등 새 기능이 동작하지 않습니다. 저장소의{' '}
-                <b>apps-script/Code.gs</b> 전체를 Apps Script 편집기에 붙여넣고 저장한 뒤,{' '}
-                <b>배포 관리 → 기존 배포(연필) → 버전: 새 버전 → 배포</b>로 다시 배포하고 이 페이지를 새로고침하세요. (‘새 배포’가
-                아니라 기존 배포를 수정해야 주소가 유지됩니다)
+                연결된 웹앱 주소: <code className="break-all bg-white/70 px-1 font-mono text-[12px]">{SERVER_URL}</code>
+                <br />
+                Apps Script <b>배포 → 배포 관리</b>에서 <b>이 주소의 배포 ID</b>와 같은 배포를 연필로 열고 <b>버전: 새 버전 → 배포</b>
+                하세요. 최신 버전이면 괄호 안이 <b>2026-10-01.version-check</b> 이후로 바뀝니다.
+                <br />
+                주소 끝이 <b>/dev</b>인 ‘테스트 배포’는 항상 최신 코드로 돌아가므로 테스트가 통과해도, 사이트가 쓰는 <b>/exec</b>{' '}
+                배포는 배포할 때 고른 버전에 고정되어 있습니다. 새 배포를 만들었다면 GitHub 변수 VITE_LAB_API 도 그 주소로 바꾸고 Actions
+                를 다시 실행해야 합니다.
               </p>
             </div>
           )}
