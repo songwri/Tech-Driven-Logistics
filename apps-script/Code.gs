@@ -69,8 +69,12 @@ function sheet_(name, headers) {
     target = book.insertSheet(name);
     target.appendRow(headers);
     target.setFrozenRows(1);
-  } else if (target.getLastColumn() < headers.length) {
+  } else if (
+    target.getLastColumn() < headers.length &&
+    String(target.getRange(1, 1).getValue()).trim() === String(headers[0])
+  ) {
     // 이전 버전 시트에 새 열이 생긴 경우 헤더를 보강한다.
+    // 첫 칸이 제목이 아닐 때(=1행이 데이터일 때)는 덮어쓰지 않는다.
     target.getRange(1, 1, 1, headers.length).setValues([headers]);
   }
   return target;
@@ -265,7 +269,15 @@ function splitList_(value) {
 }
 
 function visitSheet_() {
-  return sheet_(VISIT_SHEET, VISIT_HEADERS);
+  var target = sheet_(VISIT_SHEET, VISIT_HEADERS);
+  // 이전 버전의 저장 오류로 제목 행이 예약 데이터로 덮어써진 시트를 자동 복구한다.
+  // (덮어써진 행은 지우지 않고 제목 행 아래로 밀어, 그 예약이 목록에 다시 나타난다.)
+  if (String(target.getRange(1, 1).getValue()).trim() !== VISIT_HEADERS[0]) {
+    target.insertRowBefore(1);
+    target.getRange(1, 1, 1, VISIT_HEADERS.length).setValues([VISIT_HEADERS]);
+    target.setFrozenRows(1);
+  }
+  return target;
 }
 
 /** 헤더 이름 → 0-based 열 번호. 시트의 열 순서를 바꿔도 동작한다. */
@@ -507,9 +519,18 @@ function addReservation_(payload) {
   var token = Utilities.getUuid();
   var now = new Date().toISOString();
 
+  // 내용 없는 행은 appendRow 로 추가되지 않으므로, 쓸 행 번호를 직접 계산한다.
   var target = visitSheet_();
-  target.appendRow(VISIT_HEADERS.map(function () { return ''; }));
-  writeVisit_(target.getLastRow(), request, { '신청일시': now, '토큰': token, '개인정보동의': now });
+  var rowNumber = target.getLastRow() + 1;
+  if (rowNumber > target.getMaxRows()) target.insertRowsAfter(target.getMaxRows(), 1);
+  writeVisit_(rowNumber, request, { '신청일시': now, '토큰': token, '개인정보동의': now });
+
+  // 저장이 실제로 됐는지 확인한다. 실패했는데 메일만 나가는 일이 없도록.
+  SpreadsheetApp.flush();
+  var idColumn = columns_(target.getRange(1, 1, 1, target.getLastColumn()).getValues())['id'];
+  if (idColumn === undefined || String(target.getRange(rowNumber, idColumn + 1).getValue()) !== request.id) {
+    throw new Error('예약 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+  }
 
   MailApp.sendEmail({
     to: MAIL_TO,
