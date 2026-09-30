@@ -83,6 +83,7 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
               <SectionTitle>방문 일정</SectionTitle>
               <Suspense fallback={<p className="py-10 text-center text-sm text-warm-600">달력 불러오는 중…</p>}>
                 <SchedulePicker
+                  leadDays={0}
                   tour={draft.tour}
                   date={draft.date}
                   slot={draft.slot}

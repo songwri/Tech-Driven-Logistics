@@ -26,6 +26,8 @@ var MESSAGE_LIMIT = 100;
 var MAX_VISITORS = 30;
 
 var OPEN_WEEKDAYS = [1, 3, 5]; // 월·수·금
+/** 당일·익일 신청 불가 (오늘 +2일부터). src/lib/visit.ts 의 MIN_LEAD_DAYS 와 같아야 합니다. */
+var MIN_LEAD_DAYS = 2;
 
 /**
  * 투어 종류와 시간대. src/lib/visit.ts 의 TOURS 와 값이 같아야 합니다.
@@ -486,8 +488,12 @@ function sanitizeVisit_(payload, requireConsent) {
 
 function addReservation_(payload) {
   var request = sanitizeVisit_(payload, true);
-  var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
-  if (request.date < today) throw new Error('지난 날짜는 신청할 수 없습니다.');
+  var earliest = new Date();
+  earliest.setDate(earliest.getDate() + MIN_LEAD_DAYS);
+  var earliestKey = Utilities.formatDate(earliest, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  if (request.date < earliestKey) {
+    throw new Error('당일 · 익일 방문은 신청할 수 없습니다. ' + formatDateKo_(earliestKey) + ' 이후 날짜를 선택해 주세요.');
+  }
 
   // 승인된 일정과 겹치지 않는지 서버에서 한 번 더 확인한다.
   var blocked = busy_();

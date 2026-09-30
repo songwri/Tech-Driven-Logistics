@@ -15,10 +15,11 @@ export default defineConfig({
   base: '/Tech-Driven-Logistics/',
   build: {
     rolldownOptions: {
-      // 방문자 사이트(/)와 관리자 대시보드(/admin/)를 각각의 페이지로 빌드한다.
+      // 방문자 사이트(/), 예약 전용 페이지(/reserve/), 관리자 대시보드(/admin/)를 각각의 페이지로 빌드한다.
       input: {
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
         admin: fileURLToPath(new URL('./admin/index.html', import.meta.url)),
+        reserve: fileURLToPath(new URL('./reserve/index.html', import.meta.url)),
       },
       output: {
         // Keep the rarely-changing runtimes in their own cacheable chunks.

@@ -24,6 +24,7 @@ export interface TourDefinition {
 }
 
 /**
+ * 화면 표시 순서: 종합 → TDL Lab → 센터
  * - TDL Lab 투어: 10:30–11:30, 14:00–15:00
  * - 센터 투어: 10:00–16:00 사이 1시간 단위 (점심 12:00–13:00 제외)
  * - 종합 투어: 센터 1시간 → TDL Lab 1시간. Lab 시간대 앞에 한 시간을 붙여
@@ -40,15 +41,6 @@ export const TOURS: TourDefinition[] = [
     color: '#2a78d6',
   },
   {
-    id: 'center',
-    label: '센터 투어',
-    short: '센터',
-    description: '물류센터 현장',
-    duration: '약 1시간',
-    slots: ['10:00-11:00', '11:00-12:00', '13:00-14:00', '14:00-15:00', '15:00-16:00'],
-    color: '#eb6834',
-  },
-  {
     id: 'lab',
     label: 'TDL Lab 투어',
     short: 'Lab',
@@ -56,6 +48,15 @@ export const TOURS: TourDefinition[] = [
     duration: '약 1시간',
     slots: ['10:30-11:30', '14:00-15:00'],
     color: '#1baf7a',
+  },
+  {
+    id: 'center',
+    label: '센터 투어',
+    short: '센터',
+    description: '물류센터 현장',
+    duration: '약 1시간',
+    slots: ['10:00-11:00', '11:00-12:00', '13:00-14:00', '14:00-15:00', '15:00-16:00'],
+    color: '#eb6834',
   },
 ]
 
@@ -114,6 +115,17 @@ export const TOUR_LANGUAGE_LABEL: Record<TourLanguage, string> = {
 
 /** 외국어 투어에서 고를 수 있는 언어 (그 외는 '기타: 직접입력') */
 export const FOREIGN_LANGUAGES = ['영어', '중국어', '일본어', '베트남어']
+
+/** 준비 시간 확보: 당일 · 익일은 신청 불가 (오늘 +2일부터). apps-script/Code.gs 의 MIN_LEAD_DAYS 와 같아야 합니다. */
+export const MIN_LEAD_DAYS = 2
+
+/** 신청 가능한 가장 이른 날짜 (자정 기준) */
+export function earliestBookableDate(leadDays = MIN_LEAD_DAYS) {
+  const date = new Date()
+  date.setHours(0, 0, 0, 0)
+  date.setDate(date.getDate() + leadDays)
+  return date
+}
 
 export const MAX_VISITORS = 30
 export const OTHER = '기타'
@@ -274,19 +286,87 @@ export function clientSegment(request: Pick<VisitDraft, 'category' | 'clientType
   return request.clientType === 'new' ? '고객 · 신규' : '고객 · 기존'
 }
 
-/** 제출 전 칩 선택 항목 검사 (input required 로는 잡히지 않는 부분). */
-export function validateVisitDraft(draft: VisitDraft): string | null {
-  if (!draft.date) return '방문 희망일을 선택해 주세요. (월·수·금만 가능합니다)'
-  if (!draft.slot) return '방문 시간을 선택해 주세요.'
-  if (draft.category === 'external' && !draft.clientType) return '고객 유형(기존/신규)을 선택해 주세요.'
-  if (draft.category === 'external' && draft.industries.length === 0) return '업종을 하나 이상 선택해 주세요.'
-  if (draft.industries.includes(OTHER)) return '기타 업종을 입력해 주세요.'
-  if (draft.language === 'foreign' && (!draft.foreignLanguage || draft.foreignLanguage === OTHER)) {
-    return '투어 진행 언어를 선택해 주세요.'
+/* ------------------------------------------------------- 입력 검사 */
+
+export type FormSection = 'schedule' | 'host' | 'info' | 'visitors' | 'consent'
+
+export const FORM_SECTIONS: { id: FormSection; label: string }[] = [
+  { id: 'schedule', label: '투어 · 일정' },
+  { id: 'host', label: '신청 담당자' },
+  { id: 'info', label: '방문 정보' },
+  { id: 'visitors', label: '방문자 명단' },
+  { id: 'consent', label: '개인정보 동의' },
+]
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const blank = (value: string) => !value.trim()
+
+/** 섹션별 첫 번째 문제(없으면 null). 화면 안내와 제출 검사가 같은 규칙을 쓴다. */
+export function sectionProblems(draft: VisitDraft): Record<FormSection, string | null> {
+  const schedule = !draft.date
+    ? '방문 희망일을 선택해 주세요. (월 · 수 · 금, 당일 · 익일 제외)'
+    : draft.date < toDateKey(earliestBookableDate())
+      ? '당일 · 익일 방문은 신청할 수 없습니다. 모레 이후 날짜를 선택해 주세요.'
+      : !draft.slot
+      ? '방문 시간을 선택해 주세요.'
+      : null
+
+  const { host } = draft
+  const hostProblem =
+    blank(host.name) || blank(host.title) || blank(host.org)
+      ? '신청 담당자의 성함 · 직책 · 조직명을 입력해 주세요.'
+      : blank(host.phone)
+        ? '신청 담당자 연락처를 입력해 주세요.'
+        : !EMAIL.test(host.email.trim())
+          ? '신청 담당자 이메일을 정확히 입력해 주세요. 승인 결과가 이 주소로 발송됩니다.'
+          : null
+
+  const external = draft.category === 'external'
+  const info = external && !draft.clientType
+    ? '고객 유형(기존 / 신규)을 선택해 주세요.'
+    : blank(draft.company)
+      ? external ? '업체명을 입력해 주세요.' : '방문 조직명을 입력해 주세요.'
+      : external && draft.industries.length === 0
+        ? '업종을 선택해 주세요.'
+        : draft.industries.includes(OTHER)
+          ? '기타 업종을 입력해 주세요.'
+          : draft.purposes.length === 0
+            ? '방문 목적을 선택해 주세요.'
+            : draft.purposes.includes(OTHER)
+              ? '기타 방문 목적을 입력해 주세요.'
+              : draft.language === 'foreign' && (!draft.foreignLanguage || draft.foreignLanguage === OTHER)
+                ? '투어 진행 언어를 선택해 주세요.'
+                : null
+
+  const missingIndex = draft.visitors.findIndex(
+    (visitor) => blank(visitor.name) || blank(visitor.title) || blank(visitor.org) || !EMAIL.test(visitor.email.trim()),
+  )
+  const visitors =
+    draft.visitors.length === 0
+      ? '방문자를 한 명 이상 등록해 주세요.'
+      : missingIndex >= 0
+        ? `방문자 ${missingIndex + 1}번의 성함 · 직책 · 조직명 · 이메일을 확인해 주세요.`
+        : null
+
+  return {
+    schedule,
+    host: hostProblem,
+    info,
+    visitors,
+    consent: draft.consent ? null : '개인정보 수집 · 이용에 동의해 주세요.',
   }
-  if (draft.purposes.length === 0) return '방문 목적을 하나 이상 선택해 주세요.'
-  if (draft.purposes.includes(OTHER)) return '기타 방문 목적을 입력해 주세요.'
-  if (draft.visitors.length === 0) return '방문자를 한 명 이상 등록해 주세요.'
-  if (!draft.consent) return '개인정보 수집 · 이용에 동의해 주세요.'
+}
+
+/** 제출 전 전체 검사: 첫 번째 문제의 섹션과 문구 */
+export function firstProblem(draft: VisitDraft): { section: FormSection; message: string } | null {
+  const problems = sectionProblems(draft)
+  for (const { id } of FORM_SECTIONS) {
+    const message = problems[id]
+    if (message) return { section: id, message }
+  }
   return null
+}
+
+export function validateVisitDraft(draft: VisitDraft): string | null {
+  return firstProblem(draft)?.message ?? null
 }

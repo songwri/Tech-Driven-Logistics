@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
-import { Check, Plus, X } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
+import { Check, ClipboardPaste, Plus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Field, Input, Textarea } from '../ui/Field'
 import {
@@ -26,26 +26,32 @@ type Patch = (patch: Partial<VisitDraft>) => void
 export function SectionTitle({ index, children, aside }: { index?: string; children: ReactNode; aside?: ReactNode }) {
   return (
     <div className="mb-4 flex items-baseline justify-between gap-3 border-b border-warm-300/40 pb-2">
-      <h4 className="flex items-baseline gap-2 text-[15px] font-bold text-warm-800">
+      <h4 className="flex shrink-0 items-baseline gap-2 whitespace-nowrap text-[15px] font-bold text-warm-800">
         {index && <span className="font-mono text-xs text-brand">{index}</span>}
         {children}
       </h4>
-      {aside}
+      {aside && <div className="hidden text-right sm:block">{aside}</div>}
     </div>
   )
 }
 
+/**
+ * 선택형 버튼. 다중 선택(multi)은 체크박스 네모 대신 알약형 토글로,
+ * 선택되면 체크 아이콘이 붙는다. 단일 선택은 같은 모양의 라디오 역할.
+ */
 export function Chip({
   selected,
   onClick,
   children,
   multi = true,
+  disabled,
   className,
 }: {
   selected: boolean
   onClick: () => void
   children: ReactNode
   multi?: boolean
+  disabled?: boolean
   className?: string
 }) {
   return (
@@ -54,24 +60,17 @@ export function Chip({
       role={multi ? 'checkbox' : 'radio'}
       aria-checked={selected}
       onClick={onClick}
+      disabled={disabled}
       className={cn(
-        'inline-flex items-center gap-1.5 border px-3 py-1.5 text-[13px] transition',
+        'inline-flex min-h-9 items-center gap-1 rounded-full border px-3.5 py-1.5 text-[13px] transition',
         selected
-          ? 'border-brand bg-brand/5 font-semibold text-brand'
-          : 'border-warm-300/60 text-warm-800 hover:border-brand/60',
+          ? 'border-brand bg-brand text-white shadow-sm'
+          : 'border-warm-300/70 bg-white text-warm-800 hover:border-brand/60 hover:text-brand',
+        disabled && !selected && 'cursor-not-allowed opacity-40 hover:border-warm-300/70 hover:text-warm-800',
         className,
       )}
     >
-      {multi && (
-        <span
-          className={cn(
-            'flex h-3.5 w-3.5 items-center justify-center border',
-            selected ? 'border-brand bg-brand text-white' : 'border-warm-300',
-          )}
-        >
-          {selected && <Check width={10} height={10} strokeWidth={3} />}
-        </span>
-      )}
+      {multi && selected && <Check width={13} height={13} strokeWidth={3} className="-ml-0.5" />}
       {children}
     </button>
   )
@@ -86,17 +85,23 @@ function OtherOption({
   values,
   onChange,
   placeholder,
+  disabled,
 }: {
   values: string[]
   onChange: (values: string[]) => void
   placeholder: string
+  disabled?: boolean
 }) {
   const current = values.find((value) => value.startsWith(OTHER))
   const text = current ? current.replace(/^기타:?\s*/, '') : ''
   const rest = values.filter((value) => !value.startsWith(OTHER))
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Chip selected={Boolean(current)} onClick={() => onChange(current ? rest : [...rest, OTHER])}>
+      <Chip
+        selected={Boolean(current)}
+        disabled={disabled && !current}
+        onClick={() => onChange(current ? rest : [...rest, OTHER])}
+      >
         {OTHER}
       </Chip>
       {current && (
@@ -122,24 +127,42 @@ export function HostFields({ host, onChange }: { host: VisitHost; onChange: (hos
   const set = (key: keyof VisitHost) => (e: React.ChangeEvent<HTMLInputElement>) =>
     onChange({ ...host, [key]: e.target.value })
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3">
       <Field label="성함" required>
-        <Input value={host.name} onChange={set('name')} required maxLength={40} placeholder="김대현" />
+        <Input value={host.name} onChange={set('name')} required maxLength={40} placeholder="김대현" autoComplete="name" />
       </Field>
       <Field label="직책" required>
         <Input value={host.title} onChange={set('title')} required maxLength={40} placeholder="책임" />
       </Field>
-      <Field label="조직명" required>
-        <Input value={host.org} onChange={set('org')} required maxLength={60} placeholder="테크이노베이션팀" />
-      </Field>
-      <Field label="연락처" required>
-        <Input type="tel" value={host.phone} onChange={set('phone')} required maxLength={30} placeholder="010-0000-0000" />
-      </Field>
-      <div className="sm:col-span-2">
-        <Field label="이메일" required hint="승인 결과가 이 주소로 안내됩니다.">
-          <Input type="email" value={host.email} onChange={set('email')} required maxLength={120} placeholder="name@lxpantos.com" />
+      <div className="col-span-2">
+        <Field label="조직명" required>
+          <Input value={host.org} onChange={set('org')} required maxLength={60} placeholder="테크이노베이션팀" />
         </Field>
       </div>
+      <Field label="연락처" required>
+        <Input
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          value={host.phone}
+          onChange={set('phone')}
+          required
+          maxLength={30}
+          placeholder="010-0000-0000"
+        />
+      </Field>
+      <Field label="이메일" required hint="승인 결과가 이 주소로 발송됩니다.">
+        <Input
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          value={host.email}
+          onChange={set('email')}
+          required
+          maxLength={120}
+          placeholder="name@lxpantos.com"
+        />
+      </Field>
     </div>
   )
 }
@@ -238,7 +261,7 @@ function LanguageFields({ draft, onChange }: { draft: VisitDraft; onChange: Patc
                       : { language, foreignLanguage: draft.foreignLanguage || FOREIGN_LANGUAGES[0] },
                   )
                 }
-                className="min-w-20 justify-center bg-white"
+                className="min-w-20 justify-center"
               >
                 {TOUR_LANGUAGE_LABEL[language]}
               </Chip>
@@ -256,7 +279,6 @@ function LanguageFields({ draft, onChange }: { draft: VisitDraft; onChange: Patc
                   multi={false}
                   selected={draft.foreignLanguage === language}
                   onClick={() => onChange({ foreignLanguage: language })}
-                  className="bg-white"
                 >
                   {language}
                 </Chip>
@@ -265,7 +287,6 @@ function LanguageFields({ draft, onChange }: { draft: VisitDraft; onChange: Patc
                 multi={false}
                 selected={!isPreset && draft.foreignLanguage.startsWith(OTHER)}
                 onClick={() => onChange({ foreignLanguage: OTHER })}
-                className="bg-white"
               >
                 {OTHER}
               </Chip>
@@ -291,10 +312,10 @@ function LanguageFields({ draft, onChange }: { draft: VisitDraft; onChange: Patc
         <div className="mt-4 border-t border-warm-300/40 pt-3">
           <FieldLabel required>방문 측(고객사) 통역 동반</FieldLabel>
           <div className="mt-1.5 flex flex-wrap items-center gap-2" role="radiogroup">
-            <Chip multi={false} selected={draft.interpreter} onClick={() => onChange({ interpreter: true })} className="bg-white">
+            <Chip multi={false} selected={draft.interpreter} onClick={() => onChange({ interpreter: true })}>
               통역 동반
             </Chip>
-            <Chip multi={false} selected={!draft.interpreter} onClick={() => onChange({ interpreter: false })} className="bg-white">
+            <Chip multi={false} selected={!draft.interpreter} onClick={() => onChange({ interpreter: false })}>
               통역 없음
             </Chip>
             <span className="text-[12px] text-warm-600">
@@ -311,8 +332,11 @@ function LanguageFields({ draft, onChange }: { draft: VisitDraft; onChange: Patc
 
 /* ------------------------------------------------ 방문 구분 · 고객사 */
 
+const MAX_INDUSTRIES = 3
+
 export function VisitInfoFields({ draft, onChange }: { draft: VisitDraft; onChange: Patch }) {
   const external = draft.category === 'external'
+  const industryFull = draft.industries.length >= MAX_INDUSTRIES
   return (
     <div className="space-y-5">
       <div>
@@ -383,19 +407,23 @@ export function VisitInfoFields({ draft, onChange }: { draft: VisitDraft; onChan
         </div>
       </div>
 
-      <LanguageFields draft={draft} onChange={onChange} />
-
       {external && (
         <div>
-          <FieldLabel required>업종 (다중 선택)</FieldLabel>
+          <div className="flex items-baseline justify-between gap-2">
+            <FieldLabel required>업종</FieldLabel>
+            <span className="font-mono text-[11px] text-warm-600">
+              주 업종부터 최대 {MAX_INDUSTRIES}개 · {draft.industries.length}개 선택
+            </span>
+          </div>
           <div className="mt-1.5 space-y-2">
             {INDUSTRY_GROUPS.map((group) => (
               <div key={group.label} className="flex flex-wrap items-center gap-2">
-                <span className="w-24 shrink-0 font-mono text-[11px] text-warm-300">{group.label}</span>
+                <span className="w-full shrink-0 font-mono text-[11px] text-warm-600 sm:w-24">{group.label}</span>
                 {group.items.map((item) => (
                   <Chip
                     key={item}
                     selected={draft.industries.includes(item)}
+                    disabled={industryFull && !draft.industries.includes(item)}
                     onClick={() => onChange({ industries: toggle(draft.industries, item) })}
                   >
                     {item}
@@ -404,11 +432,12 @@ export function VisitInfoFields({ draft, onChange }: { draft: VisitDraft; onChan
               </div>
             ))}
             <div className="flex flex-wrap items-center gap-2">
-              <span className="w-24 shrink-0 font-mono text-[11px] text-warm-300">그 외</span>
+              <span className="w-full shrink-0 font-mono text-[11px] text-warm-600 sm:w-24">그 외</span>
               <OtherOption
                 values={draft.industries}
                 onChange={(industries) => onChange({ industries })}
                 placeholder="업종 직접 입력"
+                disabled={industryFull}
               />
             </div>
           </div>
@@ -416,7 +445,10 @@ export function VisitInfoFields({ draft, onChange }: { draft: VisitDraft; onChan
       )}
 
       <div>
-        <FieldLabel required>방문 목적 (다중 선택)</FieldLabel>
+        <div className="flex items-baseline justify-between gap-2">
+          <FieldLabel required>방문 목적</FieldLabel>
+          <span className="font-mono text-[11px] text-warm-600">해당하는 항목 모두 선택</span>
+        </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
           {PURPOSES.map((purpose) => (
             <Chip
@@ -434,6 +466,8 @@ export function VisitInfoFields({ draft, onChange }: { draft: VisitDraft; onChan
           />
         </div>
       </div>
+
+      <LanguageFields draft={draft} onChange={onChange} />
 
       <Field label="담당자 의견" hint="방문 배경, 고객사 니즈 등 안내에 참고할 내용을 적어주세요.">
         <Textarea
@@ -458,82 +492,250 @@ export function FieldLabel({ children, required }: { children: ReactNode; requir
 
 /* ------------------------------------------------------------ 방문자 */
 
+const VISITOR_COLUMNS = '성함 · 직책 · 조직명 · 이메일 · 차량번호 · 직무'
+const rowGrid = 'md:grid-cols-[28px_1fr_0.8fr_1.2fr_1.6fr_1fr_1fr_28px]'
+
+/** 엑셀/표에서 복사한 줄들을 방문자 목록으로 바꾼다. (탭 또는 쉼표 구분) */
+function parseVisitorRows(text: string, defaultOrg: string): Visitor[] {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => (line.includes('\t') ? line.split('\t') : line.split(',')).map((cell) => cell.trim()))
+    .filter((cells) => !/^(성함|이름|name)$/i.test(cells[0] ?? ''))
+    .map(([name = '', title = '', org = '', email = '', car = '', job = '']) => ({
+      name,
+      title,
+      org: org || defaultOrg,
+      email,
+      car,
+      jobs: JOBS.includes(job) ? [job] : [],
+    }))
+}
+
+const isEmptyVisitor = (visitor: Visitor) =>
+  !visitor.name && !visitor.title && !visitor.email && !visitor.car && visitor.jobs.length === 0
+
+/**
+ * 방문자 명단. 한 사람을 한 줄로 입력하고(데스크톱은 표, 모바일은 카드),
+ * 직무는 드롭다운 하나로 고른다. 단체 방문은 엑셀에서 붙여넣기로 한 번에 등록.
+ */
 export function VisitorsFields({
   visitors,
   onChange,
+  defaultOrg = '',
 }: {
   visitors: Visitor[]
   onChange: (visitors: Visitor[]) => void
+  /** 새 방문자의 조직명 기본값 (보통 업체명) */
+  defaultOrg?: string
 }) {
+  const [pasteOpen, setPasteOpen] = useState(false)
+  const [pasteText, setPasteText] = useState('')
+  const [pasteResult, setPasteResult] = useState<string | null>(null)
+
   const update = (index: number, patch: Partial<Visitor>) =>
     onChange(visitors.map((visitor, i) => (i === index ? { ...visitor, ...patch } : visitor)))
+  const full = visitors.length >= MAX_VISITORS
+
+  const applyPaste = () => {
+    const parsed = parseVisitorRows(pasteText, defaultOrg)
+    if (parsed.length === 0) {
+      setPasteResult('붙여넣은 내용에서 방문자를 찾지 못했습니다.')
+      return
+    }
+    const base = visitors.filter((visitor) => !isEmptyVisitor(visitor))
+    const room = MAX_VISITORS - base.length
+    const added = parsed.slice(0, Math.max(0, room))
+    onChange([...base, ...added])
+    setPasteText('')
+    setPasteOpen(false)
+    setPasteResult(
+      added.length < parsed.length
+        ? `${added.length}명을 추가했습니다. 최대 ${MAX_VISITORS}명이라 ${parsed.length - added.length}명은 제외했습니다.`
+        : `${added.length}명을 추가했습니다. 빈칸이 있으면 표에서 채워 주세요.`,
+    )
+  }
+
+  const cellLabel = 'mb-1 block font-mono text-[10px] text-warm-600 md:sr-only'
+  const cellInput = 'py-1.5'
 
   return (
-    <div className="space-y-3">
-      {visitors.map((visitor, index) => (
-        <div key={index} className="border border-warm-300/50 bg-cream/40 p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="font-mono text-xs font-semibold text-warm-800">방문자 #{index + 1}</span>
-            {visitors.length > 1 && (
+    <div>
+      <div className={cn('hidden gap-2 border-b border-warm-300/50 pb-1.5 font-mono text-[11px] text-warm-600 md:grid', rowGrid)}>
+        <span>#</span>
+        <span>
+          성함<span className="text-brand">*</span>
+        </span>
+        <span>
+          직책<span className="text-brand">*</span>
+        </span>
+        <span>
+          조직명<span className="text-brand">*</span>
+        </span>
+        <span>
+          이메일<span className="text-brand">*</span>
+        </span>
+        <span>차량번호</span>
+        <span>직무</span>
+        <span />
+      </div>
+
+      <ol className="divide-y divide-warm-300/40">
+        {visitors.map((visitor, index) => (
+          <li
+            key={index}
+            className={cn('relative grid grid-cols-2 gap-2 py-3 md:items-center md:py-2', rowGrid)}
+          >
+            <span className="col-span-2 font-mono text-[12px] font-semibold text-warm-800 md:col-span-1 md:text-center md:font-normal md:text-warm-600">
+              <span className="md:hidden">방문자 </span>
+              {index + 1}
+            </span>
+            <label>
+              <span className={cellLabel}>성함 *</span>
+              <Input
+                aria-label={`방문자 ${index + 1} 성함`}
+                value={visitor.name}
+                onChange={(e) => update(index, { name: e.target.value })}
+                maxLength={40}
+                className={cellInput}
+              />
+            </label>
+            <label>
+              <span className={cellLabel}>직책 *</span>
+              <Input
+                aria-label={`방문자 ${index + 1} 직책`}
+                value={visitor.title}
+                onChange={(e) => update(index, { title: e.target.value })}
+                maxLength={40}
+                className={cellInput}
+              />
+            </label>
+            <label className="col-span-2 md:col-span-1">
+              <span className={cellLabel}>조직명 *</span>
+              <Input
+                aria-label={`방문자 ${index + 1} 조직명`}
+                value={visitor.org}
+                onChange={(e) => update(index, { org: e.target.value })}
+                maxLength={60}
+                className={cellInput}
+              />
+            </label>
+            <label className="col-span-2 md:col-span-1">
+              <span className={cellLabel}>이메일 *</span>
+              <Input
+                type="email"
+                inputMode="email"
+                aria-label={`방문자 ${index + 1} 이메일`}
+                value={visitor.email}
+                onChange={(e) => update(index, { email: e.target.value })}
+                maxLength={120}
+                className={cellInput}
+              />
+            </label>
+            <label>
+              <span className={cellLabel}>차량번호 (주차 등록)</span>
+              <Input
+                aria-label={`방문자 ${index + 1} 차량번호`}
+                value={visitor.car}
+                onChange={(e) => update(index, { car: e.target.value })}
+                maxLength={20}
+                placeholder="없으면 비움"
+                className={cellInput}
+              />
+            </label>
+            <label>
+              <span className={cellLabel}>직무</span>
+              <select
+                aria-label={`방문자 ${index + 1} 직무`}
+                value={visitor.jobs[0] ?? ''}
+                onChange={(e) => update(index, { jobs: e.target.value ? [e.target.value] : [] })}
+                className="w-full border border-warm-300/60 bg-white px-2 py-1.5 text-sm text-warm-800 outline-none focus:border-brand"
+              >
+                <option value="">선택</option>
+                {JOBS.map((job) => (
+                  <option key={job} value={job}>
+                    {job}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {visitors.length > 1 ? (
               <button
                 type="button"
                 onClick={() => onChange(visitors.filter((_, i) => i !== index))}
-                className="inline-flex items-center gap-1 font-mono text-[11px] text-warm-600 transition hover:text-brand"
+                aria-label={`방문자 ${index + 1} 삭제`}
+                className="absolute right-0 top-2.5 flex h-7 w-7 items-center justify-center text-warm-300 transition hover:text-brand md:static"
               >
-                <X width={12} height={12} /> 삭제
+                <X width={16} height={16} />
               </button>
+            ) : (
+              <span className="hidden md:block" />
             )}
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Field label="성함" required>
-              <Input value={visitor.name} onChange={(e) => update(index, { name: e.target.value })} required maxLength={40} />
-            </Field>
-            <Field label="직책" required>
-              <Input value={visitor.title} onChange={(e) => update(index, { title: e.target.value })} required maxLength={40} />
-            </Field>
-            <Field label="조직명" required>
-              <Input value={visitor.org} onChange={(e) => update(index, { org: e.target.value })} required maxLength={60} />
-            </Field>
-            <div className="sm:col-span-2">
-              <Field label="이메일" required>
-                <Input
-                  type="email"
-                  value={visitor.email}
-                  onChange={(e) => update(index, { email: e.target.value })}
-                  required
-                  maxLength={120}
-                />
-              </Field>
-            </div>
-            <Field label="방문 차량번호" hint="주차 등록용">
-              <Input value={visitor.car} onChange={(e) => update(index, { car: e.target.value })} maxLength={20} placeholder="12가3456" />
-            </Field>
-          </div>
-          <div className="mt-3">
-            <FieldLabel>직무 구분</FieldLabel>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {JOBS.map((job) => (
-                <Chip
-                  key={job}
-                  selected={visitor.jobs.includes(job)}
-                  onClick={() => update(index, { jobs: toggle(visitor.jobs, job) })}
-                  className="px-2.5 py-1 text-[12px]"
-                >
-                  {job}
-                </Chip>
-              ))}
-            </div>
+          </li>
+        ))}
+      </ol>
+
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          disabled={full}
+          onClick={() => onChange([...visitors, { ...emptyVisitor(), org: defaultOrg }])}
+          className="inline-flex items-center gap-1.5 border border-dashed border-warm-300 px-4 py-2 text-sm font-semibold text-warm-600 transition hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Plus width={14} height={14} /> 방문자 추가
+        </button>
+        <button
+          type="button"
+          disabled={full}
+          onClick={() => setPasteOpen((open) => !open)}
+          aria-expanded={pasteOpen}
+          className="inline-flex items-center gap-1.5 border border-warm-300/70 px-4 py-2 text-sm font-semibold text-warm-600 transition hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <ClipboardPaste width={14} height={14} /> 엑셀에서 붙여넣기
+        </button>
+        <span className="ml-auto font-mono text-[11px] text-warm-600">
+          {visitors.length} / {MAX_VISITORS}명
+        </span>
+      </div>
+
+      {pasteOpen && (
+        <div className="mt-3 border border-warm-300/60 bg-cream/50 p-3">
+          <p className="text-[12px] text-warm-800">
+            엑셀에서 <b>{VISITOR_COLUMNS}</b> 순서의 열을 복사해 붙여넣으세요. 한 줄이 한 명입니다.
+            {defaultOrg && ' 조직명이 비어 있으면 업체명으로 채웁니다.'}
+          </p>
+          <Textarea
+            rows={5}
+            value={pasteText}
+            onChange={(e) => setPasteText(e.target.value)}
+            placeholder={'홍길동\t팀장\t물류혁신팀\thong@company.com\t12가3456\t운영'}
+            className="mt-2 font-mono text-[12px]"
+            aria-label="방문자 명단 붙여넣기"
+          />
+          <div className="mt-2 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setPasteOpen(false)}
+              className="px-3 py-1.5 text-sm text-warm-600 hover:text-warm-800"
+            >
+              닫기
+            </button>
+            <button
+              type="button"
+              onClick={applyPaste}
+              className="bg-warm-800 px-4 py-1.5 text-sm font-semibold text-white transition hover:brightness-110"
+            >
+              명단 추가
+            </button>
           </div>
         </div>
-      ))}
-      <button
-        type="button"
-        disabled={visitors.length >= MAX_VISITORS}
-        onClick={() => onChange([...visitors, emptyVisitor()])}
-        className="flex w-full items-center justify-center gap-1.5 border border-dashed border-warm-300 py-2.5 text-sm font-semibold text-warm-600 transition hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        <Plus width={14} height={14} /> 방문자 추가 ({visitors.length}/{MAX_VISITORS}명)
-      </button>
+      )}
+      {pasteResult && (
+        <p className="mt-2 font-mono text-[11px] text-warm-600" role="status">
+          {pasteResult}
+        </p>
+      )}
     </div>
   )
 }
