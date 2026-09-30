@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useLab } from '@/lib/labContext'
+import { RESERVE_URL } from '@/lib/routes'
 import { Logo } from './ui/Logo'
 
 const navLinks = [
@@ -13,7 +13,6 @@ const navLinks = [
 
 export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const { openReservation } = useLab()
 
   // The hero is a full-bleed 3D stage — the bar only appears once it's scrolled past.
   const [revealed, setRevealed] = useState(() => window.scrollY > window.innerHeight * 0.85)
@@ -53,13 +52,12 @@ export default function Nav() {
           ))}
         </ul>
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={openReservation}
+          <a
+            href={RESERVE_URL}
             className="rounded-full bg-brand px-4 py-1.5 text-sm font-semibold text-white transition hover:brightness-110"
           >
             방문 예약
-          </button>
+          </a>
           <button
             type="button"
             onClick={() => setMenuOpen((open) => !open)}

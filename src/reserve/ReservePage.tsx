@@ -85,7 +85,7 @@ export default function ReservePage() {
         )}
 
         <div className="border border-warm-300/50 bg-white p-4 md:p-8">
-          <ReservationForm variant="page" busy={busy} closedDays={closedDays} />
+          <ReservationForm busy={busy} closedDays={closedDays} />
         </div>
       </main>
 

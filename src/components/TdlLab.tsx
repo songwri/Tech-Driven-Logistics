@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion'
-import { useLab } from '@/lib/labContext'
-import { Button } from './ui/Button'
+import { RESERVE_URL } from '@/lib/routes'
 import BlueprintFrame from './BlueprintFrame'
 
 const labPoints = [
@@ -19,8 +18,6 @@ const labPoints = [
 ]
 
 export default function TdlLab() {
-  const { openReservation } = useLab()
-
   return (
     <section id="tdl-lab" className="bg-cream py-28">
       <div className="mx-auto max-w-7xl px-6">
@@ -59,7 +56,12 @@ export default function TdlLab() {
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3">
-          <Button onClick={openReservation}>TDL 방문 예약</Button>
+          <a
+            href={RESERVE_URL}
+            className="inline-flex items-center justify-center rounded-full bg-brand px-6 py-2.5 text-sm font-semibold text-white transition hover:brightness-110"
+          >
+            TDL 방문 예약
+          </a>
           <a
             href="#guestbook"
             className="inline-flex items-center rounded-full border border-warm-300 px-6 py-2.5 text-sm font-semibold text-warm-800 transition hover:border-brand hover:text-brand"

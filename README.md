@@ -74,14 +74,14 @@ WebM을 먼저 시도한 뒤 MP4로 폴백합니다. 영상 자체가 밝아 CSS
 
 ### 방문 예약 / 관리자 대시보드
 
-- 예약 화면(`src/components/ReservationDialog.tsx`)은 종합 투어 · 센터 투어 · TDL Lab 투어 중
-  하나를 고르고, 좌측 달력에서 날짜·시간을, 우측에서 담당자 정보와 개인정보 수집·이용 동의를
-  받습니다. 그 아래에 방문 구분(내부/외부 · 기존/신규), 업체명, 업종, 방문 목적, 방문자 명단을
-  입력합니다.
+- 예약 화면은 종합 투어 · TDL Lab 투어 · 센터 투어 중 하나를 고르고, 달력에서 날짜·시간을 정한 뒤
+  신청 담당자 정보, 방문 정보(방문 유형 · 업체명 · 업종 · 방문 목적 · 투어 언어), 방문자 명단,
+  개인정보 수집·이용 동의 순으로 입력합니다.
 - 투어 시간대와 겹침 판정 규칙은 `src/lib/visit.ts` 한곳에 있습니다
   (백엔드 `apps-script/Code.gs` 의 `TOURS` 와 값이 같아야 합니다).
 - 예약 신청 전용 페이지 `/reserve/` (`reserve/index.html` → `src/reserve/`)는 소개 사이트(영상·3D)를 거치지 않고
-  바로 열립니다. 링크·QR·메일 서명 공유용이며, 소개 사이트의 예약 모달과 같은 폼(`src/components/visit/ReservationForm.tsx`)을 씁니다.
+  바로 열립니다. 링크·QR·메일 서명 공유용이며, 소개 사이트의 '방문 예약' 버튼(첫 화면 · 상단 메뉴 · TDL Lab 섹션)도
+  모두 이 페이지로 연결됩니다. 폼은 `src/components/visit/ReservationForm.tsx` 입니다.
 - 관리자 대시보드는 별도 페이지 `/admin/` (`admin/index.html` → `src/admin/`)로 빌드됩니다.
   달력 · 예약 요청 관리 · 월별/연도별 통계를 제공하며, 설정 방법은 `apps-script/README.md`를
   참고하세요.

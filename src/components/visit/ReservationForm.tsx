@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState } from 'react'
 import { Check, CircleAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '../ui/Button'
@@ -120,14 +120,10 @@ function ProgressSteps({
 interface ReservationFormProps {
   busy: BusySegment[]
   closedDays: string[]
-  /** modal: 하단 고정 바 / page: 우측 고정 요약 패널 */
-  variant: 'modal' | 'page'
-  onClose?: () => void
-  /** 페이지 상단 등 폼 앞에 둘 내용 */
-  intro?: ReactNode
 }
 
-export function ReservationForm({ busy, closedDays, variant, onClose, intro }: ReservationFormProps) {
+/** 예약 신청 폼. 데스크톱은 우측 고정 요약 패널, 모바일은 하단 고정 바로 신청 버튼을 항상 보여준다. */
+export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
   const [draft, setDraft] = useState<VisitDraft>(initialDraft)
   const [status, setStatus] = useState<'idle' | 'sending' | 'done'>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -190,24 +186,23 @@ export function ReservationForm({ busy, closedDays, variant, onClose, intro }: R
           </div>
         </div>
         <div className="mt-6 flex gap-2">
-          {variant === 'page' && (
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => {
-                setDraft(initialDraft())
-                setStatus('idle')
-                window.scrollTo({ top: 0 })
-              }}
-            >
-              다른 일정 추가 신청
-            </Button>
-          )}
-          {onClose && (
-            <Button className="flex-1" onClick={onClose}>
-              닫기
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => {
+              setDraft(initialDraft())
+              setStatus('idle')
+              window.scrollTo({ top: 0 })
+            }}
+          >
+            다른 일정 추가 신청
+          </Button>
+          <a
+            href={import.meta.env.BASE_URL}
+            className="inline-flex flex-1 items-center justify-center rounded-full bg-brand px-6 py-2.5 text-sm font-semibold text-white transition hover:brightness-110"
+          >
+            소개 페이지로
+          </a>
         </div>
       </div>
     )
@@ -306,71 +301,40 @@ export function ReservationForm({ busy, closedDays, variant, onClose, intro }: R
     </div>
   )
 
-  if (variant === 'page') {
-    return (
-      <form onSubmit={handleSubmit} noValidate className="grid gap-8 lg:grid-cols-[1fr_280px]">
-        <div className="min-w-0">
-          {intro}
-          {sections}
-          <div className="mt-6 hidden items-center justify-end gap-4 lg:flex">
-            {errorBox}
-            {submitButton}
-          </div>
-        </div>
-        {/* 데스크톱: 우측 고정 요약 패널 / 모바일: 하단 고정 바 */}
-        <aside className="hidden lg:block">
-          <div className="sticky top-6 space-y-4 border border-warm-300/50 bg-white p-5">
-            <p className="font-mono text-[11px] uppercase tracking-wider text-brand">신청 요약</p>
-            {summary}
-            <div className="border-t border-warm-300/40 pt-3">
-              <p className="mb-2 text-[12px] text-warm-600">
-                입력 진행 <b className="text-warm-800">{doneCount}</b> / {FORM_SECTIONS.length}
-              </p>
-              <ProgressSteps problems={problems} vertical />
-            </div>
-            {errorBox}
-            <div className="[&>button]:w-full">{submitButton}</div>
-          </div>
-        </aside>
-        <div className="sticky bottom-0 z-10 -mx-4 border-t border-warm-300/50 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
-          {errorBox && <div className="mb-2">{errorBox}</div>}
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              {summary}
-              <p className="text-[11px] text-warm-600">
-                입력 진행 {doneCount} / {FORM_SECTIONS.length}
-              </p>
-            </div>
-            {submitButton}
-          </div>
-        </div>
-      </form>
-    )
-  }
-
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-10">
-      {intro}
-      {sections}
-      {/* 긴 양식이라 요약 · 진행 · 오류 · 신청 버튼을 화면 하단에 고정한다.
-          (-bottom-4 + pb-7: 모달 오버레이의 p-4 여백까지 덮어 뒤 내용이 비치지 않게) */}
-      <div className="sticky -bottom-4 z-10 -mx-6 border-t border-warm-300/50 bg-white/95 px-6 pb-7 pt-3 backdrop-blur md:-mx-8 md:px-8">
+    <form onSubmit={handleSubmit} noValidate className="grid gap-8 lg:grid-cols-[1fr_280px]">
+      <div className="min-w-0">
+        {sections}
+        <div className="mt-6 hidden items-center justify-end gap-4 lg:flex">
+          {errorBox}
+          {submitButton}
+        </div>
+      </div>
+      {/* 데스크톱: 우측 고정 요약 패널 / 모바일: 하단 고정 바 */}
+      <aside className="hidden lg:block">
+        <div className="sticky top-6 space-y-4 border border-warm-300/50 bg-white p-5">
+          <p className="font-mono text-[11px] uppercase tracking-wider text-brand">신청 요약</p>
+          {summary}
+          <div className="border-t border-warm-300/40 pt-3">
+            <p className="mb-2 text-[12px] text-warm-600">
+              입력 진행 <b className="text-warm-800">{doneCount}</b> / {FORM_SECTIONS.length}
+            </p>
+            <ProgressSteps problems={problems} vertical />
+          </div>
+          {errorBox}
+          <div className="[&>button]:w-full">{submitButton}</div>
+        </div>
+      </aside>
+      <div className="sticky bottom-0 z-10 -mx-4 border-t border-warm-300/50 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
         {errorBox && <div className="mb-2">{errorBox}</div>}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0 space-y-1.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
             {summary}
-            <div className="hidden md:block">
-              <ProgressSteps problems={problems} />
-            </div>
+            <p className="text-[11px] text-warm-600">
+              입력 진행 {doneCount} / {FORM_SECTIONS.length}
+            </p>
           </div>
-          <div className="flex shrink-0 gap-2">
-            {onClose && (
-              <Button type="button" variant="outline" onClick={onClose} className="hidden sm:inline-flex">
-                취소
-              </Button>
-            )}
-            {submitButton}
-          </div>
+          {submitButton}
         </div>
       </div>
     </form>

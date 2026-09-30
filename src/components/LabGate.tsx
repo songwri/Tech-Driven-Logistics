@@ -1,12 +1,13 @@
 import { ArrowRight, CalendarCheck, PenLine } from 'lucide-react'
 import { useLab } from '@/lib/labContext'
+import { RESERVE_URL } from '@/lib/routes'
 import { Logo } from './ui/Logo'
 
 const MEDIA = `${import.meta.env.BASE_URL}media/tdl-lab-hero`
 const POSTER = `${MEDIA}.jpg`
 
 export default function LabGate() {
-  const { entries, openReservation, openGuestbook } = useLab()
+  const { entries, openGuestbook } = useLab()
 
   const averageRating =
     entries.length > 0
@@ -58,9 +59,8 @@ export default function LabGate() {
             </p>
 
             <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-              <button
-                type="button"
-                onClick={openReservation}
+              <a
+                href={RESERVE_URL}
                 className="group inline-flex items-center justify-between gap-6 bg-brand px-7 py-4 text-left text-white shadow-lg shadow-black/30 transition hover:brightness-110"
               >
                 <span className="flex items-center gap-3">
@@ -73,7 +73,7 @@ export default function LabGate() {
                   </span>
                 </span>
                 <ArrowRight width={16} height={16} className="transition group-hover:translate-x-1" />
-              </button>
+              </a>
 
               <button
                 type="button"
