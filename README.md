@@ -80,6 +80,8 @@ WebM을 먼저 시도한 뒤 MP4로 폴백합니다. 영상 자체가 밝아 CSS
   입력합니다.
 - 투어 시간대와 겹침 판정 규칙은 `src/lib/visit.ts` 한곳에 있습니다
   (백엔드 `apps-script/Code.gs` 의 `TOURS` 와 값이 같아야 합니다).
+- 예약 신청 전용 페이지 `/reserve/` (`reserve/index.html` → `src/reserve/`)는 소개 사이트(영상·3D)를 거치지 않고
+  바로 열립니다. 링크·QR·메일 서명 공유용이며, 소개 사이트의 예약 모달과 같은 폼(`src/components/visit/ReservationForm.tsx`)을 씁니다.
 - 관리자 대시보드는 별도 페이지 `/admin/` (`admin/index.html` → `src/admin/`)로 빌드됩니다.
   달력 · 예약 요청 관리 · 월별/연도별 통계를 제공하며, 설정 방법은 `apps-script/README.md`를
   참고하세요.

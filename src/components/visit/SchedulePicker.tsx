@@ -51,7 +51,7 @@ export function SchedulePicker({ tour, date, slot, busy, closedDays, onChange }:
       <div>
         <FieldLabel required>투어 종류</FieldLabel>
         <div className="mt-1.5 grid gap-1.5" role="radiogroup">
-          {TOURS.map((item) => {
+          {TOURS.map((item, index) => {
             const active = item.id === tour
             return (
               <button
@@ -67,19 +67,28 @@ export function SchedulePicker({ tour, date, slot, busy, closedDays, onChange }:
               >
                 <span
                   className={cn(
-                    'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border',
-                    active ? 'border-brand' : 'border-warm-300',
+                    'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border font-mono text-[12px] font-bold',
+                    active ? 'border-brand bg-brand text-white' : 'border-warm-300 text-warm-600',
                   )}
+                  aria-hidden
                 >
-                  {active && <span className="h-2 w-2 rounded-full bg-brand" />}
+                  {index + 1}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className={cn('block text-sm font-semibold', active ? 'text-brand' : 'text-warm-800')}>
                     {item.label}
+                    {item.id === 'combined' && (
+                      <span className="ml-1.5 rounded-sm bg-brand/10 px-1 py-px align-middle text-[10px] font-bold text-brand">
+                        추천
+                      </span>
+                    )}
                     <span className="ml-1.5 font-normal text-warm-600">· {item.description}</span>
                   </span>
                   <span className="block font-mono text-[11px] text-warm-600">
-                    {item.duration} · {item.slots.length === 2 ? item.slots.map(formatSlot).join(' / ') : '10:00 – 16:00 (1시간 단위)'}
+                    {item.duration} ·{' '}
+                    {item.id === 'center'
+                      ? '10:00 – 16:00 매시 정각 시작'
+                      : `${item.slots.map((slot) => slot.slice(0, 5)).join(' / ')} 시작`}
                   </span>
                 </span>
               </button>
