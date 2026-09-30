@@ -10,6 +10,7 @@ import { AdminCalendar } from './AdminCalendar'
 import { RequestTable, type StatusFilter } from './RequestTable'
 import { RequestModal } from './RequestModal'
 import { StatsView } from './StatsView'
+import { DiagnoseButton } from './DiagnosePanel'
 
 type Tab = 'dashboard' | 'stats'
 
@@ -50,7 +51,7 @@ export default function AdminApp() {
   const [openId, setOpenId] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [scope, setScope] = useState<'month' | 'upcoming' | 'all'>('month')
+  const [scope, setScope] = useState<'month' | 'upcoming' | 'all'>('upcoming')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
   /** 요약 카드를 누르면 해당 조건으로 아래 목록을 바로 보여준다. */
@@ -155,6 +156,7 @@ export default function AdminApp() {
                   >
                     <RefreshCw width={13} height={13} className={data.loading ? 'animate-spin' : undefined} /> 새로고침
                   </button>
+                  <DiagnoseButton diagnose={data.diagnose} />
                   <button
                     type="button"
                     onClick={data.logout}
@@ -260,9 +262,9 @@ export default function AdminApp() {
                       <div className="inline-flex border border-warm-300/60 bg-white" role="radiogroup" aria-label="조회 범위">
                         {(
                           [
-                            ['month', '달력 월'],
                             ['upcoming', '오늘 이후'],
                             ['all', '전체'],
+                            ['month', '달력 월'],
                           ] as const
                         ).map(([value, label]) => (
                           <button

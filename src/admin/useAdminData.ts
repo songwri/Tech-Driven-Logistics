@@ -3,6 +3,20 @@ import { adminRequest, isLiveBackend } from '@/lib/labApi'
 import { busyFromRequests, isSlotBusy, type VisitRequest, type VisitStatus } from '@/lib/visit'
 import { buildSampleRequests } from './sampleData'
 
+export interface ServerHealth {
+  version: string
+  spreadsheet: { name: string; url: string }
+  webAppUrl: string
+  tabs: { name: string; rows: number; columns: number }[]
+  visitSheet?: {
+    headerOk: boolean
+    missingColumns: string[]
+    reservations: number
+    withToken: number
+    last: { row: number; id: string; hasToken: boolean; status: string; date: string } | null
+  }
+}
+
 const DEMO_KEY = 'tdl-lab-admin-demo-v3'
 const SESSION_KEY = 'tdl-lab-admin-key'
 
@@ -143,6 +157,9 @@ export function useAdminData() {
     setRequests(fresh)
   }, [])
 
+  /** 서버가 어떤 시트에 무엇을 저장하고 있는지 확인 (Apps Script health) */
+  const diagnose = useCallback(() => adminRequest<ServerHealth>(key, 'health'), [key])
+
   const logout = useCallback(() => {
     saveKey('')
     setKey('')
@@ -161,5 +178,6 @@ export function useAdminData() {
     setStatus,
     update,
     resetDemo,
+    diagnose,
   } as const
 }
