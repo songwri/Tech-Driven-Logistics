@@ -9,12 +9,15 @@ import {
   clientSegment,
   formatDateLong,
   formatSlot,
+  headcountLabel,
   languageSummary,
   type VisitRequest,
   type VisitStatus,
   validateVisitDraft,
 } from '@/lib/visit'
 import { StatusBadge, TourTag } from './status'
+import { ManualVisitModal, OpsFields } from './ManualVisitModal'
+import { opsFromRequest, opsToRequest } from './opsRecord'
 
 // 달력 라이브러리(react-day-picker)는 '정보 수정'을 열 때만 받는다.
 const SchedulePicker = lazy(() =>
@@ -47,6 +50,9 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
   const [memo, setMemo] = useState(request.adminMemo)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [editingOps, setEditingOps] = useState(false)
+  const [ops, setOps] = useState(() => opsFromRequest(request))
+  const manual = request.source === 'manual'
 
   const run = async (task: () => Promise<void>) => {
     setPending(true)
@@ -75,6 +81,16 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
       return
     }
     if (await run(() => onUpdate({ ...draft, adminMemo: memo }))) setEditing(false)
+  }
+
+  if (editing && manual) {
+    return (
+      <ManualVisitModal
+        initial={request}
+        onClose={() => setEditing(false)}
+        onSubmit={(input) => onUpdate({ ...request, ...input, status: request.status })}
+      />
+    )
   }
 
   if (editing) {
@@ -138,7 +154,34 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
   }
 
   const tour = TOUR_BY_ID[request.tour]
-  const headcount = request.visitors.length
+  const headcount = headcountLabel(request)
+  const hasHost = Boolean(request.host.name || request.host.org || request.host.phone || request.host.email)
+  const saveOps = async () => {
+    if (await run(() => onUpdate({ ...request, ...opsToRequest(ops), adminMemo: memo }))) setEditingOps(false)
+  }
+
+  /** 현재 상태에서 바꿀 수 있는 상태 버튼 */
+  const back = { label: '대기로 되돌리기', variant: 'outline' as const }
+  const actions = {
+    pending: [
+      { status: 'rejected', label: '거절', className: 'bg-[#868e96]' },
+      { status: 'approved', label: '승인', className: 'bg-[#2f9e44]' },
+    ],
+    approved: [
+      { status: 'pending', ...back },
+      { status: 'cancelled', label: '방문 취소', className: 'bg-[#868e96]' },
+      { status: 'completed', label: '방문 완료', className: 'bg-[#1c7ed6]' },
+    ],
+    completed: [{ status: 'approved', label: '승인으로 되돌리기', variant: 'outline' }],
+    rejected: [
+      { status: 'pending', ...back },
+      { status: 'approved', label: '승인', className: 'bg-[#2f9e44]' },
+    ],
+    cancelled: [
+      { status: 'pending', ...back },
+      { status: 'approved', label: '승인', className: 'bg-[#2f9e44]' },
+    ],
+  }[request.status] as { status: VisitStatus; label: string; className?: string; variant?: 'outline' }[]
 
   return (
     <Modal
@@ -149,6 +192,7 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
           <StatusBadge status={request.status} />
           <TourTag tour={request.tour} />
           <span>· {clientSegment(request)}</span>
+          {manual && <span className="border border-warm-300/70 px-1 font-mono text-[10px] text-warm-600">수기 등록</span>}
         </span>
       }
       onClose={onClose}
@@ -167,23 +211,31 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
         <p className="text-right text-sm text-warm-600">
           {tour.label} ({tour.duration})
           <br />
-          방문자 <b className="text-warm-800">{headcount}명</b>
+          방문 인원 <b className="text-warm-800">{headcount}</b>
         </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <div>
           <SectionTitle>담당자</SectionTitle>
-          <Row label="성함 · 직책">
-            {request.host.name} {request.host.title}
-          </Row>
-          <Row label="조직">{request.host.org}</Row>
-          <Row label="연락처">{request.host.phone}</Row>
-          <Row label="이메일">
-            <a href={`mailto:${request.host.email}`} className="underline decoration-warm-300 underline-offset-2">
-              {request.host.email}
-            </a>
-          </Row>
+          {hasHost || !manual ? (
+            <>
+              <Row label="성함 · 직책">
+                {request.host.name} {request.host.title}
+              </Row>
+              <Row label="조직">{request.host.org}</Row>
+              <Row label="연락처">{request.host.phone}</Row>
+              <Row label="이메일">
+                {request.host.email && (
+                  <a href={`mailto:${request.host.email}`} className="underline decoration-warm-300 underline-offset-2">
+                    {request.host.email}
+                  </a>
+                )}
+              </Row>
+            </>
+          ) : (
+            <p className="py-2 text-sm text-warm-600">기록된 담당자가 없습니다.</p>
+          )}
         </div>
         <div>
           <SectionTitle>방문 정보</SectionTitle>
@@ -201,33 +253,80 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
       </div>
 
       <div className="mt-6">
-        <SectionTitle>방문자 ({headcount}명)</SectionTitle>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] border-collapse text-[12px]">
-            <thead>
-              <tr className="bg-cream text-left font-mono text-[11px] text-warm-600">
-                {['성함', '직책', '조직명', '이메일', '차량번호', '직무'].map((head) => (
-                  <th key={head} className="border border-warm-300/40 px-2 py-1.5 font-semibold">
-                    {head}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {request.visitors.map((visitor, index) => (
-                <tr key={index}>
-                  <td className="border border-warm-300/40 px-2 py-1.5 font-semibold">{visitor.name}</td>
-                  <td className="border border-warm-300/40 px-2 py-1.5">{visitor.title}</td>
-                  <td className="border border-warm-300/40 px-2 py-1.5">{visitor.org}</td>
-                  <td className="border border-warm-300/40 px-2 py-1.5">{visitor.email}</td>
-                  <td className="border border-warm-300/40 px-2 py-1.5">{visitor.car || '-'}</td>
-                  <td className="border border-warm-300/40 px-2 py-1.5">{visitor.jobs.join(', ') || '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <SectionTitle
+          aside={
+            !editingOps && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOps(opsFromRequest(request))
+                  setEditingOps(true)
+                }}
+                className="font-mono text-[11px] font-semibold text-brand hover:underline"
+              >
+                기록 편집
+              </button>
+            )
+          }
+        >
+          운영 기록
+        </SectionTitle>
+        {editingOps ? (
+          <div className="border border-warm-300/50 bg-cream/40 p-4">
+            <OpsFields value={ops} onChange={setOps} />
+            <div className="mt-3 flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setEditingOps(false)}>
+                취소
+              </Button>
+              <Button size="sm" disabled={pending} onClick={() => void saveOps()}>
+                {pending ? '저장 중…' : '기록 저장'}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid gap-x-6 md:grid-cols-2">
+            <Row label="주요 인원">
+              {request.keyPersons && <span className="whitespace-pre-line">{request.keyPersons}</span>}
+            </Row>
+            <Row label="가이드">{request.guides && <span className="whitespace-pre-line">{request.guides}</span>}</Row>
+            <Row label="유관 부서">{request.departments?.join(', ')}</Row>
+            <Row label="후속 진행">
+              {request.followUp && <span className="whitespace-pre-line">{request.followUp}</span>}
+            </Row>
+          </div>
+        )}
       </div>
+
+      {request.visitors.length > 0 && (
+        <div className="mt-6">
+          <SectionTitle>방문자 ({headcount})</SectionTitle>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] border-collapse text-[12px]">
+              <thead>
+                <tr className="bg-cream text-left font-mono text-[11px] text-warm-600">
+                  {['성함', '직책', '조직명', '이메일', '차량번호', '직무'].map((head) => (
+                    <th key={head} className="border border-warm-300/40 px-2 py-1.5 font-semibold">
+                      {head}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {request.visitors.map((visitor, index) => (
+                  <tr key={index}>
+                    <td className="border border-warm-300/40 px-2 py-1.5 font-semibold">{visitor.name}</td>
+                    <td className="border border-warm-300/40 px-2 py-1.5">{visitor.title}</td>
+                    <td className="border border-warm-300/40 px-2 py-1.5">{visitor.org}</td>
+                    <td className="border border-warm-300/40 px-2 py-1.5">{visitor.email}</td>
+                    <td className="border border-warm-300/40 px-2 py-1.5">{visitor.car || '-'}</td>
+                    <td className="border border-warm-300/40 px-2 py-1.5">{visitor.jobs.join(', ') || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="mt-6">
         <SectionTitle
@@ -262,7 +361,7 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
           <p className="mt-1 text-[13px] text-warm-800">
             관리자 목록 · 통계 · 구글 시트(visit_requests)에서 모두 지워지며 <b>되돌릴 수 없습니다.</b>
             <br />
-            기록을 남기려면 삭제 대신 <b>거절</b>을 쓰세요. (거절 건도 통계에서는 제외됩니다)
+            기록을 남기려면 삭제 대신 <b>거절</b> 또는 <b>방문 취소</b>를 쓰세요. (둘 다 통계에서는 제외됩니다)
           </p>
           <div className="mt-3 flex justify-end gap-2">
             <Button variant="outline" size="sm" disabled={pending} onClick={() => setConfirmDelete(false)}>
@@ -300,31 +399,18 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
           </Button>
         </div>
         <div className="flex flex-wrap gap-2">
-          {request.status !== 'pending' && (
-            <Button variant="outline" size="sm" disabled={pending} onClick={() => run(() => onSetStatus(request.id, 'pending'))}>
-              대기로 되돌리기
-            </Button>
-          )}
-          {request.status !== 'rejected' && (
+          {actions.map((action) => (
             <Button
+              key={action.status}
               size="sm"
+              variant={action.variant}
               disabled={pending}
-              onClick={() => run(() => onSetStatus(request.id, 'rejected'))}
-              className="bg-[#868e96]"
+              onClick={() => run(() => onSetStatus(request.id, action.status))}
+              className={action.className}
             >
-              거절
+              {action.label}
             </Button>
-          )}
-          {request.status !== 'approved' && (
-            <Button
-              size="sm"
-              disabled={pending}
-              onClick={() => run(() => onSetStatus(request.id, 'approved'))}
-              className="bg-[#2f9e44]"
-            >
-              승인
-            </Button>
-          )}
+          ))}
         </div>
       </div>
     </Modal>

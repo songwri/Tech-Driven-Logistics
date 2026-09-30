@@ -1,9 +1,9 @@
-import { CheckCircle2, CircleDashed, XCircle } from 'lucide-react'
+import { Ban, CheckCheck, CheckCircle2, CircleDashed, XCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { STATUS_LABEL, TOUR_BY_ID, type TourType, type VisitStatus } from '@/lib/visit'
 import { STATUS_TONE } from './statusTone'
 
-const STATUS_ICON = { pending: CircleDashed, approved: CheckCircle2, rejected: XCircle }
+const STATUS_ICON = { pending: CircleDashed, approved: CheckCircle2, completed: CheckCheck, rejected: XCircle, cancelled: Ban }
 
 export function StatusBadge({ status, className }: { status: VisitStatus; className?: string }) {
   const Icon = STATUS_ICON[status]

@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { OPEN_WEEKDAYS, TOURS, TOUR_BY_ID, toDateKey, type VisitRequest } from '@/lib/visit'
+import { OPEN_WEEKDAYS, TOURS, TOUR_BY_ID, formatSlot, isCounted, toDateKey, type VisitRequest } from '@/lib/visit'
 import { STATUS_TONE } from './statusTone'
 import { StatusBadge } from './status'
 
@@ -83,6 +83,7 @@ export function AdminCalendar({ month, onMonthChange, requests, selectedDate, on
           <span className="hidden h-3 w-px bg-warm-300/60 sm:block" />
           <StatusBadge status="pending" />
           <StatusBadge status="approved" />
+          <StatusBadge status="completed" />
           <StatusBadge status="rejected" />
           <span className="inline-flex items-center gap-1">
             <Globe width={11} height={11} /> 외국어 투어
@@ -158,7 +159,7 @@ export function AdminCalendar({ month, onMonthChange, requests, selectedDate, on
                         key={request.id}
                         className={cn(
                           'h-2 w-2 rounded-full',
-                          request.status === 'rejected' && 'opacity-30',
+                          !isCounted(request.status) && 'opacity-30',
                           request.status === 'pending' && 'ring-2 ring-[#f59f00] ring-offset-1',
                         )}
                         style={{ background: TOUR_BY_ID[request.tour].color }}
@@ -175,14 +176,14 @@ export function AdminCalendar({ month, onMonthChange, requests, selectedDate, on
                         event.stopPropagation()
                         onOpen(request.id)
                       }}
-                      title={`${TOUR_BY_ID[request.tour].label} · ${request.slot} · ${request.company}`}
+                      title={`${TOUR_BY_ID[request.tour].label} · ${formatSlot(request.slot)} · ${request.company}`}
                       className={cn(
                         'flex w-full items-center gap-1 overflow-hidden border border-l-[3px] px-1 py-0.5 text-left text-[11px] leading-tight transition hover:brightness-95',
                         STATUS_TONE[request.status].chip,
                       )}
                       style={{ borderLeftColor: TOUR_BY_ID[request.tour].color }}
                     >
-                      <span className="shrink-0 font-mono text-[10px] opacity-80">{request.slot.slice(0, 5)}</span>
+                      <span className="shrink-0 font-mono text-[10px] opacity-80">{request.slot ? request.slot.slice(0, 5) : '미정'}</span>
                       <span className="truncate font-medium">{request.company}</span>
                       {request.language === 'foreign' && (
                         <Globe width={10} height={10} className="ml-auto shrink-0" aria-label="외국어 투어" />

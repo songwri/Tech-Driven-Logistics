@@ -10,6 +10,9 @@ import {
   TOURS,
   baseOption,
   clientSegment,
+  headcountOf,
+  isConfirmed,
+  isCounted,
   type VisitRequest,
 } from '@/lib/visit'
 import { ColumnChart, DonutChart, type Datum } from './charts'
@@ -21,6 +24,7 @@ const SEGMENTS = [
   { label: '고객 · 기존', color: '#4a3aa7' },
   { label: '고객 · 신규', color: '#e87ba4' },
   { label: '내부 방문', color: '#eda100' },
+  { label: '고객 · 미분류', color: '#adb5bd' },
 ]
 
 type Period = 'year' | 'month'
@@ -96,7 +100,7 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
   const basisRequests = useMemo(
     () =>
       requests.filter((request) =>
-        basis === 'approved' ? request.status === 'approved' : request.status !== 'rejected',
+        basis === 'approved' ? isConfirmed(request.status) : isCounted(request.status),
       ),
     [requests, basis],
   )
@@ -115,10 +119,10 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
   const previous = basisRequests.filter((request) => request.date.startsWith(previousPrefix))
 
   const allInPeriod = requests.filter((request) => request.date.startsWith(prefix))
-  const approved = allInPeriod.filter((request) => request.status === 'approved').length
-  const decided = allInPeriod.filter((request) => request.status !== 'pending').length
-  const visitors = scoped.reduce((sum, request) => sum + request.visitors.length, 0)
-  const previousVisitors = previous.reduce((sum, request) => sum + request.visitors.length, 0)
+  const approved = allInPeriod.filter((request) => isConfirmed(request.status)).length
+  const decided = allInPeriod.filter((request) => isConfirmed(request.status) || request.status === 'rejected').length
+  const visitors = scoped.reduce((sum, request) => sum + headcountOf(request), 0)
+  const previousVisitors = previous.reduce((sum, request) => sum + headcountOf(request), 0)
 
   const purposes = countBy(scoped, (request) => request.purposes.map(baseOption), [...PURPOSES, OTHER])
   const segments = SEGMENTS.map((segment) => ({
@@ -172,7 +176,7 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
       `TDL_visit_stats_${fileLabel}.xlsx`,
       buildStatsSheets({
         requests,
-        periodRequests: allInPeriod.filter((request) => request.status !== 'rejected'),
+        periodRequests: allInPeriod.filter((request) => isCounted(request.status)),
         scoped,
         year,
         years,
@@ -183,7 +187,7 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
 
   const kpis = [
     {
-      label: basis === 'approved' ? '승인 건수' : '신청 건수',
+      label: basis === 'approved' ? '승인·완료 건수' : '신청 건수',
       value: scoped.length,
       unit: '건',
       delta: scoped.length - previous.length,
@@ -246,8 +250,8 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
           value={basis}
           onChange={setBasis}
           options={[
-            { value: 'all', label: '전체 신청 (거절 제외)' },
-            { value: 'approved', label: '승인 건만' },
+            { value: 'all', label: '전체 (거절·취소 제외)' },
+            { value: 'approved', label: '승인·완료만' },
           ]}
         />
         <span className="ml-auto font-mono text-[11px] text-warm-600">방문일 기준 · {periodLabel}</span>
@@ -326,7 +330,7 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
           <div>
             <h3 className="text-[15px] font-bold text-warm-800">기간별 통계표</h3>
             <p className="font-mono text-[11px] text-warm-600">
-              거절 건은 통계에서 제외(거절 열만 참고 표시) · 열마다 값이 클수록 진하게 표시 · 엑셀에는 월별/연도별/항목별/예약 목록 시트가 함께 저장됩니다
+              거절 · 취소 건은 통계에서 제외(해당 열만 참고 표시) · 열마다 값이 클수록 진하게 표시 · 엑셀에는 월별/연도별/항목별/예약 목록 시트가 함께 저장됩니다
             </p>
           </div>
           <Segmented

@@ -20,7 +20,7 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-09-30.delete-request';
+var CODE_VERSION = '2026-09-30.legacy-import';
 
 var GUESTBOOK_SHEET = 'guestbook';
 var VISIT_SHEET = 'visit_requests';
@@ -43,9 +43,14 @@ var TOURS = {
     slots: ['10:00-11:00', '11:00-12:00', '13:00-14:00', '14:00-15:00', '15:00-16:00'],
   },
   lab: { label: 'TDL Lab 투어', slots: ['10:30-11:30', '14:00-15:00'] },
+  // 기존 방문 이력 · 관리자 수기 등록 전용 (예약 화면에서는 고를 수 없음). 시간 자유.
+  other: { label: '기타 방문', slots: [] },
 };
 
-var STATUS_TEXT = { pending: '대기', approved: '승인', rejected: '거절' };
+var STATUS_TEXT = { pending: '대기', approved: '승인', completed: '완료', rejected: '거절', cancelled: '취소' };
+var MAX_IMPORT = 500;
+/** 승인 · 완료: 성사된 방문 (시간대를 점유) */
+function isConfirmed_(status) { return status === 'approved' || status === 'completed'; }
 var PURPOSES = ['기존 고객사 Lock-in', '신규 영업', '교육', '투어'];
 
 var BRAND = '#a72b2b';
@@ -57,7 +62,7 @@ var VISIT_HEADERS = [
   'id', '신청일시', '상태', '투어', '방문일', '시간', '방문구분', '고객구분', '업체명', '업종',
   '방문목적', '담당자', '담당자직책', '담당자조직', '담당자연락처', '담당자이메일', '담당자의견',
   '방문인원', '방문자명단', '요청사항', '개인정보동의', '관리자메모', '토큰', '수정일시', '방문자JSON',
-  '투어언어', '외국어', '통역동반',
+  '투어언어', '외국어', '통역동반', '출처', '주요인원', '가이드', '유관부서', '후속진행',
 ];
 var BLOCKED_HEADERS = ['날짜', '시간대(비우면 종일)', '사유'];
 
@@ -255,7 +260,10 @@ function fromMinutes_(minutes) {
 
 /** 투어 한 건이 점유하는 공간·시간 구간 */
 function segmentsOf_(tour, date, slot) {
-  var range = String(slot).split('-');
+  var range = String(slot || '').split('-');
+  if (!range[0] || !range[1]) return []; // 시간 미정
+  // 기타 방문은 어느 공간을 쓰는지 모르므로 그 시간의 센터 · Lab 을 모두 막는다.
+  if (tour === 'other') return [{ date: date, resource: 'all', from: range[0], to: range[1] }];
   if (tour === 'combined') {
     var handoff = fromMinutes_(toMinutes_(range[0]) + 60);
     return [
@@ -290,7 +298,9 @@ function tourIdFromLabel_(value) {
 function statusFromText_(value) {
   var text = String(value == null ? '' : value).trim();
   if (text === '승인' || text === '확정' || text === 'approved') return 'approved';
-  if (text === '거절' || text === '취소' || text === 'rejected') return 'rejected';
+  if (text === '완료' || text === 'completed') return 'completed';
+  if (text === '거절' || text === 'rejected') return 'rejected';
+  if (text === '취소' || text === 'cancelled') return 'cancelled';
   return 'pending';
 }
 
@@ -344,7 +354,8 @@ function rowToRequest_(row, col) {
     date: normalizeDateKey_(get('방문일')),
     slot: normalizeSlot_(get('시간')),
     category: category,
-    clientType: category === 'external' ? (clientText.indexOf('신규') !== -1 ? 'new' : 'existing') : undefined,
+    clientType: category === 'external' && clientText
+      ? (clientText.indexOf('신규') !== -1 ? 'new' : 'existing') : undefined,
     language: foreign ? 'foreign' : 'ko',
     foreignLanguage: foreign ? String(get('외국어')) : '',
     interpreter: foreign && String(get('통역동반')).trim() === '동반',
@@ -363,7 +374,19 @@ function rowToRequest_(row, col) {
     note: String(get('요청사항')),
     consent: String(get('개인정보동의')).trim() !== '',
     adminMemo: String(get('관리자메모')),
+    source: String(get('출처')).trim() === '수기' ? 'manual' : 'web',
+    headcount: headcountFromCell_(get('방문인원')),
+    keyPersons: String(get('주요인원')),
+    guides: String(get('가이드')),
+    departments: splitList_(get('유관부서')),
+    followUp: String(get('후속진행')),
   };
+}
+
+function headcountFromCell_(value) {
+  var text = String(value == null ? '' : value).trim();
+  if (!/^\d+$/.test(text)) return undefined; // 비어 있거나 'TBD'
+  return Number(text);
 }
 
 /** '09:30-11:30' 형태로 정리 (시트가 시간을 Date 로 바꿔 놓은 경우 대비) */
@@ -403,7 +426,19 @@ function writeVisit_(rowNumber, request, extra) {
   var target = visitSheet_();
   var col = columns_(target.getRange(1, 1, 1, target.getLastColumn()).getValues());
   var values = target.getRange(rowNumber, 1, 1, target.getLastColumn()).getValues()[0];
+  fillVisitRow_(values, col, request, extra);
+
+  // 날짜·시간·연락처가 숫자/날짜로 자동 변환되지 않도록 텍스트 서식으로 기록한다.
+  var range = target.getRange(rowNumber, 1, 1, values.length);
+  range.setNumberFormat('@');
+  range.setValues([values]);
+}
+
+/** 예약 객체를 시트 한 행(values, 헤더 순서)에 채운다. */
+function fillVisitRow_(values, col, request, extra) {
   var set = function (name, value) { if (col[name] !== undefined) values[col[name]] = value; };
+  var visitors = request.visitors || [];
+  var hasHeadcount = typeof request.headcount === 'number';
 
   set('id', request.id);
   set('상태', STATUS_TEXT[request.status] || '대기');
@@ -411,7 +446,8 @@ function writeVisit_(rowNumber, request, extra) {
   set('방문일', request.date);
   set('시간', request.slot);
   set('방문구분', request.category === 'internal' ? '내부 방문' : '고객 방문');
-  set('고객구분', request.category === 'internal' ? '' : (request.clientType === 'new' ? '신규 고객사' : '기존 고객사'));
+  set('고객구분', request.category === 'internal' || !request.clientType ? ''
+    : (request.clientType === 'new' ? '신규 고객사' : '기존 고객사'));
   set('투어언어', request.language === 'foreign' ? '외국어' : '한국어');
   set('외국어', request.language === 'foreign' ? request.foreignLanguage : '');
   set('통역동반', request.language === 'foreign' ? (request.interpreter ? '동반' : '없음') : '');
@@ -424,18 +460,18 @@ function writeVisit_(rowNumber, request, extra) {
   set('담당자연락처', request.host.phone);
   set('담당자이메일', request.host.email);
   set('담당자의견', request.hostComment);
-  set('방문인원', request.visitors.length);
-  set('방문자명단', visitorsText_(request.visitors));
+  set('방문인원', visitors.length ? visitors.length : (hasHeadcount ? request.headcount : ''));
+  set('방문자명단', visitorsText_(visitors));
   set('요청사항', request.note);
   set('관리자메모', request.adminMemo || '');
   set('수정일시', new Date().toISOString());
-  set('방문자JSON', JSON.stringify(request.visitors));
+  set('방문자JSON', JSON.stringify(visitors));
+  set('출처', request.source === 'manual' ? '수기' : '웹');
+  set('주요인원', request.keyPersons || '');
+  set('가이드', request.guides || '');
+  set('유관부서', (request.departments || []).join(', '));
+  set('후속진행', request.followUp || '');
   for (var key in (extra || {})) set(key, extra[key]);
-
-  // 날짜·시간·연락처가 숫자/날짜로 자동 변환되지 않도록 텍스트 서식으로 기록한다.
-  var range = target.getRange(rowNumber, 1, 1, values.length);
-  range.setNumberFormat('@');
-  range.setValues([values]);
 }
 
 /** 승인된 예약과 blocked 시트에서 '신청 불가' 구간을 만든다. */
@@ -444,7 +480,7 @@ function busy_(excludeId) {
   var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
   var busy = [];
   readVisits_().forEach(function (request) {
-    if (request.status !== 'approved' || request.id === excludeId || request.date < today) return;
+    if (!isConfirmed_(request.status) || request.id === excludeId || request.date < today) return;
     busy = busy.concat(segmentsOf_(request.tour, request.date, request.slot));
   });
 
@@ -472,7 +508,7 @@ function optionalText_(value, max) {
 /** 예약 화면/관리자 수정 공통 검증. 깨끗한 요청 객체를 돌려준다. */
 function sanitizeVisit_(payload, requireConsent) {
   var tour = String(payload.tour || '');
-  if (!TOURS[tour]) throw new Error('투어 종류를 선택해 주세요.');
+  if (!TOURS[tour] || tour === 'other') throw new Error('투어 종류를 선택해 주세요.');
   var date = requireText_(payload.date, '방문 희망일', 10);
   var slot = requireText_(payload.slot, '방문 시간', 11);
   if (TOURS[tour].slots.indexOf(slot) === -1) throw new Error('선택한 투어에서 운영하지 않는 시간입니다.');
@@ -593,7 +629,8 @@ function changeStatus_(found, status) {
     // 잠금을 기다리는 사이 행 위치가 바뀌었을 수 있어 id 로 다시 찾는다.
     var current = findVisit_(function (item) { return item.id === found.id; });
     if (!current) throw new Error('예약을 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.');
-    if (status === 'approved' && isBusy_(current.tour, current.date, current.slot, busy_(current.id).busy)) {
+    if (isConfirmed_(status) && !isConfirmed_(current.status)
+      && isBusy_(current.tour, current.date, current.slot, busy_(current.id).busy)) {
       throw new Error('이미 승인된 다른 예약과 시간이 겹쳐 승인할 수 없습니다.');
     }
     current._previous = current.status;
@@ -601,8 +638,163 @@ function changeStatus_(found, status) {
     writeVisit_(current._row, current);
     return current;
   });
-  if (request._previous !== status && status !== 'pending') notifyHost_(request);
+  // 신청 담당자에게는 웹 예약의 승인 · 거절만 알린다. (완료 · 취소 · 수기 등록 건은 메일 없음)
+  var before = request._previous;
+  var notify = request.source !== 'manual' && (
+    (status === 'approved' && !isConfirmed_(before)) || (status === 'rejected' && before !== 'rejected'));
+  if (notify) notifyHost_(request);
   return request;
+}
+
+/* ------------------------------------------------- 수기 등록 · 이력 가져오기 */
+
+var TIME_RE_ = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/**
+ * 관리자 수기 등록 · 기존 방문 이력 검증. 웹 예약 규칙(월·수·금, 정해진 시간대, 방문자 명단 등)을 적용하지 않는다.
+ */
+function sanitizeManual_(payload) {
+  var tour = TOURS[payload.tour] ? String(payload.tour) : 'other';
+  var date = String(payload.date || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(new Date(date + 'T00:00:00').getTime())) {
+    throw new Error('방문일이 올바르지 않습니다. (예: 2026-09-07)');
+  }
+  var slot = String(payload.slot || '').replace(/\s/g, '');
+  if (slot) {
+    var range = slot.split('-');
+    if (range.length !== 2 || !TIME_RE_.test(range[0]) || !TIME_RE_.test(range[1]) || range[0] >= range[1]) {
+      throw new Error('시간이 올바르지 않습니다. (예: 10:00-11:30, 미정이면 비워 두세요)');
+    }
+  }
+  var status = STATUS_TEXT[payload.status] ? String(payload.status) : 'approved';
+  var category = payload.category === 'internal' ? 'internal' : 'external';
+  var language = payload.language === 'foreign' ? 'foreign' : 'ko';
+  var list = function (items, max) {
+    return (items || []).map(function (item) { return optionalText_(item, max).replace(/,/g, ' '); })
+      .filter(function (item) { return item; }).slice(0, 20);
+  };
+  var host = payload.host || {};
+  var visitors = (payload.visitors || []).slice(0, MAX_VISITORS).map(function (v) {
+    return {
+      name: optionalText_(v.name, 40), title: optionalText_(v.title, 40), org: optionalText_(v.org, 60),
+      email: optionalText_(v.email, 120), car: optionalText_(v.car, 20),
+      jobs: (v.jobs || []).map(function (job) { return optionalText_(job, 30); }).slice(0, 12),
+    };
+  }).filter(function (v) { return v.name; });
+  var headcount = Number(payload.headcount);
+  return {
+    tour: tour,
+    date: date,
+    slot: slot,
+    status: status,
+    source: 'manual',
+    category: category,
+    clientType: category === 'external' && (payload.clientType === 'new' || payload.clientType === 'existing')
+      ? payload.clientType : undefined,
+    language: language,
+    foreignLanguage: language === 'foreign' ? optionalText_(payload.foreignLanguage, 40).replace(/,/g, ' ') : '',
+    interpreter: language === 'foreign' && payload.interpreter === true,
+    company: requireText_(payload.company, '업체(기관)명', 80),
+    industries: category === 'external' ? list(payload.industries, 50) : [],
+    purposes: list(payload.purposes, 80),
+    host: {
+      name: optionalText_(host.name, 40), title: optionalText_(host.title, 40), org: optionalText_(host.org, 60),
+      phone: optionalText_(host.phone, 30), email: optionalText_(host.email, 120),
+    },
+    hostComment: optionalText_(payload.hostComment, 500),
+    visitors: visitors,
+    headcount: payload.headcount === '' || payload.headcount == null || !(headcount >= 0 && headcount <= 9999)
+      ? undefined : Math.floor(headcount),
+    note: optionalText_(payload.note, 1000),
+    consent: false,
+    adminMemo: optionalText_(payload.adminMemo, 1000),
+    keyPersons: optionalText_(payload.keyPersons, 1000),
+    guides: optionalText_(payload.guides, 1000),
+    departments: list(payload.departments, 60),
+    followUp: optionalText_(payload.followUp, 2000),
+  };
+}
+
+/** 운영 기록 필드 (웹 예약에도 방문 후 기록할 수 있다) */
+function applyOpsFields_(target, payload) {
+  target.keyPersons = optionalText_(payload.keyPersons, 1000);
+  target.guides = optionalText_(payload.guides, 1000);
+  target.departments = (payload.departments || []).map(function (item) { return optionalText_(item, 60).replace(/,/g, ' '); })
+    .filter(function (item) { return item; }).slice(0, 20);
+  target.followUp = optionalText_(payload.followUp, 2000);
+  return target;
+}
+
+/** 같은 방문을 두 번 가져오지 않도록: 날짜 + 업체명 + 시간 */
+function visitKey_(request) {
+  return [request.date, String(request.company).replace(/\s/g, '').toLowerCase(), request.slot].join('|');
+}
+
+/** 여러 건을 한 번에 시트 끝에 기록한다 (잠금 안에서 호출). */
+function appendVisits_(requests) {
+  if (!requests.length) return;
+  var target = visitSheet_();
+  var header = target.getRange(1, 1, 1, Math.max(target.getLastColumn(), VISIT_HEADERS.length)).getValues();
+  var col = columns_(header);
+  var width = header[0].length;
+  var now = new Date().toISOString();
+  var rows = requests.map(function (request) {
+    var values = [];
+    for (var i = 0; i < width; i++) values.push('');
+    fillVisitRow_(values, col, request, { '신청일시': request.createdAt || now });
+    return values;
+  });
+  var start = target.getLastRow() + 1;
+  var needed = start + rows.length - 1 - target.getMaxRows();
+  if (needed > 0) target.insertRowsAfter(target.getMaxRows(), needed);
+  var range = target.getRange(start, 1, rows.length, width);
+  range.setNumberFormat('@');
+  range.setValues(rows);
+  SpreadsheetApp.flush();
+}
+
+function createManual_(payload) {
+  var request = sanitizeManual_(payload || {});
+  return withLock_(function () {
+    if (isConfirmed_(request.status) && isBusy_(request.tour, request.date, request.slot, busy_().busy)) {
+      throw new Error('이미 승인된 다른 예약과 시간이 겹칩니다. 시간을 확인해 주세요.');
+    }
+    request.id = Utilities.getUuid();
+    request.createdAt = new Date().toISOString();
+    appendVisits_([request]);
+    return { request: request };
+  });
+}
+
+/** 기존 방문 이력 일괄 가져오기. 이미 있는 방문(날짜+업체+시간)은 건너뛴다. */
+function importManual_(items) {
+  if (!Array.isArray(items) || items.length === 0) throw new Error('가져올 방문 기록이 없습니다.');
+  if (items.length > MAX_IMPORT) throw new Error('한 번에 ' + MAX_IMPORT + '건까지 가져올 수 있습니다.');
+  return withLock_(function () {
+    var seen = {};
+    readVisits_().forEach(function (item) { seen[visitKey_(item)] = true; });
+    var created = [];
+    var skipped = [];
+    var now = new Date().toISOString();
+    items.forEach(function (item, index) {
+      try {
+        var request = sanitizeManual_(item || {});
+        var key = visitKey_(request);
+        if (seen[key]) {
+          skipped.push({ index: index, reason: '이미 등록된 방문' });
+          return;
+        }
+        seen[key] = true;
+        request.id = Utilities.getUuid();
+        request.createdAt = now;
+        created.push(request);
+      } catch (error) {
+        skipped.push({ index: index, reason: String(error.message || error) });
+      }
+    });
+    appendVisits_(created);
+    return { created: created, skipped: skipped };
+  });
 }
 
 function findVisit_(predicate) {
@@ -626,6 +818,8 @@ function admin_(payload) {
   }
 
   if (payload.action === 'health') return health_();
+  if (payload.action === 'create') return createManual_(payload.request);
+  if (payload.action === 'import') return importManual_(payload.requests);
 
   if (payload.action === 'delete') {
     // 예약을 시트에서 완전히 지운다 (되돌릴 수 없음). 잠금 안에서 id 로 다시 찾아 그 행만 삭제.
@@ -648,20 +842,25 @@ function admin_(payload) {
   }
 
   if (payload.action === 'update') {
-    var next = sanitizeVisit_(payload.request || {}, false);
+    var input = payload.request || {};
+    // 수기 등록 건은 완화된 규칙, 웹 예약은 예약 화면과 같은 규칙으로 검사한다.
+    var next = request.source === 'manual' ? sanitizeManual_(input) : sanitizeVisit_(input, false);
+    applyOpsFields_(next, input);
+    next.source = request.source;
+    next.consent = request.consent;
     next.id = request.id;
-    next.status = request.status;
     next.createdAt = request.createdAt;
-    next.adminMemo = optionalText_((payload.request || {}).adminMemo, 500);
+    next.adminMemo = optionalText_(input.adminMemo, 1000);
     return withLock_(function () {
       var current = findVisit_(function (item) { return item.id === request.id; });
       if (!current) throw new Error('예약을 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.');
       next.status = current.status;
       next._row = current._row;
-      if (next.status === 'approved' && isBusy_(next.tour, next.date, next.slot, busy_(next.id).busy)) {
+      if (isConfirmed_(next.status) && isBusy_(next.tour, next.date, next.slot, busy_(next.id).busy)) {
         throw new Error('변경한 일정이 이미 승인된 다른 예약과 겹칩니다.');
       }
       writeVisit_(next._row, next);
+      delete next._row;
       return { request: publicRequest_(next) };
     });
   }

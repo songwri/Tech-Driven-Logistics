@@ -1,16 +1,18 @@
 import { useMemo, useState } from 'react'
-import { BarChart3, CalendarRange, LogOut, RefreshCw, RotateCcw, X } from 'lucide-react'
+import { BarChart3, CalendarRange, FileInput, LogOut, Plus, RefreshCw, RotateCcw, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/ui/Logo'
 import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Field'
-import { formatDateShort, toDateKey, type VisitStatus } from '@/lib/visit'
+import { formatDateShort, headcountOf, isConfirmed, isCounted, toDateKey, type VisitStatus } from '@/lib/visit'
 import { useAdminData } from './useAdminData'
 import { AdminCalendar } from './AdminCalendar'
 import { RequestTable, type StatusFilter } from './RequestTable'
 import { RequestModal } from './RequestModal'
 import { StatsView } from './StatsView'
 import { DiagnoseButton } from './DiagnosePanel'
+import { ManualVisitModal } from './ManualVisitModal'
+import { ImportModal } from './ImportModal'
 
 type Tab = 'dashboard' | 'stats'
 
@@ -90,6 +92,7 @@ export default function AdminApp() {
   const [notice, setNotice] = useState<string | null>(null)
   const [scope, setScope] = useState<'month' | 'upcoming' | 'all'>('upcoming')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [dialog, setDialog] = useState<'manual' | 'import' | null>(null)
 
   /** 요약 카드를 누르면 해당 조건으로 아래 목록을 바로 보여준다. */
   const focusList = (nextScope: 'month' | 'upcoming' | 'all', nextStatus: StatusFilter) => {
@@ -106,6 +109,7 @@ export default function AdminApp() {
   const summary = useMemo(() => {
     const inMonth = requests.filter((request) => request.date.startsWith(monthPrefix))
     const upcomingApproved = requests.filter((request) => request.status === 'approved' && request.date >= today)
+    const counted = inMonth.filter((request) => isCounted(request.status))
     return [
       {
         label: '승인 대기',
@@ -120,23 +124,23 @@ export default function AdminApp() {
         value: upcomingApproved.length,
         unit: '건',
         accent: 'text-[#2b8a3e]',
-        hint: `예정 인원 ${upcomingApproved.reduce((sum, request) => sum + request.visitors.length, 0)}명`,
+        hint: `예정 인원 ${upcomingApproved.reduce((sum, request) => sum + headcountOf(request), 0)}명`,
         focus: ['upcoming', 'approved'] as const,
       },
       {
         label: `${month.getMonth() + 1}월 신청`,
-        value: inMonth.filter((request) => request.status !== 'rejected').length,
+        value: counted.length,
         unit: '건',
         accent: 'text-warm-800',
-        hint: `승인 ${inMonth.filter((request) => request.status === 'approved').length} · 거절 ${inMonth.filter((request) => request.status === 'rejected').length}건은 제외`,
+        hint: `승인·완료 ${counted.filter((request) => isConfirmed(request.status)).length} · 거절·취소 ${inMonth.length - counted.length}건은 제외`,
         focus: ['month', 'all'] as const,
       },
       {
         label: `${month.getMonth() + 1}월 방문 인원`,
-        value: inMonth.filter((request) => request.status === 'approved').reduce((sum, request) => sum + request.visitors.length, 0),
+        value: counted.filter((request) => isConfirmed(request.status)).reduce((sum, request) => sum + headcountOf(request), 0),
         unit: '명',
         accent: 'text-warm-800',
-        hint: '승인 건 기준',
+        hint: '승인 · 완료 기준',
         focus: ['month', 'approved'] as const,
       },
     ]
@@ -304,7 +308,25 @@ export default function AdminApp() {
 
               <section id="request-list" className="scroll-mt-4">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-lg font-bold text-warm-800">예약 요청 관리</h2>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h2 className="text-lg font-bold text-warm-800">예약 요청 관리</h2>
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setDialog('manual')}
+                        className="inline-flex items-center gap-1 border border-warm-300/60 bg-white px-2.5 py-1.5 text-[12px] font-semibold text-warm-600 transition hover:border-warm-800 hover:text-warm-800"
+                      >
+                        <Plus width={13} height={13} /> 수기 등록
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDialog('import')}
+                        className="inline-flex items-center gap-1 border border-warm-300/60 bg-white px-2.5 py-1.5 text-[12px] font-semibold text-warm-600 transition hover:border-warm-800 hover:text-warm-800"
+                      >
+                        <FileInput width={13} height={13} /> 기존 이력 가져오기
+                      </button>
+                    </div>
+                  </div>
                   <div className="flex flex-wrap items-center gap-2">
                     {selectedDate ? (
                       <button
@@ -364,6 +386,19 @@ export default function AdminApp() {
             <StatsView requests={requests} />
           )}
         </main>
+      )}
+
+      {dialog === 'manual' && (
+        <ManualVisitModal
+          onClose={() => setDialog(null)}
+          onSubmit={async (input) => {
+            const created = await data.create(input)
+            setNotice(`${formatDateShort(created.date)} ${created.company} 방문을 등록했습니다.`)
+          }}
+        />
+      )}
+      {dialog === 'import' && (
+        <ImportModal requests={requests} onClose={() => setDialog(null)} onImport={data.importMany} />
       )}
 
       {openRequest && (

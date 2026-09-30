@@ -7,7 +7,7 @@ import {
   CLOSED_WEEKDAYS,
   MIN_LEAD_DAYS,
   earliestBookableDate,
-  TOURS,
+  BOOKABLE_TOURS,
   TOUR_BY_ID,
   formatDateLong,
   formatSlot,
@@ -64,7 +64,7 @@ export function SchedulePicker({
       <div>
         <FieldLabel required>투어 종류</FieldLabel>
         <div className="mt-1.5 grid gap-1.5" role="radiogroup">
-          {TOURS.map((item, index) => {
+          {BOOKABLE_TOURS.map((item, index) => {
             const active = item.id === tour
             return (
               <button
