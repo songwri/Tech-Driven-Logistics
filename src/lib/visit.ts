@@ -4,8 +4,12 @@
  * (apps-script/Code.gs 의 TOURS 정의와 값이 같아야 합니다.)
  */
 
-export type TourType = 'combined' | 'center' | 'lab'
-export type VisitStatus = 'pending' | 'approved' | 'rejected'
+/** other: 기존 방문 이력 · 수기 등록처럼 정해진 투어 시간표 밖의 방문 (웹 예약에서는 선택 불가) */
+export type TourType = 'combined' | 'center' | 'lab' | 'other'
+/** completed: 방문 완료 / cancelled: 일정 취소. 거절 · 취소는 통계에서 제외한다. */
+export type VisitStatus = 'pending' | 'approved' | 'completed' | 'rejected' | 'cancelled'
+/** web: 예약 페이지 신청 / manual: 관리자 수기 등록 · 기존 이력 가져오기 */
+export type VisitSource = 'web' | 'manual'
 export type VisitCategory = 'internal' | 'external'
 export type ClientType = 'existing' | 'new'
 export type TourLanguage = 'ko' | 'foreign'
@@ -58,7 +62,19 @@ export const TOURS: TourDefinition[] = [
     slots: ['10:00-11:00', '11:00-12:00', '13:00-14:00', '14:00-15:00', '15:00-16:00'],
     color: '#eb6834',
   },
+  {
+    id: 'other',
+    label: '기타 방문',
+    short: '기타',
+    description: '수기 등록 · 기존 이력',
+    duration: '시간 자유',
+    slots: [],
+    color: '#8a8f98',
+  },
 ]
+
+/** 예약 페이지에서 고를 수 있는 투어 (기타 방문 제외) */
+export const BOOKABLE_TOURS = TOURS.filter((tour) => tour.id !== 'other')
 
 export const TOUR_BY_ID = Object.fromEntries(TOURS.map((tour) => [tour.id, tour])) as Record<
   TourType,
@@ -72,8 +88,15 @@ export const CLOSED_WEEKDAYS = [0, 2, 4, 6]
 export const STATUS_LABEL: Record<VisitStatus, string> = {
   pending: '대기중',
   approved: '승인됨',
+  completed: '완료',
   rejected: '거절됨',
+  cancelled: '취소됨',
 }
+
+/** 통계에 넣는 상태 (거절 · 취소 제외) */
+export const isCounted = (status: VisitStatus) => status !== 'rejected' && status !== 'cancelled'
+/** 성사된 방문 (승인 · 완료). 시간대를 점유하고 방문 인원 통계에 들어간다. */
+export const isConfirmed = (status: VisitStatus) => status === 'approved' || status === 'completed'
 
 export const CATEGORY_LABEL: Record<VisitCategory, string> = {
   internal: '내부 방문',
@@ -178,6 +201,28 @@ export interface VisitRequest extends VisitDraft {
   status: VisitStatus
   createdAt: string
   adminMemo: string
+  /** 없으면 'web' */
+  source?: VisitSource
+  /** 방문 인원수 (방문자 명단이 없는 수기 기록용). 없으면 명단 인원 */
+  headcount?: number
+  /** 주요 인원 (예: '홍길동 상무, 김철수 이사') */
+  keyPersons?: string
+  /** 안내 가이드 (줄바꿈 구분) */
+  guides?: string
+  /** 유관 부서 */
+  departments?: string[]
+  /** 후속 진행 현황 */
+  followUp?: string
+}
+
+/** 방문 인원: 명단이 있으면 명단 인원, 없으면 기록된 인원수 */
+export function headcountOf(request: Pick<VisitRequest, 'visitors' | 'headcount'>) {
+  return request.visitors.length > 0 ? request.visitors.length : (request.headcount ?? 0)
+}
+
+/** '6명' / 인원 미정인 수기 기록은 '미정' */
+export function headcountLabel(request: Pick<VisitRequest, 'visitors' | 'headcount'>) {
+  return request.visitors.length === 0 && request.headcount == null ? '미정' : `${headcountOf(request)}명`
 }
 
 /** 확정된 예약 또는 휴무가 점유하는 구간 (개인정보 없음). */
@@ -220,7 +265,7 @@ export function formatDateLong(key: string) {
 }
 
 export function formatSlot(slot: string) {
-  return slot.replace('-', ' – ')
+  return slot ? slot.replace('-', ' – ') : '시간 미정'
 }
 
 /* ------------------------------------------------------- 중복 판정 */
@@ -237,6 +282,9 @@ function fromMinutes(minutes: number) {
 /** 투어 한 건이 어떤 공간을 언제 쓰는지. 종합 투어는 센터 1시간 → Lab 순서입니다. */
 export function segmentsOf(tour: TourType, date: string, slot: string): BusySegment[] {
   const [from, to] = slot.split('-')
+  if (!from || !to) return [] // 시간 미정
+  // 기타 방문(수기 등록)은 어느 공간을 쓰는지 모르므로 그 시간의 센터 · Lab 을 모두 막는다.
+  if (tour === 'other') return [{ date, resource: 'all', from, to }]
   if (tour === 'combined') {
     const handoff = fromMinutes(toMinutes(from) + 60)
     return [
@@ -261,7 +309,7 @@ export function isSlotBusy(tour: TourType, date: string, slot: string, busy: Bus
 /** 승인된 예약들이 점유한 구간 (관리자 화면에서 승인 전 중복 확인용). */
 export function busyFromRequests(requests: VisitRequest[], excludeId?: string) {
   return requests
-    .filter((request) => request.status === 'approved' && request.id !== excludeId)
+    .filter((request) => isConfirmed(request.status) && request.id !== excludeId)
     .flatMap((request) => segmentsOf(request.tour, request.date, request.slot))
 }
 
@@ -283,6 +331,7 @@ export function languageSummary(request: Pick<VisitDraft, 'language' | 'foreignL
 
 export function clientSegment(request: Pick<VisitDraft, 'category' | 'clientType'>) {
   if (request.category === 'internal') return '내부 방문'
+  if (!request.clientType) return '고객 · 미분류' // 기존 방문 이력처럼 신규/기존 구분이 없는 기록
   return request.clientType === 'new' ? '고객 · 신규' : '고객 · 기존'
 }
 

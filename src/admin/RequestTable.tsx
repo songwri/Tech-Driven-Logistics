@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Check, Globe, Search, X } from 'lucide-react'
+import { Check, CheckCheck, Globe, Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   STATUS_LABEL,
@@ -7,6 +7,9 @@ import {
   clientSegment,
   formatDateShort,
   formatSlot,
+  headcountLabel,
+  isCounted,
+  toDateKey,
   languageSummary,
   type TourType,
   type VisitRequest,
@@ -27,7 +30,16 @@ interface RequestTableProps {
 }
 
 export type StatusFilter = 'all' | VisitStatus
-const STATUS_FILTERS: StatusFilter[] = ['all', 'pending', 'approved', 'rejected']
+const STATUS_FILTERS: StatusFilter[] = ['all', 'pending', 'approved', 'completed', 'rejected', 'cancelled']
+
+/** 관리자 수기 등록 · 기존 이력 가져오기로 들어온 기록 표시 */
+function ManualTag() {
+  return (
+    <span className="ml-1.5 border border-warm-300/70 px-1 py-px align-middle font-mono text-[10px] font-normal text-warm-600">
+      수기
+    </span>
+  )
+}
 
 export function RequestTable({
   requests,
@@ -42,7 +54,14 @@ export function RequestTable({
   const [query, setQuery] = useState('')
 
   const counts = useMemo(() => {
-    const result: Record<StatusFilter, number> = { all: requests.length, pending: 0, approved: 0, rejected: 0 }
+    const result: Record<StatusFilter, number> = {
+      all: requests.length,
+      pending: 0,
+      approved: 0,
+      completed: 0,
+      rejected: 0,
+      cancelled: 0,
+    }
     for (const request of requests) result[request.status] += 1
     return result
   }, [requests])
@@ -55,13 +74,23 @@ export function RequestTable({
       .filter(
         (request) =>
           !needle ||
-          [request.company, request.host.name, request.host.org, ...request.visitors.map((visitor) => visitor.name)]
+          [
+            request.company,
+            request.host.name,
+            request.host.org,
+            ...request.visitors.map((visitor) => visitor.name),
+            ...request.purposes,
+            request.keyPersons ?? '',
+            request.guides ?? '',
+            ...(request.departments ?? []),
+          ]
             .join(' ')
             .toLowerCase()
             .includes(needle),
       )
       .sort((a, b) => (a.date + a.slot).localeCompare(b.date + b.slot))
   }, [requests, status, tour, query])
+  const today = toDateKey(new Date())
 
   return (
     <div className="border border-warm-300/50 bg-white">
@@ -106,7 +135,7 @@ export function RequestTable({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="업체명 · 담당자 · 방문자 검색"
+            placeholder="업체 · 담당자 · 가이드 · 부서 검색"
             className="w-48 bg-transparent text-[13px] text-warm-800 outline-none placeholder:text-warm-300"
           />
         </label>
@@ -135,14 +164,17 @@ export function RequestTable({
                 <p className="text-[13px] font-bold">
                   {formatDateShort(request.date)} <span className="font-mono font-normal">{formatSlot(request.slot)}</span>
                 </p>
-                <p className="mt-0.5 truncate text-[14px] font-semibold">{request.company}</p>
+                <p className="mt-0.5 truncate text-[14px] font-semibold">
+                  {request.company}
+                  {request.source === 'manual' && <ManualTag />}
+                </p>
               </div>
               <StatusBadge status={request.status} />
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
               <TourTag tour={request.tour} />
               <span>{clientSegment(request)}</span>
-              <span>{request.visitors.length}명</span>
+              <span>{headcountLabel(request)}</span>
               {request.language === 'foreign' && (
                 <span className="inline-flex items-center gap-1 font-semibold">
                   <Globe width={12} height={12} /> {languageSummary(request)}
@@ -211,7 +243,7 @@ export function RequestTable({
                 <td className="whitespace-nowrap py-2.5 pl-3 pr-2 font-semibold">{formatDateShort(request.date)}</td>
                 <td className="whitespace-nowrap px-2 py-2.5 font-mono text-[12px]">{formatSlot(request.slot)}</td>
                 <td className="px-2 py-2.5">
-                  <TourTag tour={request.tour} className={request.status === 'rejected' ? 'opacity-60' : undefined} />
+                  <TourTag tour={request.tour} className={isCounted(request.status) ? undefined : 'opacity-60'} />
                 </td>
                 <td className="whitespace-nowrap px-2 py-2.5">{clientSegment(request)}</td>
                 <td className="whitespace-nowrap px-2 py-2.5 text-[12px]">
@@ -224,12 +256,15 @@ export function RequestTable({
                     <span className="opacity-60">한국어</span>
                   )}
                 </td>
-                <td className="max-w-56 truncate px-2 py-2.5 font-semibold">{request.company}</td>
+                <td className="max-w-56 truncate px-2 py-2.5 font-semibold">
+                  {request.company}
+                  {request.source === 'manual' && <ManualTag />}
+                </td>
                 <td className="whitespace-nowrap px-2 py-2.5">
-                  {request.host.name}
+                  {request.host.name || <span className="opacity-40">-</span>}
                   <span className="ml-1 text-[11px] opacity-60">{request.host.title}</span>
                 </td>
-                <td className="whitespace-nowrap px-2 py-2.5 text-right font-mono">{request.visitors.length}명</td>
+                <td className="whitespace-nowrap px-2 py-2.5 text-right font-mono">{headcountLabel(request)}</td>
                 <td className="px-2 py-2.5">
                   <StatusBadge status={request.status} />
                 </td>
@@ -253,6 +288,16 @@ export function RequestTable({
                         <X width={12} height={12} /> 거절
                       </button>
                     </span>
+                  ) : request.status === 'approved' && request.date <= today ? (
+                    <button
+                      type="button"
+                      disabled={busyId === request.id}
+                      onClick={() => onSetStatus(request.id, 'completed')}
+                      title="방문을 마친 건을 완료로 표시합니다"
+                      className="inline-flex items-center gap-1 border border-[#1c7ed6] bg-white px-2 py-1 text-[12px] font-semibold text-[#1864ab] transition hover:bg-[#1c7ed6] hover:text-white disabled:opacity-50"
+                    >
+                      <CheckCheck width={12} height={12} /> 완료
+                    </button>
                   ) : (
                     <button
                       type="button"

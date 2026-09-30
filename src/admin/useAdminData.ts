@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { adminRequest, isLiveBackend } from '@/lib/labApi'
-import { busyFromRequests, isSlotBusy, type VisitRequest, type VisitStatus } from '@/lib/visit'
+import { busyFromRequests, isConfirmed, isSlotBusy, toDateKey, type VisitRequest, type VisitStatus } from '@/lib/visit'
 import { buildSampleRequests } from './sampleData'
+import { visitKey, type ManualInput } from './importLegacy'
 
 export interface ServerHealth {
   version: string
@@ -36,6 +37,25 @@ function writeDemo(requests: VisitRequest[]) {
   } catch {
     /* 저장 불가 — 새로고침 시 초기화될 뿐 */
   }
+}
+
+export interface ImportResult {
+  created: VisitRequest[]
+  skipped: { index: number; reason: string }[]
+}
+
+const newId = () =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`
+
+/**
+ * 시간이 겹치는지는 오늘 이후 일정만 본다. 지난 이력끼리 겹치는 건(기존 방문 기록) 막지 않는다.
+ * 서버(busy_)도 지난 날짜를 빼고 판단한다.
+ */
+function conflicts(request: Pick<VisitRequest, 'tour' | 'date' | 'slot' | 'status' | 'id'>, all: VisitRequest[]) {
+  if (!isConfirmed(request.status) || request.date < toDateKey(new Date())) return false
+  return isSlotBusy(request.tour, request.date, request.slot, busyFromRequests(all, request.id))
 }
 
 export function readSavedKey() {
@@ -123,7 +143,7 @@ export function useAdminData() {
     async (id: string, status: VisitStatus) => {
       const target = requests.find((request) => request.id === id)
       if (!target) return
-      if (status === 'approved' && isSlotBusy(target.tour, target.date, target.slot, busyFromRequests(requests, id))) {
+      if (!isConfirmed(target.status) && conflicts({ ...target, status }, requests)) {
         throw new Error('이미 승인된 다른 예약과 시간이 겹쳐 승인할 수 없습니다. 일정을 먼저 조정해 주세요.')
       }
       if (!isLiveBackend) {
@@ -138,7 +158,7 @@ export function useAdminData() {
 
   const update = useCallback(
     async (next: VisitRequest) => {
-      if (next.status === 'approved' && isSlotBusy(next.tour, next.date, next.slot, busyFromRequests(requests, next.id))) {
+      if (conflicts(next, requests)) {
         throw new Error('변경한 일정이 이미 승인된 다른 예약과 겹칩니다.')
       }
       if (!isLiveBackend) {
@@ -162,6 +182,54 @@ export function useAdminData() {
       })
     },
     [key],
+  )
+
+  /** 관리자 수기 등록 (웹 예약 규칙 밖의 방문: 화 · 목, 자유 시간, 명단 없음 등) */
+  const create = useCallback(
+    async (input: ManualInput) => {
+      if (conflicts({ ...input, id: '' }, requests)) {
+        throw new Error('이미 승인된 다른 예약과 시간이 겹칩니다. 시간을 확인해 주세요.')
+      }
+      const created = isLiveBackend
+        ? (await adminRequest<{ request: VisitRequest }>(key, 'create', { request: input })).request
+        : { ...input, source: 'manual' as const, id: newId(), createdAt: new Date().toISOString() }
+      setRequests((current) => {
+        const next = [...current, created]
+        if (!isLiveBackend) writeDemo(next)
+        return next
+      })
+      return created
+    },
+    [key, requests],
+  )
+
+  /** 기존 방문 이력 일괄 가져오기. 이미 있는 방문(날짜 + 업체 + 시간)은 건너뛴다. */
+  const importMany = useCallback(
+    async (inputs: ManualInput[]): Promise<ImportResult> => {
+      let result: ImportResult
+      if (isLiveBackend) {
+        result = await adminRequest<ImportResult>(key, 'import', { requests: inputs })
+      } else {
+        const seen = new Set(requests.map(visitKey))
+        const now = new Date().toISOString()
+        result = { created: [], skipped: [] }
+        inputs.forEach((input, index) => {
+          if (seen.has(visitKey(input))) {
+            result.skipped.push({ index, reason: '이미 등록된 방문' })
+            return
+          }
+          seen.add(visitKey(input))
+          result.created.push({ ...input, source: 'manual', id: newId(), createdAt: now })
+        })
+      }
+      setRequests((current) => {
+        const next = [...current, ...result.created]
+        if (!isLiveBackend) writeDemo(next)
+        return next
+      })
+      return result
+    },
+    [key, requests],
   )
 
   const resetDemo = useCallback(() => {
@@ -193,5 +261,7 @@ export function useAdminData() {
     resetDemo,
     diagnose,
     remove,
+    create,
+    importMany,
   } as const
 }

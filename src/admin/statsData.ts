@@ -9,6 +9,9 @@ import {
   baseOption,
   clientSegment,
   formatDateShort,
+  headcountOf,
+  isConfirmed,
+  isCounted,
   languageSummary,
   type VisitRequest,
 } from '@/lib/visit'
@@ -19,17 +22,22 @@ export interface PeriodRow {
   label: string
   total: number
   pending: number
+  /** 승인(예정) */
   approved: number
+  completed: number
   rejected: number
-  /** 처리(승인+거절) 대비 승인 비율, 0~1 */
+  cancelled: number
+  /** 처리(승인·완료+거절) 대비 승인 비율, 0~1 */
   approvalRate: number | null
   visitors: number
   combined: number
   center: number
   lab: number
+  other: number
   internal: number
   existing: number
   newClient: number
+  unclassified: number
   korean: number
   foreign: number
   interpreter: number
@@ -45,18 +53,22 @@ export interface MetricColumn {
 }
 
 export const METRIC_COLUMNS: MetricColumn[] = [
-  { key: 'total', label: '신청(거절 제외)', group: '처리 현황' },
+  { key: 'total', label: '신청(거절·취소 제외)', group: '처리 현황' },
   { key: 'pending', label: '대기', group: '처리 현황' },
   { key: 'approved', label: '승인', group: '처리 현황' },
+  { key: 'completed', label: '완료', group: '처리 현황' },
   { key: 'rejected', label: '거절', group: '처리 현황' },
+  { key: 'cancelled', label: '취소', group: '처리 현황' },
   { key: 'approvalRate', label: '승인률', group: '처리 현황', percent: true },
-  { key: 'visitors', label: '방문 인원(승인)', group: '처리 현황' },
+  { key: 'visitors', label: '방문 인원(승인·완료)', group: '처리 현황' },
   { key: 'combined', label: '종합', group: '투어 종류' },
   { key: 'lab', label: 'Lab', group: '투어 종류' },
   { key: 'center', label: '센터', group: '투어 종류' },
+  { key: 'other', label: '기타', group: '투어 종류' },
   { key: 'internal', label: '내부 방문', group: '방문 유형' },
   { key: 'existing', label: '고객·기존', group: '방문 유형' },
   { key: 'newClient', label: '고객·신규', group: '방문 유형' },
+  { key: 'unclassified', label: '고객·미분류', group: '방문 유형' },
   { key: 'korean', label: '한국어', group: '투어 언어' },
   { key: 'foreign', label: '외국어', group: '투어 언어' },
   { key: 'interpreter', label: '통역 동반', group: '투어 언어' },
@@ -68,23 +80,28 @@ export const METRIC_COLUMNS: MetricColumn[] = [
  */
 export function summarize(label: string, all: VisitRequest[]): PeriodRow {
   const rejected = all.filter((request) => request.status === 'rejected').length
-  const requests = all.filter((request) => request.status !== 'rejected')
+  const cancelled = all.filter((request) => request.status === 'cancelled').length
+  const requests = all.filter((request) => isCounted(request.status))
   const count = (test: (request: VisitRequest) => boolean) => requests.filter(test).length
-  const approvedList = requests.filter((request) => request.status === 'approved')
+  const approvedList = requests.filter((request) => isConfirmed(request.status))
   return {
     label,
     total: requests.length,
     pending: count((request) => request.status === 'pending'),
-    approved: approvedList.length,
+    approved: count((request) => request.status === 'approved'),
+    completed: count((request) => request.status === 'completed'),
     rejected,
+    cancelled,
     approvalRate: approvedList.length + rejected > 0 ? approvedList.length / (approvedList.length + rejected) : null,
-    visitors: approvedList.reduce((sum, request) => sum + request.visitors.length, 0),
+    visitors: approvedList.reduce((sum, request) => sum + headcountOf(request), 0),
     combined: count((request) => request.tour === 'combined'),
     center: count((request) => request.tour === 'center'),
     lab: count((request) => request.tour === 'lab'),
+    other: count((request) => request.tour === 'other'),
     internal: count((request) => request.category === 'internal'),
-    existing: count((request) => request.category === 'external' && request.clientType !== 'new'),
+    existing: count((request) => request.category === 'external' && request.clientType === 'existing'),
     newClient: count((request) => request.category === 'external' && request.clientType === 'new'),
+    unclassified: count((request) => request.category === 'external' && !request.clientType),
     korean: count((request) => request.language !== 'foreign'),
     foreign: count((request) => request.language === 'foreign'),
     interpreter: count((request) => request.language === 'foreign' && request.interpreter),
@@ -136,7 +153,7 @@ function distributionSheet(name: string, requests: VisitRequest[]): Sheet {
   const external = requests.filter((request) => request.category === 'external')
 
   push('방문 목적', tally((request) => request.purposes.map(baseOption), [...PURPOSES, OTHER]), requests.length)
-  push('방문 유형', tally((request) => [clientSegment(request)], ['고객 · 기존', '고객 · 신규', '내부 방문']), requests.length)
+  push('방문 유형', tally((request) => [clientSegment(request)], ['고객 · 기존', '고객 · 신규', '내부 방문', '고객 · 미분류']), requests.length)
   push('투어 종류', tally((request) => [TOUR_BY_ID[request.tour].label], TOURS.map((tour) => tour.label)), requests.length)
   push(
     '투어 언어',
@@ -144,7 +161,7 @@ function distributionSheet(name: string, requests: VisitRequest[]): Sheet {
     requests.length,
   )
   push('업종(고객 방문)', tally((request) => request.industries.map(baseOption), [...INDUSTRIES, OTHER], external), external.length)
-  const visitorCount = requests.reduce((sum, request) => sum + request.visitors.length, 0)
+  const visitorCount = requests.reduce((sum, request) => sum + headcountOf(request), 0)
   push(
     '방문자 직무',
     JOBS.map((job) => [
@@ -182,12 +199,17 @@ function listSheet(name: string, requests: VisitRequest[]): Sheet {
       { header: '담당자', width: 10 },
       { header: '담당자 조직', width: 22 },
       { header: '방문 인원', width: 10 },
+      { header: '주요 인원', width: 22 },
+      { header: '가이드', width: 22 },
+      { header: '유관부서', width: 22 },
       { header: '상태', width: 9 },
+      { header: '후속 진행', width: 26 },
       { header: '관리자 메모', width: 30 },
+      { header: '출처', width: 9 },
     ],
     rows: sorted.map((request) => [
       formatDateShort(request.date),
-      request.slot,
+      request.slot ? request.slot : '미정',
       TOUR_BY_ID[request.tour].label,
       languageSummary(request),
       clientSegment(request),
@@ -196,9 +218,14 @@ function listSheet(name: string, requests: VisitRequest[]): Sheet {
       request.purposes.join(', '),
       request.host.name,
       request.host.org,
-      request.visitors.length,
+      headcountOf(request),
+      request.keyPersons ?? '',
+      (request.guides ?? '').replace(/\n+/g, ', '),
+      (request.departments ?? []).join(', '),
       STATUS_LABEL[request.status],
+      request.followUp ?? '',
       request.adminMemo,
+      request.source === 'manual' ? '수기 등록' : '웹 신청',
     ]),
   }
 }
