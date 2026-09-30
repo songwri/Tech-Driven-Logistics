@@ -125,10 +125,10 @@ export default function AdminApp() {
       },
       {
         label: `${month.getMonth() + 1}월 신청`,
-        value: inMonth.length,
+        value: inMonth.filter((request) => request.status !== 'rejected').length,
         unit: '건',
         accent: 'text-warm-800',
-        hint: `승인 ${inMonth.filter((request) => request.status === 'approved').length} · 거절 ${inMonth.filter((request) => request.status === 'rejected').length}`,
+        hint: `승인 ${inMonth.filter((request) => request.status === 'approved').length} · 거절 ${inMonth.filter((request) => request.status === 'rejected').length}건은 제외`,
         focus: ['month', 'all'] as const,
       },
       {
@@ -374,6 +374,7 @@ export default function AdminApp() {
           onClose={closeModal}
           onSetStatus={data.setStatus}
           onUpdate={data.update}
+          onDelete={data.remove}
         />
       )}
     </div>

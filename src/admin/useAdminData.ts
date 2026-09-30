@@ -151,6 +151,19 @@ export function useAdminData() {
     [key, replace, requests],
   )
 
+  /** 예약을 완전히 삭제한다 (구글 시트의 행도 삭제, 되돌릴 수 없음). */
+  const remove = useCallback(
+    async (id: string) => {
+      if (isLiveBackend) await adminRequest<{ deleted: string }>(key, 'delete', { id })
+      setRequests((current) => {
+        const next = current.filter((request) => request.id !== id)
+        if (!isLiveBackend) writeDemo(next)
+        return next
+      })
+    },
+    [key],
+  )
+
   const resetDemo = useCallback(() => {
     const fresh = buildSampleRequests()
     writeDemo(fresh)
@@ -179,5 +192,6 @@ export function useAdminData() {
     update,
     resetDemo,
     diagnose,
+    remove,
   } as const
 }

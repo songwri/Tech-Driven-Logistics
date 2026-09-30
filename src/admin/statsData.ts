@@ -45,7 +45,7 @@ export interface MetricColumn {
 }
 
 export const METRIC_COLUMNS: MetricColumn[] = [
-  { key: 'total', label: '신청', group: '처리 현황' },
+  { key: 'total', label: '신청(거절 제외)', group: '처리 현황' },
   { key: 'pending', label: '대기', group: '처리 현황' },
   { key: 'approved', label: '승인', group: '처리 현황' },
   { key: 'rejected', label: '거절', group: '처리 현황' },
@@ -62,10 +62,15 @@ export const METRIC_COLUMNS: MetricColumn[] = [
   { key: 'interpreter', label: '통역 동반', group: '투어 언어' },
 ]
 
-export function summarize(label: string, requests: VisitRequest[]): PeriodRow {
+/**
+ * 기간 한 줄 집계. 거절된 예약은 통계에서 제외한다(처음부터 거절이든, 승인 후 거절로 바꾼 것이든).
+ * '거절' 열과 승인률 계산에만 거절 건수를 쓴다.
+ */
+export function summarize(label: string, all: VisitRequest[]): PeriodRow {
+  const rejected = all.filter((request) => request.status === 'rejected').length
+  const requests = all.filter((request) => request.status !== 'rejected')
   const count = (test: (request: VisitRequest) => boolean) => requests.filter(test).length
   const approvedList = requests.filter((request) => request.status === 'approved')
-  const rejected = count((request) => request.status === 'rejected')
   return {
     label,
     total: requests.length,

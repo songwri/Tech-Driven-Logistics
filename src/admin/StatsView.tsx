@@ -92,8 +92,12 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
   const [basis, setBasis] = useState<Basis>('all')
   const [gridView, setGridView] = useState<'month' | 'year'>('month')
 
+  // 거절된 예약은 모든 통계에서 제외한다. (승인률 계산에만 거절 건수를 쓴다)
   const basisRequests = useMemo(
-    () => (basis === 'approved' ? requests.filter((request) => request.status === 'approved') : requests),
+    () =>
+      requests.filter((request) =>
+        basis === 'approved' ? request.status === 'approved' : request.status !== 'rejected',
+      ),
     [requests, basis],
   )
 
@@ -166,7 +170,14 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
     const fileLabel = period === 'year' ? `${year}` : `${year}-${String(month).padStart(2, '0')}`
     downloadWorkbook(
       `TDL_visit_stats_${fileLabel}.xlsx`,
-      buildStatsSheets({ requests, periodRequests: allInPeriod, scoped, year, years, periodLabel }),
+      buildStatsSheets({
+        requests,
+        periodRequests: allInPeriod.filter((request) => request.status !== 'rejected'),
+        scoped,
+        year,
+        years,
+        periodLabel,
+      }),
     )
   }
 
@@ -235,7 +246,7 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
           value={basis}
           onChange={setBasis}
           options={[
-            { value: 'all', label: '전체 신청' },
+            { value: 'all', label: '전체 신청 (거절 제외)' },
             { value: 'approved', label: '승인 건만' },
           ]}
         />
@@ -315,7 +326,7 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
           <div>
             <h3 className="text-[15px] font-bold text-warm-800">기간별 통계표</h3>
             <p className="font-mono text-[11px] text-warm-600">
-              전체 신청 기준 · 열마다 값이 클수록 진하게 표시 · 엑셀에는 월별/연도별/항목별/예약 목록 시트가 함께 저장됩니다
+              거절 건은 통계에서 제외(거절 열만 참고 표시) · 열마다 값이 클수록 진하게 표시 · 엑셀에는 월별/연도별/항목별/예약 목록 시트가 함께 저장됩니다
             </p>
           </div>
           <Segmented
