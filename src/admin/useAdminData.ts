@@ -10,6 +10,7 @@ import {
 import { busyFromRequests, isConfirmed, isSlotBusy, toDateKey, type VisitRequest, type VisitStatus } from '@/lib/visit'
 import { buildSampleRequests } from './sampleData'
 import { visitKey, type ManualInput } from './importLegacy'
+import { normalizeRequest, normalizeRequests } from './normalize'
 
 export interface ServerHealth {
   version: string
@@ -31,7 +32,7 @@ const SESSION_KEY = 'tdl-lab-admin-key'
 function readDemo(): VisitRequest[] {
   try {
     const raw = localStorage.getItem(DEMO_KEY)
-    if (raw) return JSON.parse(raw) as VisitRequest[]
+    if (raw) return normalizeRequests(JSON.parse(raw))
   } catch {
     /* storage disabled — fall through to fresh sample data */
   }
@@ -133,7 +134,7 @@ export function useAdminData() {
     setError(null)
     try {
       const data = await adminRequest<{ requests: VisitRequest[] }>(adminKey, 'list')
-      setRequests(data.requests)
+      setRequests(normalizeRequests(data.requests))
       saveKey(adminKey)
       setKey(adminKey)
       return true
@@ -154,7 +155,7 @@ export function useAdminData() {
     let cancelled = false
     adminRequest<{ requests: VisitRequest[] }>(savedKey, 'list')
       .then((data) => {
-        if (!cancelled) setRequests(data.requests)
+        if (!cancelled) setRequests(normalizeRequests(data.requests))
       })
       .catch((loadError: unknown) => {
         if (cancelled) return
@@ -191,7 +192,7 @@ export function useAdminData() {
         return
       }
       const data = await adminRequest<{ request: VisitRequest }>(key, 'setStatus', { id, status })
-      replace(data.request)
+      replace(normalizeRequest(data.request))
     },
     [key, replace, requests],
   )
@@ -206,7 +207,7 @@ export function useAdminData() {
         return
       }
       const data = await adminRequest<{ request: VisitRequest }>(key, 'update', { id: next.id, request: next })
-      replace(data.request)
+      replace(normalizeRequest(data.request))
     },
     [key, replace, requests],
   )
@@ -232,7 +233,7 @@ export function useAdminData() {
       }
       await requireServer()
       const created = isLiveBackend
-        ? (await adminRequest<{ request: VisitRequest }>(key, 'create', { request: input })).request
+        ? normalizeRequest((await adminRequest<{ request: unknown }>(key, 'create', { request: input })).request)
         : { ...input, source: 'manual' as const, id: newId(), createdAt: new Date().toISOString() }
       setRequests((current) => {
         const next = [...current, created]
@@ -250,7 +251,10 @@ export function useAdminData() {
       let result: ImportResult
       if (isLiveBackend) {
         await requireServer()
-        result = await adminRequest<ImportResult>(key, 'import', { requests: inputs })
+        const data = await adminRequest<{ created?: unknown; skipped?: ImportResult['skipped'] }>(key, 'import', {
+          requests: inputs,
+        })
+        result = { created: normalizeRequests(data.created), skipped: Array.isArray(data.skipped) ? data.skipped : [] }
       } else {
         const seen = new Set(requests.map(visitKey))
         const now = new Date().toISOString()

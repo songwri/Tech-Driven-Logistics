@@ -2,9 +2,12 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import '../index.css'
 import AdminApp from './AdminApp'
+import { ErrorBoundary } from './ErrorBoundary'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AdminApp />
+    <ErrorBoundary>
+      <AdminApp />
+    </ErrorBoundary>
   </StrictMode>,
 )
