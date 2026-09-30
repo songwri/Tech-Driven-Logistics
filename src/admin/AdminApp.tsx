@@ -10,6 +10,7 @@ import { AdminCalendar } from './AdminCalendar'
 import { RequestTable, type StatusFilter } from './RequestTable'
 import { RequestModal } from './RequestModal'
 import { StatsView } from './StatsView'
+import { DiagnoseButton } from './DiagnosePanel'
 
 type Tab = 'dashboard' | 'stats'
 
@@ -155,6 +156,7 @@ export default function AdminApp() {
                   >
                     <RefreshCw width={13} height={13} className={data.loading ? 'animate-spin' : undefined} /> 새로고침
                   </button>
+                  <DiagnoseButton diagnose={data.diagnose} />
                   <button
                     type="button"
                     onClick={data.logout}

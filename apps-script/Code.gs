@@ -19,6 +19,9 @@ var MAIL_TO = 'daehyun.kim1@lxpantos.com';
 var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
+/** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
+var CODE_VERSION = '2026-09-30.lock-id-lookup';
+
 var GUESTBOOK_SHEET = 'guestbook';
 var VISIT_SHEET = 'visit_requests';
 var BLOCKED_SHEET = 'blocked';
@@ -101,6 +104,36 @@ function requireText_(value, label, max) {
   if (!text) throw new Error(label + '을(를) 입력해 주세요.');
   if (text.length > max) throw new Error(label + '이(가) 너무 깁니다.');
   return text;
+}
+
+/**
+ * 시트 쓰기를 한 번에 하나씩만 실행한다. 두 요청이 동시에 들어오면 같은 행 번호를 받아
+ * 먼저 들어온 예약을 덮어쓰는 문제(→ 메일의 승인 링크가 '예약을 찾을 수 없습니다')를 막는다.
+ */
+var lockDepth_ = 0; // 같은 실행 안에서 중첩 호출돼도 잠금을 한 번만 잡는다.
+
+function withLock_(task) {
+  if (lockDepth_ > 0) return task();
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) throw new Error('요청이 많아 잠시 지연되고 있습니다. 잠시 후 다시 시도해 주세요.');
+  lockDepth_++;
+  try {
+    return task();
+  } finally {
+    lockDepth_--;
+    lock.releaseLock();
+  }
+}
+
+/**
+ * 메일 버튼이 가리킬 웹앱 주소.
+ * ScriptApp.getService().getUrl() 은 환경에 따라 /dev 주소나 다른 배포 주소를 줄 수 있어,
+ * 스크립트 속성 WEB_APP_URL 이 있으면 그 값을 우선 쓰고 /dev 는 /exec 로 바꾼다.
+ */
+function webAppUrl_() {
+  var fixed = PropertiesService.getScriptProperties().getProperty('WEB_APP_URL');
+  var url = String(fixed || ScriptApp.getService().getUrl() || '').trim();
+  return url.replace(/\/dev$/, '/exec');
 }
 
 function jsonOutput_(payload) {
@@ -273,9 +306,14 @@ function visitSheet_() {
   // 이전 버전의 저장 오류로 제목 행이 예약 데이터로 덮어써진 시트를 자동 복구한다.
   // (덮어써진 행은 지우지 않고 제목 행 아래로 밀어, 그 예약이 목록에 다시 나타난다.)
   if (String(target.getRange(1, 1).getValue()).trim() !== VISIT_HEADERS[0]) {
-    target.insertRowBefore(1);
-    target.getRange(1, 1, 1, VISIT_HEADERS.length).setValues([VISIT_HEADERS]);
-    target.setFrozenRows(1);
+    // 동시에 들어온 다른 요청이 이미 복구했을 수 있으므로 잠금 안에서 한 번 더 확인한다.
+    withLock_(function () {
+      if (String(target.getRange(1, 1).getValue()).trim() === VISIT_HEADERS[0]) return;
+      target.insertRowBefore(1);
+      target.getRange(1, 1, 1, VISIT_HEADERS.length).setValues([VISIT_HEADERS]);
+      target.setFrozenRows(1);
+      SpreadsheetApp.flush();
+    });
   }
   return target;
 }
@@ -519,18 +557,21 @@ function addReservation_(payload) {
   var token = Utilities.getUuid();
   var now = new Date().toISOString();
 
-  // 내용 없는 행은 appendRow 로 추가되지 않으므로, 쓸 행 번호를 직접 계산한다.
   var target = visitSheet_();
-  var rowNumber = target.getLastRow() + 1;
-  if (rowNumber > target.getMaxRows()) target.insertRowsAfter(target.getMaxRows(), 1);
-  writeVisit_(rowNumber, request, { '신청일시': now, '토큰': token, '개인정보동의': now });
+  withLock_(function () {
+    // 내용 없는 행은 appendRow 로 추가되지 않으므로, 쓸 행 번호를 직접 계산한다.
+    // 잠금 안에서 계산해야 동시에 들어온 예약끼리 같은 행을 덮어쓰지 않는다.
+    var rowNumber = target.getLastRow() + 1;
+    if (rowNumber > target.getMaxRows()) target.insertRowsAfter(target.getMaxRows(), 1);
+    writeVisit_(rowNumber, request, { '신청일시': now, '토큰': token, '개인정보동의': now });
 
-  // 저장이 실제로 됐는지 확인한다. 실패했는데 메일만 나가는 일이 없도록.
-  SpreadsheetApp.flush();
-  var idColumn = columns_(target.getRange(1, 1, 1, target.getLastColumn()).getValues())['id'];
-  if (idColumn === undefined || String(target.getRange(rowNumber, idColumn + 1).getValue()) !== request.id) {
-    throw new Error('예약 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
-  }
+    // 저장이 실제로 됐는지 확인한다. 실패했는데 메일만 나가는 일이 없도록.
+    SpreadsheetApp.flush();
+    var saved = findVisit_(function (item) { return item.id === request.id; });
+    if (!saved || saved._token !== token) {
+      throw new Error('예약 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+    }
+  });
 
   MailApp.sendEmail({
     to: MAIL_TO,
@@ -547,14 +588,20 @@ function addReservation_(payload) {
  * 상태 변경. 승인은 다른 승인 건과 겹치면 거부한다.
  * 상태가 실제로 바뀌면 신청 담당자에게 결과 메일을 보낸다.
  */
-function changeStatus_(request, status) {
-  if (status === 'approved' && isBusy_(request.tour, request.date, request.slot, busy_(request.id).busy)) {
-    throw new Error('이미 승인된 다른 예약과 시간이 겹쳐 승인할 수 없습니다.');
-  }
-  var previous = request.status;
-  request.status = status;
-  writeVisit_(request._row, request);
-  if (previous !== status && status !== 'pending') notifyHost_(request);
+function changeStatus_(found, status) {
+  var request = withLock_(function () {
+    // 잠금을 기다리는 사이 행 위치가 바뀌었을 수 있어 id 로 다시 찾는다.
+    var current = findVisit_(function (item) { return item.id === found.id; });
+    if (!current) throw new Error('예약을 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.');
+    if (status === 'approved' && isBusy_(current.tour, current.date, current.slot, busy_(current.id).busy)) {
+      throw new Error('이미 승인된 다른 예약과 시간이 겹쳐 승인할 수 없습니다.');
+    }
+    current._previous = current.status;
+    current.status = status;
+    writeVisit_(current._row, current);
+    return current;
+  });
+  if (request._previous !== status && status !== 'pending') notifyHost_(request);
   return request;
 }
 
@@ -578,6 +625,8 @@ function admin_(payload) {
     return { requests: readVisits_().map(publicRequest_) };
   }
 
+  if (payload.action === 'health') return health_();
+
   var request = findVisit_(function (item) { return item.id === String(payload.id); });
   if (!request) throw new Error('예약을 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.');
 
@@ -593,12 +642,17 @@ function admin_(payload) {
     next.status = request.status;
     next.createdAt = request.createdAt;
     next.adminMemo = optionalText_((payload.request || {}).adminMemo, 500);
-    next._row = request._row;
-    if (next.status === 'approved' && isBusy_(next.tour, next.date, next.slot, busy_(next.id).busy)) {
-      throw new Error('변경한 일정이 이미 승인된 다른 예약과 겹칩니다.');
-    }
-    writeVisit_(next._row, next);
-    return { request: publicRequest_(next) };
+    return withLock_(function () {
+      var current = findVisit_(function (item) { return item.id === request.id; });
+      if (!current) throw new Error('예약을 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.');
+      next.status = current.status;
+      next._row = current._row;
+      if (next.status === 'approved' && isBusy_(next.tour, next.date, next.slot, busy_(next.id).busy)) {
+        throw new Error('변경한 일정이 이미 승인된 다른 예약과 겹칩니다.');
+      }
+      writeVisit_(next._row, next);
+      return { request: publicRequest_(next) };
+    });
   }
 
   throw new Error('알 수 없는 관리자 요청입니다.');
@@ -699,9 +753,10 @@ function visitorsTable_(visitors) {
 }
 
 function reservationMailHtml_(r, token) {
-  var base = ScriptApp.getService().getUrl();
-  var confirm = base + '?action=confirm&token=' + encodeURIComponent(token);
-  var cancel = base + '?action=cancel&token=' + encodeURIComponent(token);
+  var base = webAppUrl_();
+  var query = '&id=' + encodeURIComponent(r.id) + '&token=' + encodeURIComponent(token);
+  var confirm = base + '?action=confirm' + query;
+  var cancel = base + '?action=cancel' + query;
 
   var lead = [
     '안녕하세요, TDL Lab 담당자님.<br>',
@@ -741,7 +796,11 @@ function reservationMailHtml_(r, token) {
     '</p>',
   ].join('');
 
-  return mailShell_('방문 예약 신청', lead, scheduleBox_(r) + detail
+  var book = SpreadsheetApp.getActiveSpreadsheet();
+  var stored = '<p style="margin:14px 0 0;font-size:11px;color:#aca8a7;">저장 위치: '
+    + '<a href="' + book.getUrl() + '" style="color:#aca8a7;">' + escapeHtml_(book.getName())
+    + '</a> · ' + VISIT_SHEET + ' 탭 · 예약번호 ' + escapeHtml_(String(r.id).slice(0, 8)) + '</p>';
+  return mailShell_('방문 예약 신청', lead, scheduleBox_(r) + detail + stored
     + '<div style="margin-top:20px;font-size:12px;color:#aca8a7;">방문자 명단</div>'
     + visitorsTable_(r.visitors) + actions);
 }
@@ -848,18 +907,60 @@ function showSelectedGuestbook() {
   setSelected_(GUESTBOOK_SHEET, GUESTBOOK_HIDDEN_COL, '', '다시 표시합니다.');
 }
 
+/* ------------------------------------------------------------ 진단 */
+
+/** 관리자 키로만 호출된다. 어떤 시트에 무엇이 저장되어 있는지 한 번에 확인하기 위한 정보. */
+function health_() {
+  var book = SpreadsheetApp.getActiveSpreadsheet();
+  var target = book.getSheetByName(VISIT_SHEET);
+  var info = {
+    version: CODE_VERSION,
+    spreadsheet: { name: book.getName(), url: book.getUrl() },
+    webAppUrl: webAppUrl_(),
+    tabs: book.getSheets().map(function (sheet) {
+      return { name: sheet.getName(), rows: sheet.getLastRow(), columns: sheet.getLastColumn() };
+    }),
+  };
+  if (target) {
+    var lastColumn = Math.max(1, target.getLastColumn());
+    var header = target.getRange(1, 1, 1, lastColumn).getValues()[0];
+    var col = columns_([header]);
+    var list = readVisits_();
+    var last = list[list.length - 1];
+    info.visitSheet = {
+      headerOk: String(header[0]) === VISIT_HEADERS[0],
+      missingColumns: VISIT_HEADERS.filter(function (name) { return col[name] === undefined; }),
+      reservations: list.length,
+      withToken: list.filter(function (item) { return item._token; }).length,
+      last: last ? { row: last._row, id: last.id.slice(0, 8), hasToken: Boolean(last._token), status: last.status, date: last.date } : null,
+    };
+  }
+  return info;
+}
+
 /* ------------------------------------------------------------ 엔드포인트 */
 
 function doGet(e) {
   try {
     var action = e && e.parameter ? e.parameter.action : '';
 
+    if (action === 'version') return jsonOutput_({ version: CODE_VERSION });
+
     if (action === 'confirm' || action === 'cancel') {
       var token = String(e.parameter.token || '').trim();
-      var request = token ? findVisit_(function (item) { return item._token === token; }) : null;
+      var id = String(e.parameter.id || '').trim();
+      // id 가 있으면 id 로 찾고 토큰을 대조한다. (이전 메일의 링크처럼 id 가 없으면 토큰으로 찾는다)
+      var request = id
+        ? findVisit_(function (item) { return item.id === id && (!item._token || item._token === token); })
+        : token ? findVisit_(function (item) { return item._token === token; }) : null;
       if (!request) {
+        var book = SpreadsheetApp.getActiveSpreadsheet();
         return resultPage_('예약을 찾을 수 없습니다',
-          '이미 삭제되었거나 링크가 잘못되었습니다.<br>관리자 대시보드에서 직접 확인해 주세요.', 'error');
+          '이미 삭제되었거나 링크가 잘못되었습니다.<br>관리자 대시보드에서 직접 확인해 주세요.'
+          + '<br><br><span style="font-size:12px;color:#aca8a7;">확인한 시트: ' + escapeHtml_(book.getName())
+          + ' · ' + VISIT_SHEET + ' 탭 · 예약 ' + readVisits_().length + '건'
+          + (id ? ' · 예약번호 ' + escapeHtml_(id.slice(0, 8)) : '')
+          + '<br>코드 버전 ' + CODE_VERSION + '</span>', 'error');
       }
       var schedule = '<b>' + escapeHtml_(TOURS[request.tour].label) + '<br>'
         + escapeHtml_(formatDateKo_(request.date)) + ' ' + escapeHtml_(request.slot) + '</b><br>'
