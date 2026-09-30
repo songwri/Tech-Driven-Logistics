@@ -44,22 +44,61 @@ function writeLocal(entries: GuestbookEntry[]) {
   }
 }
 
+/** 서버(Apps Script)가 이 시간 안에 답하지 않으면 멈춰 있지 않고 오류로 알린다. */
+const TIMEOUT_MS = 60000
+
+const ACCESS_HINT =
+  'Apps Script 배포 관리에서 기존 배포의 "액세스 권한이 있는 사용자"가 "모든 사용자"인지, ' +
+  '사이트에 등록된 웹앱 주소(VITE_LAB_API)가 지금 배포의 주소와 같은지 확인해 주세요.'
+
+/**
+ * Apps Script 웹앱 호출 공통. 응답 없음 · 접근 거부(로그인 필요, 404) · JSON 이 아닌 응답을
+ * 원인을 알 수 있는 메시지로 바꾼다.
+ */
+async function callServer<T>(url: string, init: RequestInit): Promise<T> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  let response: Response
+  try {
+    response = await fetch(url, { ...init, redirect: 'follow', signal: controller.signal })
+  } catch (fetchError) {
+    if (controller.signal.aborted) {
+      throw new Error(
+        `서버(Apps Script)가 ${TIMEOUT_MS / 1000}초 동안 응답하지 않습니다. 잠시 후 다시 시도하고, ` +
+          '계속되면 Apps Script 편집기의 [실행] 기록에서 오류를 확인해 주세요.',
+      )
+    }
+    // 로그인 페이지로 돌려보내지는 경우(액세스 권한 제한) 브라우저가 CORS 로 막아 여기로 온다.
+    throw new Error(`서버에 연결하지 못했습니다. ${ACCESS_HINT}`, { cause: fetchError })
+  } finally {
+    clearTimeout(timer)
+  }
+  if (response.status === 404 || response.status === 401 || response.status === 403) {
+    throw new Error(`서버 웹앱에 접근할 수 없습니다 (${response.status}). ${ACCESS_HINT}`)
+  }
+  if (!response.ok) throw new Error(`요청에 실패했습니다 (${response.status})`)
+
+  const text = await response.text()
+  let data: T & { error?: string }
+  try {
+    data = JSON.parse(text) as T & { error?: string }
+  } catch {
+    throw new Error(`서버가 데이터 대신 웹페이지를 돌려줬습니다 (로그인 요구 또는 스크립트 오류). ${ACCESS_HINT}`)
+  }
+  if (data.error) throw new Error(data.error)
+  return data
+}
+
 /**
  * Apps Script web apps don't answer CORS preflights, so posts go out as
  * `text/plain` to stay a "simple request". The body is still JSON.
  */
-async function post<T>(payload: Record<string, unknown>): Promise<T> {
-  const response = await fetch(API_BASE as string, {
+function post<T>(payload: Record<string, unknown>): Promise<T> {
+  return callServer<T>(API_BASE as string, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(payload),
-    redirect: 'follow',
   })
-  if (!response.ok) throw new Error(`요청에 실패했습니다 (${response.status})`)
-
-  const data = (await response.json()) as T & { error?: string }
-  if (data.error) throw new Error(data.error)
-  return data
 }
 
 export interface LabSnapshot {
@@ -73,10 +112,7 @@ export interface LabSnapshot {
 export async function fetchLab(): Promise<LabSnapshot> {
   if (!API_BASE) return { entries: readLocal(), busy: [], closedDays: [] }
 
-  const response = await fetch(API_BASE)
-  if (!response.ok) throw new Error(`방명록을 불러오지 못했습니다 (${response.status})`)
-  const data = (await response.json()) as Partial<LabSnapshot> & { error?: string }
-  if (data.error) throw new Error(data.error)
+  const data = await callServer<Partial<LabSnapshot>>(API_BASE, { method: 'GET' })
   return {
     entries: data.entries ?? [],
     busy: data.busy ?? [],
@@ -124,16 +160,29 @@ export interface ServerVersion {
   apiLevel: number
 }
 
-/** 배포된 Apps Script 의 코드 버전 (?action=version) */
-export async function fetchServerVersion(): Promise<ServerVersion> {
-  const url = new URL(API_BASE as string)
-  url.searchParams.set('action', 'version')
-  url.searchParams.set('t', String(Date.now())) // 캐시된 응답 방지
-  const response = await fetch(url, { redirect: 'follow' })
-  if (!response.ok) throw new Error(`서버 버전을 확인하지 못했습니다 (${response.status})`)
-  const data = (await response.json()) as { version?: string; apiLevel?: number; error?: string }
-  if (data.error) throw new Error(data.error)
-  return { version: String(data.version ?? '알 수 없음'), apiLevel: Number(data.apiLevel ?? 1) }
+/** 코드 버전 → 기능 수준. apiLevel 을 알려주지 않는 서버용 (2026-09-30.legacy-import 부터 2) */
+function levelOf(version: string) {
+  const date = version.slice(0, 10)
+  if (date > '2026-09-30') return 2
+  return version === '2026-09-30.legacy-import' ? 2 : 1
+}
+
+/**
+ * 배포된 Apps Script 의 코드 버전. 관리자 목록과 같은 경로(POST · 관리자 키)로 묻는다.
+ * (별도 GET 주소는 배포 권한 설정에 따라 사이트에서만 막힐 수 있어 쓰지 않는다)
+ */
+export async function fetchServerVersion(key: string): Promise<ServerVersion> {
+  try {
+    const data = await adminRequest<{ version?: string; apiLevel?: number }>(key, 'health')
+    const version = String(data.version ?? '알 수 없음')
+    return { version, apiLevel: Number(data.apiLevel ?? levelOf(version)) }
+  } catch (healthError) {
+    // health 요청조차 모르는 아주 오래된 서버는 요청을 예약 조회로 처리해 이 메시지를 낸다.
+    if (healthError instanceof Error && healthError.message.includes('예약을 찾을 수 없습니다')) {
+      return { version: '확인 불가 (오래된 버전)', apiLevel: 1 }
+    }
+    throw healthError
+  }
 }
 
 export const outdatedServerMessage = (server: ServerVersion) =>
