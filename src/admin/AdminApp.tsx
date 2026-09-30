@@ -14,7 +14,37 @@ import { DiagnoseButton } from './DiagnosePanel'
 
 type Tab = 'dashboard' | 'stats'
 
-function LoginPanel({ onLogin, error, loading }: { onLogin: (key: string) => void; error: string | null; loading: boolean }) {
+/** 메일의 '확인하고 승인 · 거절하기' 버튼이 여는 주소: /admin/?review=<예약 id> */
+function readReviewId() {
+  try {
+    return new URLSearchParams(window.location.search).get('review')
+  } catch {
+    return null
+  }
+}
+
+function clearReviewParam() {
+  try {
+    const url = new URL(window.location.href)
+    if (!url.searchParams.has('review')) return
+    url.searchParams.delete('review')
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash)
+  } catch {
+    /* 주소 정리 실패는 무시 (새로고침 시 같은 예약이 다시 열릴 뿐) */
+  }
+}
+
+function LoginPanel({
+  onLogin,
+  error,
+  loading,
+  fromMail,
+}: {
+  onLogin: (key: string) => void
+  error: string | null
+  loading: boolean
+  fromMail: boolean
+}) {
   const [key, setKey] = useState('')
   return (
     <form
@@ -27,6 +57,11 @@ function LoginPanel({ onLogin, error, loading }: { onLogin: (key: string) => voi
       <p className="font-mono text-xs uppercase tracking-[0.3em] text-brand">Admin</p>
       <h2 className="mt-2 text-xl font-bold text-warm-800">관리자 로그인</h2>
       <p className="mt-1 text-sm text-warm-600">Apps Script에 설정한 관리자 키를 입력하세요.</p>
+      {fromMail && (
+        <p className="mt-3 border-l-2 border-brand bg-cream px-3 py-2 text-[13px] text-warm-800">
+          메일에서 연 예약은 로그인하면 바로 상세 화면으로 열립니다.
+        </p>
+      )}
       <div className="mt-6">
         <Field label="관리자 키" required>
           <Input type="password" value={key} onChange={(e) => setKey(e.target.value)} autoFocus autoComplete="current-password" />
@@ -48,7 +83,9 @@ export default function AdminApp() {
     return new Date(now.getFullYear(), now.getMonth(), 1)
   })
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [openId, setOpenId] = useState<string | null>(null)
+  // 메일 버튼으로 들어오면 해당 예약을 바로 연다 (로그인 · 목록 로딩이 끝나는 대로)
+  const [reviewId] = useState(readReviewId)
+  const [openId, setOpenId] = useState<string | null>(reviewId)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [scope, setScope] = useState<'month' | 'upcoming' | 'all'>('upcoming')
@@ -133,6 +170,12 @@ export default function AdminApp() {
   }
 
   const openRequest = requests.find((request) => request.id === openId)
+  const reviewMissing =
+    Boolean(reviewId) && openId === reviewId && data.authenticated && !data.loading && !openRequest
+  const closeModal = () => {
+    setOpenId(null)
+    clearReviewParam()
+  }
 
   return (
     <div className="min-h-screen bg-[#f7f6f5]">
@@ -209,10 +252,23 @@ export default function AdminApp() {
       )}
 
       {!data.authenticated ? (
-        <LoginPanel onLogin={(key) => void data.login(key)} error={data.error} loading={data.loading} />
+        <LoginPanel
+          onLogin={(key) => void data.login(key)}
+          error={data.error}
+          loading={data.loading}
+          fromMail={Boolean(reviewId)}
+        />
       ) : (
         <main className="mx-auto max-w-7xl space-y-5 px-4 py-6 md:px-8">
           {data.error && <p className="border border-brand/40 bg-brand/5 px-3 py-2 text-sm text-brand">{data.error}</p>}
+          {reviewMissing && (
+            <p className="flex items-center justify-between gap-3 border border-brand/40 bg-brand/5 px-3 py-2 text-sm text-brand">
+              메일에서 연 예약(번호 {reviewId?.slice(0, 8)})을 찾을 수 없습니다. 삭제되었거나 다른 시트에 저장된 예약일 수 있습니다.
+              <button type="button" onClick={closeModal} aria-label="닫기">
+                <X width={14} height={14} />
+              </button>
+            </p>
+          )}
 
           {tab === 'dashboard' ? (
             <>
@@ -315,7 +371,7 @@ export default function AdminApp() {
           key={openRequest.id}
           request={openRequest}
           requests={requests}
-          onClose={() => setOpenId(null)}
+          onClose={closeModal}
           onSetStatus={data.setStatus}
           onUpdate={data.update}
         />

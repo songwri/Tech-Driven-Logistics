@@ -6,8 +6,8 @@
  * 코드에 두지 않습니다.
  *
  *   GET  ?                      → 방명록(마스킹된 값) + 예약 불가 구간 반환
- *   GET  ?action=confirm&token= → 예약 승인 (메일의 버튼에서 호출)
- *   GET  ?action=cancel&token=  → 예약 거절 (메일의 버튼에서 호출)
+ *   GET  ?action=confirm|cancel → (예전 메일 링크) 관리자 페이지로 안내만 함. 승인·거절은 관리자 페이지에서
+ *   GET  ?action=version        → 배포된 코드 버전
  *   POST                        → { type: 'guestbook' | 'reservation' | 'admin', ... }
  *
  * 방명록의 실명·실제 소속과 예약자의 연락처는 시트에만 남고 공개 GET 으로는
@@ -20,7 +20,7 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-09-30.lock-id-lookup';
+var CODE_VERSION = '2026-09-30.admin-review';
 
 var GUESTBOOK_SHEET = 'guestbook';
 var VISIT_SHEET = 'visit_requests';
@@ -578,7 +578,7 @@ function addReservation_(payload) {
     replyTo: request.host.email,
     subject: '[TDL Lab] 방문 예약 신청 · ' + TOURS[request.tour].label + ' · ' + request.company + ' · '
       + request.date + ' ' + request.slot,
-    htmlBody: reservationMailHtml_(request, token),
+    htmlBody: reservationMailHtml_(request),
   });
 
   return { ok: true };
@@ -752,11 +752,18 @@ function visitorsTable_(visitors) {
   return html.join('');
 }
 
-function reservationMailHtml_(r, token) {
-  var base = webAppUrl_();
-  var query = '&id=' + encodeURIComponent(r.id) + '&token=' + encodeURIComponent(token);
-  var confirm = base + '?action=confirm' + query;
-  var cancel = base + '?action=cancel' + query;
+/** 관리자 페이지에서 해당 예약 상세를 바로 여는 주소 */
+function reviewUrl_(id) {
+  return ADMIN_URL + '?review=' + encodeURIComponent(id);
+}
+
+/**
+ * 메일의 버튼은 승인을 직접 처리하지 않고 관리자 페이지(해당 예약 상세)를 연다.
+ * - 관리자 키가 있어야 승인되므로 메일이 전달되거나 보안 스캐너가 링크를 열어도 자동 승인되지 않는다.
+ * - 관리자 페이지는 사이트가 쓰는 웹앱 주소로만 요청하므로 배포 주소가 여러 개여도 어긋나지 않는다.
+ */
+function reservationMailHtml_(r) {
+  var review = reviewUrl_(r.id);
 
   var lead = [
     '안녕하세요, TDL Lab 담당자님.<br>',
@@ -784,13 +791,10 @@ function reservationMailHtml_(r, token) {
 
   var actions = [
     '<div style="margin-top:26px;">',
-    button_(confirm, '이 일정으로 승인하기', true),
-    '&nbsp;&nbsp;',
-    button_(cancel, '거절', false),
-    '&nbsp;&nbsp;',
-    button_(ADMIN_URL, '관리자 대시보드', false),
+    button_(review, '확인하고 승인 · 거절하기', true),
     '</div>',
     '<p style="margin:14px 0 0;font-size:12px;color:#aca8a7;line-height:1.7;">',
+    '버튼을 누르면 관리자 페이지에서 이 예약의 상세 화면이 열립니다. (관리자 키로 로그인)<br>',
     '승인하면 해당 시간대는 예약 화면에서 자동으로 선택 불가 처리되고, 신청 담당자에게 확정 메일이 발송됩니다.<br>',
     '이 메일에 그대로 <b>회신</b>하시면 신청 담당자에게 바로 답장이 갑니다.',
     '</p>',
@@ -947,35 +951,17 @@ function doGet(e) {
     if (action === 'version') return jsonOutput_({ version: CODE_VERSION });
 
     if (action === 'confirm' || action === 'cancel') {
+      // 예전 메일의 승인/거절 링크. 링크만으로 상태를 바꾸지 않고(자동 승인 방지) 관리자 페이지로 안내한다.
       var token = String(e.parameter.token || '').trim();
       var id = String(e.parameter.id || '').trim();
-      // id 가 있으면 id 로 찾고 토큰을 대조한다. (이전 메일의 링크처럼 id 가 없으면 토큰으로 찾는다)
-      var request = id
-        ? findVisit_(function (item) { return item.id === id && (!item._token || item._token === token); })
+      var found = id
+        ? findVisit_(function (item) { return item.id === id; })
         : token ? findVisit_(function (item) { return item._token === token; }) : null;
-      if (!request) {
-        var book = SpreadsheetApp.getActiveSpreadsheet();
-        return resultPage_('예약을 찾을 수 없습니다',
-          '이미 삭제되었거나 링크가 잘못되었습니다.<br>관리자 대시보드에서 직접 확인해 주세요.'
-          + '<br><br><span style="font-size:12px;color:#aca8a7;">확인한 시트: ' + escapeHtml_(book.getName())
-          + ' · ' + VISIT_SHEET + ' 탭 · 예약 ' + readVisits_().length + '건'
-          + (id ? ' · 예약번호 ' + escapeHtml_(id.slice(0, 8)) : '')
-          + '<br>코드 버전 ' + CODE_VERSION + '</span>', 'error');
-      }
-      var schedule = '<b>' + escapeHtml_(TOURS[request.tour].label) + '<br>'
-        + escapeHtml_(formatDateKo_(request.date)) + ' ' + escapeHtml_(request.slot) + '</b><br>'
-        + escapeHtml_(request.company) + ' · ' + escapeHtml_(request.host.name) + ' 님<br><br>';
-      try {
-        changeStatus_(request, action === 'confirm' ? 'approved' : 'rejected');
-      } catch (conflict) {
-        return resultPage_('승인할 수 없습니다', schedule + escapeHtml_(conflict.message), 'error');
-      }
-      if (action === 'confirm') {
-        return resultPage_('예약을 승인했습니다', schedule
-          + '이 시간대는 이제 예약 화면에서 선택할 수 없습니다.<br>'
-          + '<b>' + escapeHtml_(request.host.email) + '</b> 로 확정 안내 메일을 보냈습니다.');
-      }
-      return resultPage_('예약을 거절했습니다', schedule + '신청 담당자에게 결과 안내 메일을 보냈습니다.');
+      var target = found ? reviewUrl_(found.id) : ADMIN_URL;
+      return resultPage_('관리자 페이지에서 처리해 주세요',
+        '보안을 위해 메일 링크로는 바로 승인 · 거절되지 않습니다.<br>'
+        + '아래 버튼으로 관리자 페이지에서 예약을 확인하고 처리해 주세요.<br><br>'
+        + button_(target, found ? '이 예약 열기' : '관리자 페이지 열기', true));
     }
 
     var blocked = busy_();
