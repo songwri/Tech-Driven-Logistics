@@ -20,7 +20,7 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-09-30.admin-review';
+var CODE_VERSION = '2026-09-30.delete-request';
 
 var GUESTBOOK_SHEET = 'guestbook';
 var VISIT_SHEET = 'visit_requests';
@@ -626,6 +626,17 @@ function admin_(payload) {
   }
 
   if (payload.action === 'health') return health_();
+
+  if (payload.action === 'delete') {
+    // 예약을 시트에서 완전히 지운다 (되돌릴 수 없음). 잠금 안에서 id 로 다시 찾아 그 행만 삭제.
+    return withLock_(function () {
+      var target = findVisit_(function (item) { return item.id === String(payload.id); });
+      if (!target) throw new Error('예약을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.');
+      visitSheet_().deleteRow(target._row);
+      SpreadsheetApp.flush();
+      return { deleted: target.id };
+    });
+  }
 
   var request = findVisit_(function (item) { return item.id === String(payload.id); });
   if (!request) throw new Error('예약을 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.');

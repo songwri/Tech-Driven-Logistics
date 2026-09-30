@@ -27,6 +27,8 @@ interface RequestModalProps {
   onClose: () => void
   onSetStatus: (id: string, status: VisitStatus) => Promise<void>
   onUpdate: (request: VisitRequest) => Promise<void>
+  /** 예약 완전 삭제 (구글 시트 행도 삭제) */
+  onDelete: (id: string) => Promise<void>
 }
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
@@ -38,7 +40,8 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate }: RequestModalProps) {
+export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate, onDelete }: RequestModalProps) {
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<VisitRequest>(request)
   const [memo, setMemo] = useState(request.adminMemo)
@@ -253,10 +256,49 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
 
       {error && <p className="mt-4 border border-brand/40 bg-brand/5 px-3 py-2 text-sm text-brand">{error}</p>}
 
+      {confirmDelete && (
+        <div className="mt-6 border border-brand/50 bg-brand/5 p-4" role="alertdialog" aria-label="예약 삭제 확인">
+          <p className="text-sm font-semibold text-brand">이 예약을 완전히 삭제할까요?</p>
+          <p className="mt-1 text-[13px] text-warm-800">
+            관리자 목록 · 통계 · 구글 시트(visit_requests)에서 모두 지워지며 <b>되돌릴 수 없습니다.</b>
+            <br />
+            기록을 남기려면 삭제 대신 <b>거절</b>을 쓰세요. (거절 건도 통계에서는 제외됩니다)
+          </p>
+          <div className="mt-3 flex justify-end gap-2">
+            <Button variant="outline" size="sm" disabled={pending} onClick={() => setConfirmDelete(false)}>
+              취소
+            </Button>
+            <Button
+              size="sm"
+              disabled={pending}
+              onClick={() =>
+                void run(async () => {
+                  await onDelete(request.id)
+                  onClose()
+                })
+              }
+            >
+              {pending ? '삭제 중…' : '삭제'}
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-warm-300/40 pt-4">
-        <Button variant="outline" size="sm" onClick={startEdit}>
-          정보 수정
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={startEdit}>
+            정보 수정
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={pending || confirmDelete}
+            onClick={() => setConfirmDelete(true)}
+            className="text-brand hover:text-brand"
+          >
+            삭제
+          </Button>
+        </div>
         <div className="flex flex-wrap gap-2">
           {request.status !== 'pending' && (
             <Button variant="outline" size="sm" disabled={pending} onClick={() => run(() => onSetStatus(request.id, 'pending'))}>
