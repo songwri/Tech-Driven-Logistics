@@ -29,6 +29,12 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* 예약 · 관리자 페이지는 입력이 많아 격자 배경 없이 깔끔한 단색으로 쓴다. */
+body.plain-bg {
+  background-color: #f7f6f5;
+  background-image: none;
+}
+
 .font-display {
   font-family: var(--font-display);
   letter-spacing: -0.01em;
