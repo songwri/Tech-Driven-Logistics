@@ -1,9 +1,12 @@
-import type { VisitRequest, VisitStatus } from '@/lib/visit'
+import { TOURS, type TourType, type Visitor, type VisitRequest, type VisitStatus } from '@/lib/visit'
 
 /**
- * 기존에 엑셀 · 구글 시트로 관리하던 방문 이력을 붙여넣어 가져오기.
+ * 방문 이력 가져오기 (붙여넣기 · .xlsx · .csv 파일). 두 가지 양식을 알아본다.
  *
- * 기대하는 열 순서 (엑셀에서 표를 복사하면 탭으로 구분되어 붙여넣어짐):
+ * 1) visit_requests 양식: 구글 시트 visit_requests 탭과 같은 제목 행 (id, 신청일시, 상태, 투어, 방문일, …)
+ *    → 제목 이름으로 열을 찾으므로 열 순서가 달라도 되고, 필요한 열만 있어도 된다.
+ *
+ * 2) 기존 관리 양식 (엑셀에서 표를 복사하면 탭으로 구분되어 붙여넣어짐):
  *   순번 · 날짜 · 요일 · 시작시간 · 종료시간 · 구분 · 업체(기관)명 · 방문 목적 · 방문인원수 ·
  *   주요 인원 · 가이드 · 유관부서1~4 · 완료유무 · 후속 진행현황
  * - 순번은 비어 있거나 아예 빠져 있어도 된다 (날짜 칸을 기준으로 맞춘다).
@@ -20,14 +23,14 @@ export interface ParsedRow {
   error?: string
 }
 
-/** 탭 구분 텍스트 → 셀 2차원 배열. 따옴표로 감싼 셀 안의 줄바꿈 · 탭 · "" 를 처리한다. */
-export function parseTsv(text: string): string[][] {
+/** 구분 문자(탭 · 쉼표) 텍스트 → 셀 2차원 배열. 따옴표로 감싼 셀 안의 줄바꿈 · 구분 문자 · "" 를 처리한다. */
+export function parseDelimited(text: string, delimiter = '\t'): string[][] {
   const rows: string[][] = []
   let row: string[] = []
   let cell = ''
   let quoted = false
   let atCellStart = true
-  const src = text.replace(/\r\n?/g, '\n')
+  const src = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n')
 
   for (let i = 0; i < src.length; i++) {
     const ch = src[i]
@@ -49,7 +52,7 @@ export function parseTsv(text: string): string[][] {
       atCellStart = false
       continue
     }
-    if (ch === '\t') {
+    if (ch === delimiter) {
       row.push(cell)
       cell = ''
       atCellStart = true
@@ -164,9 +167,160 @@ function statusFrom(value: string): VisitStatus {
 const isHeaderRow = (cells: string[]) =>
   cells.some((cell) => /날짜|방문일/.test(cell)) && cells.some((cell) => /업체|기관/.test(cell))
 
-/** 붙여넣은 표 → 가져올 수기 기록 목록 (행마다 오류 메시지 포함) */
+/**
+ * 구글 시트 visit_requests 탭의 열 (apps-script/Code.gs 의 VISIT_HEADERS 와 같아야 합니다).
+ * 가져오기 양식 파일의 제목 행으로도 쓴다.
+ */
+export const VISIT_SHEET_HEADERS = [
+  'id', '신청일시', '상태', '투어', '방문일', '시간', '방문구분', '고객구분', '업체명', '업종',
+  '방문목적', '담당자', '담당자직책', '담당자조직', '담당자연락처', '담당자이메일', '담당자의견',
+  '방문인원', '방문자명단', '요청사항', '개인정보동의', '관리자메모', '토큰', '수정일시', '방문자JSON',
+  '투어언어', '외국어', '통역동반', '출처', '주요인원', '가이드', '유관부서', '후속진행',
+] as const
+
+/** 가져올 때 쓰지 않는 열 (시스템이 채움) */
+export const SYSTEM_COLUMNS = ['id', '신청일시', '방문자명단', '개인정보동의', '토큰', '수정일시', '출처'] as const
+
+export type TableFormat = 'visit_requests' | 'legacy'
+
+export interface ParsedTable {
+  format: TableFormat
+  rows: ParsedRow[]
+}
+
+const isVisitSheetHeader = (cells: string[]) => {
+  const names = new Set(cells.map((cell) => cell.trim()))
+  return names.has('방문일') && names.has('업체명')
+}
+
+const splitComma = (value: string) =>
+  value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+
+/** '13:00-14:00' / '13:00 ~ 14:00' / '8:30–10:00' → '13:00-14:00', 그 외 '' */
+export function normalizeSlot(value: string) {
+  const [from = '', to = ''] = value.split(/\s*[-~–]\s*/)
+  const start = normalizeTime(from)
+  const end = normalizeTime(to)
+  return start && end && start < end ? `${start}-${end}` : ''
+}
+
+function tourFrom(value: string): TourType {
+  const text = value.trim()
+  return TOURS.find((tour) => tour.id === text || tour.label === text || tour.short === text)?.id ?? 'other'
+}
+
+function visitorsFrom(value: string): Visitor[] {
+  if (!value.trim()) return []
+  try {
+    const list: unknown = JSON.parse(value)
+    if (!Array.isArray(list)) return []
+    return list
+      .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
+      .map((item) => ({
+        name: String(item.name ?? ''),
+        title: String(item.title ?? ''),
+        org: String(item.org ?? ''),
+        email: String(item.email ?? ''),
+        car: String(item.car ?? ''),
+        jobs: Array.isArray(item.jobs) ? item.jobs.map(String) : [],
+      }))
+      .filter((visitor) => visitor.name)
+  } catch {
+    return []
+  }
+}
+
+/** visit_requests 양식 (제목 이름으로 열을 찾는다) */
+function parseVisitSheet(table: string[][], headerAt: number): ParsedRow[] {
+  const col = new Map(table[headerAt].map((name, index) => [name.trim(), index]))
+  const result: ParsedRow[] = []
+  table.slice(headerAt + 1).forEach((cells, offset) => {
+    const line = headerAt + offset + 2
+    if (!cells.some((cell) => cell.trim())) return
+    const get = (name: string) => {
+      const index = col.get(name)
+      return index === undefined ? '' : (cells[index] ?? '').trim()
+    }
+    const date = normalizeDate(get('방문일'))
+    if (!date) {
+      result.push({ line, error: '방문일이 비어 있거나 형식이 다릅니다 (예: 2026-07-27)' })
+      return
+    }
+    const company = get('업체명')
+    if (!company) {
+      result.push({ line, error: '업체명이 비어 있습니다' })
+      return
+    }
+    const category = get('방문구분').includes('내부') ? 'internal' : 'external'
+    const clientText = get('고객구분')
+    const foreignName = get('외국어')
+    const foreign = get('투어언어') === '외국어' || Boolean(foreignName)
+    const statusText = get('상태')
+    const headcount = get('방문인원').match(/\d+/)
+    result.push({
+      line,
+      input: {
+        tour: tourFrom(get('투어')),
+        date,
+        slot: normalizeSlot(get('시간')),
+        // 이력은 대부분 확정된 방문이므로 상태가 비어 있으면 승인으로 본다.
+        status: statusText ? statusFrom(statusText) : 'approved',
+        source: 'manual',
+        category,
+        clientType:
+          category === 'external' && clientText
+            ? clientText.includes('신규')
+              ? 'new'
+              : clientText.includes('기존')
+                ? 'existing'
+                : undefined
+            : undefined,
+        language: foreign ? 'foreign' : 'ko',
+        foreignLanguage: foreign ? foreignName || '영어' : '',
+        interpreter: foreign && get('통역동반') === '동반',
+        company,
+        industries: category === 'external' ? splitComma(get('업종')) : [],
+        purposes: splitComma(get('방문목적')),
+        host: {
+          name: get('담당자'),
+          title: get('담당자직책'),
+          org: get('담당자조직'),
+          phone: get('담당자연락처'),
+          email: get('담당자이메일'),
+        },
+        hostComment: get('담당자의견'),
+        visitors: visitorsFrom(get('방문자JSON')),
+        headcount: headcount ? Number(headcount[0]) : undefined,
+        note: get('요청사항'),
+        consent: false,
+        adminMemo: get('관리자메모'),
+        keyPersons: get('주요인원'),
+        guides: get('가이드'),
+        departments: splitComma(get('유관부서')),
+        followUp: get('후속진행'),
+      },
+    })
+  })
+  return result
+}
+
+/** 셀 표 → 가져올 기록 목록. 양식을 자동으로 알아본다. */
+export function parseTable(table: string[][]): ParsedTable {
+  const headerAt = table.slice(0, 5).findIndex(isVisitSheetHeader)
+  if (headerAt !== -1) return { format: 'visit_requests', rows: parseVisitSheet(table, headerAt) }
+  return { format: 'legacy', rows: parseLegacyTable(table) }
+}
+
+/** 붙여넣은 표 (탭 구분) → 가져올 기록 목록 */
 export function parseLegacy(text: string): ParsedRow[] {
-  const table = parseTsv(text)
+  return parseTable(parseDelimited(text)).rows
+}
+
+/** 기존 관리 양식 (순번 · 날짜 · 요일 · 시작시간 …) */
+function parseLegacyTable(table: string[][]): ParsedRow[] {
   let offsets = { ...DEFAULT_OFFSETS }
   const result: ParsedRow[] = []
 
