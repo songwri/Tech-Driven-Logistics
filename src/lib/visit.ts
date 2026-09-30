@@ -116,6 +116,17 @@ export const TOUR_LANGUAGE_LABEL: Record<TourLanguage, string> = {
 /** 외국어 투어에서 고를 수 있는 언어 (그 외는 '기타: 직접입력') */
 export const FOREIGN_LANGUAGES = ['영어', '중국어', '일본어', '베트남어']
 
+/** 준비 시간 확보: 당일 · 익일은 신청 불가 (오늘 +2일부터). apps-script/Code.gs 의 MIN_LEAD_DAYS 와 같아야 합니다. */
+export const MIN_LEAD_DAYS = 2
+
+/** 신청 가능한 가장 이른 날짜 (자정 기준) */
+export function earliestBookableDate(leadDays = MIN_LEAD_DAYS) {
+  const date = new Date()
+  date.setHours(0, 0, 0, 0)
+  date.setDate(date.getDate() + leadDays)
+  return date
+}
+
 export const MAX_VISITORS = 30
 export const OTHER = '기타'
 
@@ -293,8 +304,10 @@ const blank = (value: string) => !value.trim()
 /** 섹션별 첫 번째 문제(없으면 null). 화면 안내와 제출 검사가 같은 규칙을 쓴다. */
 export function sectionProblems(draft: VisitDraft): Record<FormSection, string | null> {
   const schedule = !draft.date
-    ? '방문 희망일을 선택해 주세요. (월 · 수 · 금만 가능합니다)'
-    : !draft.slot
+    ? '방문 희망일을 선택해 주세요. (월 · 수 · 금, 당일 · 익일 제외)'
+    : draft.date < toDateKey(earliestBookableDate())
+      ? '당일 · 익일 방문은 신청할 수 없습니다. 모레 이후 날짜를 선택해 주세요.'
+      : !draft.slot
       ? '방문 시간을 선택해 주세요.'
       : null
 

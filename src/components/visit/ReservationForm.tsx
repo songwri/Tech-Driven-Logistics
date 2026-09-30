@@ -255,18 +255,12 @@ export function ReservationForm({ busy, closedDays, variant, onClose, intro }: R
           />
         </section>
 
-        <div className="space-y-8">
-          <section id={sectionId('host')} className="scroll-mt-24">
-            <SectionTitle index="02" aside={<span className="text-[12px] text-warm-600">예약을 신청하고 결과를 받을 분</span>}>
-              신청 담당자
-            </SectionTitle>
-            <HostFields host={draft.host} onChange={(host) => patch({ host })} />
-          </section>
-          <section id={sectionId('consent')} className="scroll-mt-24">
-            <SectionTitle>개인정보 수집 · 이용 동의</SectionTitle>
-            <PrivacyConsent checked={draft.consent} onChange={(consent) => patch({ consent })} />
-          </section>
-        </div>
+        <section id={sectionId('host')} className="scroll-mt-24">
+          <SectionTitle index="02" aside={<span className="text-[12px] text-warm-600">예약을 신청하고 결과를 받을 분</span>}>
+            신청 담당자
+          </SectionTitle>
+          <HostFields host={draft.host} onChange={(host) => patch({ host })} />
+        </section>
       </div>
 
       <section id={sectionId('info')} className="scroll-mt-24">
@@ -296,14 +290,19 @@ export function ReservationForm({ busy, closedDays, variant, onClose, intro }: R
         />
       </section>
 
-      <p className="border-l-2 border-brand bg-cream px-4 py-3 text-[13px] text-warm-800">
-        예약 신청 시 담당자에게 승인 요청이 전달되며, 일정 확정 후 입력하신 이메일로 확정 안내가 발송됩니다.
-        {!isLiveBackend && (
-          <span className="mt-1 block font-mono text-[11px] text-warm-600">
-            ※ 예약 접수 서버 연결 전입니다. 연결 후 정상 접수됩니다.
-          </span>
-        )}
-      </p>
+      {/* 입력을 모두 마친 뒤 동의하도록 폼 맨 끝, 신청 버튼 바로 위에 둔다. */}
+      <section id={sectionId('consent')} className="scroll-mt-24">
+        <SectionTitle index="06">개인정보 수집 · 이용 동의</SectionTitle>
+        <PrivacyConsent checked={draft.consent} onChange={(consent) => patch({ consent })} />
+        <p className="mt-4 border-l-2 border-brand bg-cream px-4 py-3 text-[13px] text-warm-800">
+          예약 신청 시 담당자에게 승인 요청이 전달되며, 일정 확정 후 입력하신 이메일로 확정 안내가 발송됩니다.
+          {!isLiveBackend && (
+            <span className="mt-1 block font-mono text-[11px] text-warm-600">
+              ※ 예약 접수 서버 연결 전입니다. 연결 후 정상 접수됩니다.
+            </span>
+          )}
+        </p>
+      </section>
     </div>
   )
 
@@ -313,6 +312,10 @@ export function ReservationForm({ busy, closedDays, variant, onClose, intro }: R
         <div className="min-w-0">
           {intro}
           {sections}
+          <div className="mt-6 hidden items-center justify-end gap-4 lg:flex">
+            {errorBox}
+            {submitButton}
+          </div>
         </div>
         {/* 데스크톱: 우측 고정 요약 패널 / 모바일: 하단 고정 바 */}
         <aside className="hidden lg:block">

@@ -5,6 +5,8 @@ import { Calendar } from '../ui/Calendar'
 import { FieldLabel } from './VisitFields'
 import {
   CLOSED_WEEKDAYS,
+  MIN_LEAD_DAYS,
+  earliestBookableDate,
   TOURS,
   TOUR_BY_ID,
   formatDateLong,
@@ -23,10 +25,21 @@ interface SchedulePickerProps {
   busy: BusySegment[]
   closedDays: string[]
   onChange: (patch: { tour?: TourType; date?: string; slot?: string }) => void
+  /** 오늘부터 며칠 뒤부터 고를 수 있는지. 신청 화면은 당일·익일 제외(2), 관리자 수정은 0 */
+  leadDays?: number
 }
 
 /** 좌측 패널: 투어 종류 → 달력 날짜 → 시간대 순으로 고릅니다. */
-export function SchedulePicker({ tour, date, slot, busy, closedDays, onChange }: SchedulePickerProps) {
+export function SchedulePicker({
+  tour,
+  date,
+  slot,
+  busy,
+  closedDays,
+  onChange,
+  leadDays = MIN_LEAD_DAYS,
+}: SchedulePickerProps) {
+  const earliest = useMemo(() => earliestBookableDate(leadDays), [leadDays])
   const definition = TOUR_BY_ID[tour]
 
   // 선택한 투어의 모든 시간대가 막힌 날은 달력에서 고를 수 없게 한다.
@@ -101,18 +114,22 @@ export function SchedulePicker({ tour, date, slot, busy, closedDays, onChange }:
         <Calendar
           mode="single"
           selected={selectedDate}
-          defaultMonth={selectedDate}
           onSelect={(picked) => {
             const nextDate = picked ? toDateKey(picked) : ''
             const keepSlot = Boolean(slot) && Boolean(nextDate) && !isSlotBusy(tour, nextDate, slot, busy)
             onChange({ date: nextDate, slot: keepSlot ? slot : '' })
           }}
-          startMonth={new Date()}
-          disabled={[{ before: new Date() }, { dayOfWeek: CLOSED_WEEKDAYS }, ...closed, ...fullyBookedDays]}
+          startMonth={earliest}
+          defaultMonth={selectedDate ?? earliest}
+          disabled={[{ before: earliest }, { dayOfWeek: CLOSED_WEEKDAYS }, ...closed, ...fullyBookedDays]}
         />
         <p className="mt-2 flex items-center gap-2 border-t border-warm-300/40 pt-2 font-mono text-[11px] text-warm-600">
           <CalendarDays width={14} height={14} />
-          {date ? `${formatDateLong(date)} 선택됨` : '월 · 수 · 금만 선택 가능'}
+          {date
+            ? `${formatDateLong(date)} 선택됨`
+            : leadDays > 0
+              ? '월 · 수 · 금 · 당일 · 익일은 신청 불가'
+              : '월 · 수 · 금만 선택 가능'}
         </p>
       </div>
 
