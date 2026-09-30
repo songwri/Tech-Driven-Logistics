@@ -20,7 +20,14 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-09-30.legacy-import';
+var CODE_VERSION = '2026-10-01.version-check';
+/**
+ * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
+ * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
+ *   2: 수기 등록(create) · 기존 이력 가져오기(import) · 완료/취소 상태 · 운영 기록 열
+ */
+var API_LEVEL = 2;
+var ADMIN_ACTIONS = ['list', 'health', 'delete', 'setStatus', 'update', 'create', 'import'];
 
 var GUESTBOOK_SHEET = 'guestbook';
 var VISIT_SHEET = 'visit_requests';
@@ -814,6 +821,10 @@ function admin_(payload) {
     throw new Error('관리자 키가 올바르지 않습니다.');
   }
 
+  if (ADMIN_ACTIONS.indexOf(String(payload.action)) === -1) {
+    throw new Error('서버(Apps Script)가 모르는 관리자 요청입니다: ' + payload.action + ' (서버 버전 ' + CODE_VERSION + ')');
+  }
+
   if (payload.action === 'list') {
     return { requests: readVisits_().map(publicRequest_) };
   }
@@ -1159,7 +1170,7 @@ function doGet(e) {
   try {
     var action = e && e.parameter ? e.parameter.action : '';
 
-    if (action === 'version') return jsonOutput_({ version: CODE_VERSION });
+    if (action === 'version') return jsonOutput_({ version: CODE_VERSION, apiLevel: API_LEVEL });
 
     if (action === 'confirm' || action === 'cancel') {
       // 예전 메일의 승인/거절 링크. 링크만으로 상태를 바꾸지 않고(자동 승인 방지) 관리자 페이지로 안내한다.
