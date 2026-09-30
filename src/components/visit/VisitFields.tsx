@@ -596,7 +596,7 @@ export function VisitorsFields({
                 value={visitor.car}
                 onChange={(e) => update(index, { car: e.target.value })}
                 maxLength={20}
-                placeholder="없으면 비움"
+                placeholder="00가0000"
                 className={cellInput}
               />
             </label>

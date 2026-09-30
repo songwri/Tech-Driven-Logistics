@@ -51,7 +51,7 @@ export default function AdminApp() {
   const [openId, setOpenId] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [scope, setScope] = useState<'month' | 'upcoming' | 'all'>('month')
+  const [scope, setScope] = useState<'month' | 'upcoming' | 'all'>('upcoming')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
   /** 요약 카드를 누르면 해당 조건으로 아래 목록을 바로 보여준다. */
@@ -262,9 +262,9 @@ export default function AdminApp() {
                       <div className="inline-flex border border-warm-300/60 bg-white" role="radiogroup" aria-label="조회 범위">
                         {(
                           [
-                            ['month', '달력 월'],
                             ['upcoming', '오늘 이후'],
                             ['all', '전체'],
+                            ['month', '달력 월'],
                           ] as const
                         ).map(([value, label]) => (
                           <button
