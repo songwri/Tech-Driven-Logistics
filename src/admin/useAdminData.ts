@@ -3,7 +3,7 @@ import { adminRequest, isLiveBackend } from '@/lib/labApi'
 import { busyFromRequests, isSlotBusy, type VisitRequest, type VisitStatus } from '@/lib/visit'
 import { buildSampleRequests } from './sampleData'
 
-const DEMO_KEY = 'tdl-lab-admin-demo-v2'
+const DEMO_KEY = 'tdl-lab-admin-demo-v3'
 const SESSION_KEY = 'tdl-lab-admin-key'
 
 function readDemo(): VisitRequest[] {

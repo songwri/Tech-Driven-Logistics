@@ -9,7 +9,7 @@ import {
   JOBS,
   MAX_VISITORS,
   OTHER,
-  FOREIGN_LANGUAGES,
+  FOREIGN_LANGUAGE,
   PURPOSES,
   TOUR_LANGUAGE_LABEL,
   emptyVisitor,
@@ -129,7 +129,7 @@ export function HostFields({ host, onChange }: { host: VisitHost; onChange: (hos
   return (
     <div className="grid grid-cols-2 gap-3">
       <Field label="성함" required>
-        <Input value={host.name} onChange={set('name')} required maxLength={40} placeholder="김대현" autoComplete="name" />
+        <Input value={host.name} onChange={set('name')} required maxLength={40} placeholder="홍길동" autoComplete="name" />
       </Field>
       <Field label="직책" required>
         <Input value={host.title} onChange={set('title')} required maxLength={40} placeholder="책임" />
@@ -241,71 +241,27 @@ function RadioDot({ active }: { active: boolean }) {
 /** 투어 진행 언어 · 외국어 종류 · 방문 측 통역 동반 여부 */
 function LanguageFields({ draft, onChange }: { draft: VisitDraft; onChange: Patch }) {
   const foreign = draft.language === 'foreign'
-  const isPreset = FOREIGN_LANGUAGES.includes(draft.foreignLanguage)
-  const otherText = draft.foreignLanguage.startsWith(OTHER) ? draft.foreignLanguage.replace(/^기타:?\s*/, '') : ''
   return (
     <div className="border border-warm-300/50 bg-cream/40 p-4">
-      <div className="grid gap-4 md:grid-cols-[auto_1fr]">
-        <div>
-          <FieldLabel required>투어 진행 언어</FieldLabel>
-          <div className="mt-1.5 flex gap-2" role="radiogroup">
-            {(Object.keys(TOUR_LANGUAGE_LABEL) as TourLanguage[]).map((language) => (
-              <Chip
-                key={language}
-                multi={false}
-                selected={draft.language === language}
-                onClick={() =>
-                  onChange(
-                    language === 'ko'
-                      ? { language, foreignLanguage: '', interpreter: false }
-                      : { language, foreignLanguage: draft.foreignLanguage || FOREIGN_LANGUAGES[0] },
-                  )
-                }
-                className="min-w-20 justify-center"
-              >
-                {TOUR_LANGUAGE_LABEL[language]}
-              </Chip>
-            ))}
-          </div>
-        </div>
-
-        {foreign && (
-          <div>
-            <FieldLabel required>언어</FieldLabel>
-            <div className="mt-1.5 flex flex-wrap items-center gap-2" role="radiogroup">
-              {FOREIGN_LANGUAGES.map((language) => (
-                <Chip
-                  key={language}
-                  multi={false}
-                  selected={draft.foreignLanguage === language}
-                  onClick={() => onChange({ foreignLanguage: language })}
-                >
-                  {language}
-                </Chip>
-              ))}
-              <Chip
-                multi={false}
-                selected={!isPreset && draft.foreignLanguage.startsWith(OTHER)}
-                onClick={() => onChange({ foreignLanguage: OTHER })}
-              >
-                {OTHER}
-              </Chip>
-              {!isPreset && draft.foreignLanguage.startsWith(OTHER) && (
-                <Input
-                  value={otherText}
-                  onChange={(e) => {
-                    const cleaned = e.target.value.replace(/,/g, ' ')
-                    onChange({ foreignLanguage: cleaned ? `${OTHER}: ${cleaned}` : OTHER })
-                  }}
-                  placeholder="언어 직접 입력"
-                  maxLength={30}
-                  className="max-w-40 py-1.5"
-                  autoFocus
-                />
-              )}
-            </div>
-          </div>
-        )}
+      <FieldLabel required>투어 진행 언어</FieldLabel>
+      <div className="mt-1.5 flex flex-wrap items-center gap-2" role="radiogroup">
+        {(Object.keys(TOUR_LANGUAGE_LABEL) as TourLanguage[]).map((language) => (
+          <Chip
+            key={language}
+            multi={false}
+            selected={draft.language === language}
+            onClick={() =>
+              onChange(
+                language === 'ko'
+                  ? { language, foreignLanguage: '', interpreter: false }
+                  : { language, foreignLanguage: FOREIGN_LANGUAGE },
+              )
+            }
+            className="min-w-20 justify-center"
+          >
+            {TOUR_LANGUAGE_LABEL[language]}
+          </Chip>
+        ))}
       </div>
 
       {foreign && (
@@ -321,7 +277,7 @@ function LanguageFields({ draft, onChange }: { draft: VisitDraft; onChange: Patc
             <span className="text-[12px] text-warm-600">
               {draft.interpreter
                 ? '고객사 통역이 함께 오면 한국어로 안내하고 통역이 전달합니다.'
-                : '통역 없이 오시는 경우 해당 언어로 안내 가능한 인력을 배정합니다.'}
+                : '통역 없이 오시는 경우 영어로 안내 가능한 인력을 배정합니다.'}
             </span>
           </div>
         </div>

@@ -59,9 +59,11 @@ export default function ReservePage() {
           <div>
             <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-brand">TDL Lab · Visit Reservation</p>
             <h1 className="mt-2 text-3xl font-bold text-warm-800 md:text-4xl">TDL 방문 예약</h1>
-            <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-warm-600">
-              물류센터와 TDL Lab에서 검증된 물류 기술을 직접 확인하세요. 방문은 <b className="text-warm-800">월 · 수 · 금</b>에
-              운영됩니다.
+            <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-warm-600">
+              <span className="block">물류센터와 TDL Lab에서 검증된 물류 기술을 직접 확인하세요.</span>
+              <span className="block">
+                방문은 <b className="text-warm-800">월 · 수 · 금</b>에 운영됩니다.
+              </span>
             </p>
           </div>
           <ol className="grid grid-cols-3 gap-2 md:w-[420px]">

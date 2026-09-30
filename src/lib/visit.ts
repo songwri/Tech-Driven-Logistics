@@ -110,11 +110,11 @@ export const JOBS = [
 
 export const TOUR_LANGUAGE_LABEL: Record<TourLanguage, string> = {
   ko: '한국어',
-  foreign: '외국어',
+  foreign: '외국어 (영어)',
 }
 
-/** 외국어 투어에서 고를 수 있는 언어 (그 외는 '기타: 직접입력') */
-export const FOREIGN_LANGUAGES = ['영어', '중국어', '일본어', '베트남어']
+/** 외국어 투어는 영어로만 진행한다. */
+export const FOREIGN_LANGUAGE = '영어'
 
 /** 준비 시간 확보: 당일 · 익일은 신청 불가 (오늘 +2일부터). apps-script/Code.gs 의 MIN_LEAD_DAYS 와 같아야 합니다. */
 export const MIN_LEAD_DAYS = 2
