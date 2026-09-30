@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { BarChart3, CalendarRange, FileInput, LogOut, Plus, RefreshCw, RotateCcw, X } from 'lucide-react'
+import { BarChart3, CalendarRange, FileDown, FileInput, LogOut, Plus, RefreshCw, RotateCcw, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/ui/Logo'
 import { Button } from '@/components/ui/Button'
@@ -13,6 +13,7 @@ import { StatsView } from './StatsView'
 import { DiagnoseButton } from './DiagnosePanel'
 import { ManualVisitModal } from './ManualVisitModal'
 import { ImportModal } from './ImportModal'
+import { downloadVisitRequests } from './importTemplate'
 
 type Tab = 'dashboard' | 'stats'
 
@@ -324,6 +325,15 @@ export default function AdminApp() {
                         className="inline-flex items-center gap-1 border border-warm-300/60 bg-white px-2.5 py-1.5 text-[12px] font-semibold text-warm-600 transition hover:border-warm-800 hover:text-warm-800"
                       >
                         <FileInput width={13} height={13} /> 기존 이력 가져오기
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => downloadVisitRequests(requests)}
+                        disabled={requests.length === 0}
+                        title="전체 기록을 구글 시트 visit_requests 탭과 같은 양식의 엑셀로 내려받습니다"
+                        className="inline-flex items-center gap-1 border border-warm-300/60 bg-white px-2.5 py-1.5 text-[12px] font-semibold text-warm-600 transition hover:border-warm-800 hover:text-warm-800 disabled:opacity-50"
+                      >
+                        <FileDown width={13} height={13} /> 전체 내려받기
                       </button>
                     </div>
                   </div>

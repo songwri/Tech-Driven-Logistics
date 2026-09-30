@@ -1,8 +1,11 @@
-import { downloadWorkbook, type Sheet } from '@/lib/xlsx'
+import { downloadWorkbook, type CellValue, type Sheet } from '@/lib/xlsx'
+import { TOUR_BY_ID, toDateKey, type VisitRequest, type VisitStatus } from '@/lib/visit'
 import { SYSTEM_COLUMNS, VISIT_SHEET_HEADERS } from './importLegacy'
 
+type Header = (typeof VISIT_SHEET_HEADERS)[number]
+
 /** 열마다 채우는 법과 예시 (양식 파일의 '안내' 시트) */
-const GUIDE: Record<(typeof VISIT_SHEET_HEADERS)[number], [string, string]> = {
+const GUIDE: Record<Header, [string, string]> = {
   id: ['비워 두세요 (자동)', ''],
   신청일시: ['비워 두세요 (자동)', ''],
   상태: ['대기 / 승인 / 완료 / 거절 / 취소 — 비우면 승인. 거절 · 취소는 통계 제외', '완료'],
@@ -38,7 +41,7 @@ const GUIDE: Record<(typeof VISIT_SHEET_HEADERS)[number], [string, string]> = {
   후속진행: ['', 'PoC 논의'],
 }
 
-const WIDTHS: Partial<Record<(typeof VISIT_SHEET_HEADERS)[number], number>> = {
+const WIDTHS: Partial<Record<Header, number>> = {
   id: 10,
   신청일시: 12,
   방문일: 12,
@@ -51,13 +54,83 @@ const WIDTHS: Partial<Record<(typeof VISIT_SHEET_HEADERS)[number], number>> = {
   후속진행: 22,
 }
 
+const system = new Set<string>(SYSTEM_COLUMNS)
+const visitColumns = () =>
+  VISIT_SHEET_HEADERS.map((header) => ({ header, width: WIDTHS[header] ?? (system.has(header) ? 10 : 12) }))
+
+/** apps-script/Code.gs 의 STATUS_TEXT 와 같아야 합니다 (시트에 적히는 상태 글자). */
+const STATUS_TEXT: Record<VisitStatus, string> = {
+  pending: '대기',
+  approved: '승인',
+  completed: '완료',
+  rejected: '거절',
+  cancelled: '취소',
+}
+
+/** 예약 한 건 → visit_requests 탭 한 행 (Code.gs 의 fillVisitRow_ 와 같은 값) */
+function toSheetRow(request: VisitRequest): CellValue[] {
+  const foreign = request.language === 'foreign'
+  const values: Record<Header, CellValue> = {
+    id: request.id,
+    신청일시: request.createdAt,
+    상태: STATUS_TEXT[request.status],
+    투어: TOUR_BY_ID[request.tour].label,
+    방문일: request.date,
+    시간: request.slot,
+    방문구분: request.category === 'internal' ? '내부 방문' : '고객 방문',
+    고객구분:
+      request.category === 'internal' || !request.clientType
+        ? ''
+        : request.clientType === 'new'
+          ? '신규 고객사'
+          : '기존 고객사',
+    업체명: request.company,
+    업종: request.industries.join(', '),
+    방문목적: request.purposes.join(', '),
+    담당자: request.host.name,
+    담당자직책: request.host.title,
+    담당자조직: request.host.org,
+    담당자연락처: request.host.phone,
+    담당자이메일: request.host.email,
+    담당자의견: request.hostComment,
+    방문인원: request.visitors.length || request.headcount,
+    방문자명단: request.visitors.map((v) => `${v.name}(${v.title}, ${v.org})`).join(' / '),
+    요청사항: request.note,
+    개인정보동의: request.consent ? '동의' : '',
+    관리자메모: request.adminMemo,
+    토큰: '', // 메일 링크용 비밀값은 내보내지 않는다
+    수정일시: '',
+    방문자JSON: JSON.stringify(request.visitors),
+    투어언어: foreign ? '외국어' : '한국어',
+    외국어: foreign ? request.foreignLanguage : '',
+    통역동반: foreign ? (request.interpreter ? '동반' : '없음') : '',
+    출처: request.source === 'manual' ? '수기' : '웹',
+    주요인원: request.keyPersons ?? '',
+    가이드: request.guides ?? '',
+    유관부서: (request.departments ?? []).join(', '),
+    후속진행: request.followUp ?? '',
+  }
+  return VISIT_SHEET_HEADERS.map((header) => values[header])
+}
+
+/**
+ * 예약 · 방문 기록을 visit_requests 양식 그대로 내려받는다.
+ * 같은 파일을 [기존 이력 가져오기]로 다시 올릴 수 있다 (이미 있는 방문은 건너뜀).
+ */
+export function downloadVisitRequests(requests: VisitRequest[]) {
+  const rows = [...requests]
+    .sort((a, b) => (a.date + a.slot).localeCompare(b.date + b.slot))
+    .map(toSheetRow)
+  const stamp = toDateKey(new Date()).replace(/-/g, '')
+  downloadWorkbook(`TDL_visit_requests_${stamp}.xlsx`, [{ name: 'visit_requests', columns: visitColumns(), rows }])
+}
+
 /** 기존 이력 가져오기 양식: 구글 시트 visit_requests 탭과 같은 열 + 안내 시트 */
 export function downloadImportTemplate() {
-  const system = new Set<string>(SYSTEM_COLUMNS)
   const sheets: Sheet[] = [
     {
       name: 'visit_requests',
-      columns: VISIT_SHEET_HEADERS.map((header) => ({ header, width: WIDTHS[header] ?? (system.has(header) ? 10 : 12) })),
+      columns: visitColumns(),
       rows: [],
     },
     {
