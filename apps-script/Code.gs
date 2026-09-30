@@ -58,6 +58,7 @@ var BRAND = '#a72b2b';
 var GUESTBOOK_HEADERS = [
   'id', 'createdAt', '표시이름', '표시소속', '직함', '평가', '메시지', '실명', '실제소속', '숨김',
 ];
+/** src/admin/importLegacy.ts 의 VISIT_SHEET_HEADERS 와 같아야 합니다 (가져오기 양식). */
 var VISIT_HEADERS = [
   'id', '신청일시', '상태', '투어', '방문일', '시간', '방문구분', '고객구분', '업체명', '업종',
   '방문목적', '담당자', '담당자직책', '담당자조직', '담당자연락처', '담당자이메일', '담당자의견',

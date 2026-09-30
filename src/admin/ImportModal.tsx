@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react'
-import { AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
+import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, Upload, X } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Field'
 import { cn } from '@/lib/utils'
 import { formatDateShort, formatSlot, type VisitRequest } from '@/lib/visit'
-import { parseLegacy, visitKey, type ManualInput } from './importLegacy'
+import { readXlsx } from '@/lib/xlsxRead'
+import { parseDelimited, parseTable, visitKey, type ManualInput } from './importLegacy'
+import { downloadImportTemplate } from './importTemplate'
 import type { ImportResult } from './useAdminData'
 import { StatusBadge } from './status'
 
@@ -14,8 +16,35 @@ const EXAMPLE = [
   '1\t2026-07-27\t월\t13:00\t14:00\t외부\tACME\t영업\t6\t-\t"홍길동 책임\n김철수 선임"\t영업팀\t\t\t\t완료\t',
 ].join('\n')
 
+/** CSV 는 엑셀이 한글을 CP949(EUC-KR)로 저장하는 경우가 많아, UTF-8 이 아니면 EUC-KR 로 읽는다. */
+function decodeText(buffer: ArrayBuffer) {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buffer)
+  } catch {
+    return new TextDecoder('euc-kr').decode(buffer)
+  }
+}
+
+/** 올린 파일 → 셀 표. .xlsx 는 visit_requests 시트(없으면 내용이 있는 첫 시트)를 읽는다. */
+async function readTableFile(file: File): Promise<string[][]> {
+  const name = file.name.toLowerCase()
+  const buffer = await file.arrayBuffer()
+  if (name.endsWith('.xlsx') || name.endsWith('.xlsm')) {
+    const sheets = await readXlsx(buffer)
+    const hasRows = (rows: string[][]) => rows.some((cells) => cells.some((cell) => cell.trim()))
+    const sheet =
+      sheets.find((item) => item.name.trim() === 'visit_requests' && hasRows(item.rows)) ??
+      sheets.find((item) => item.name !== '안내' && hasRows(item.rows))
+    if (!sheet) throw new Error('파일에 내용이 있는 시트가 없습니다.')
+    return sheet.rows
+  }
+  if (name.endsWith('.xls')) throw new Error('예전 엑셀 형식(.xls)은 읽을 수 없습니다. 엑셀에서 .xlsx 로 다시 저장해 올려 주세요.')
+  const text = decodeText(buffer)
+  return parseDelimited(text, name.endsWith('.csv') ? ',' : '\t')
+}
+
 /**
- * 기존에 엑셀 · 구글 시트로 관리하던 방문 이력을 붙여넣어 한 번에 가져온다.
+ * 기존에 엑셀 · 구글 시트로 관리하던 방문 이력을 파일 · 붙여넣기로 한 번에 가져온다.
  * 붙여넣은 내용은 구글 시트(visit_requests)에만 저장된다.
  */
 export function ImportModal({
@@ -28,11 +57,29 @@ export function ImportModal({
   onImport: (inputs: ManualInput[]) => Promise<ImportResult>
 }) {
   const [text, setText] = useState('')
+  const [file, setFile] = useState<{ name: string; table: string[][] } | null>(null)
+  const [dragging, setDragging] = useState(false)
+  const fileInput = useRef<HTMLInputElement>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<{ created: number; skipped: { line: number; reason: string }[] } | null>(null)
 
-  const parsed = useMemo(() => parseLegacy(text), [text])
+  const table = useMemo(() => parseTable(file ? file.table : parseDelimited(text)), [file, text])
+  const parsed = table.rows
+
+  const openFile = async (picked: File | undefined) => {
+    if (!picked) return
+    setError(null)
+    setResult(null)
+    try {
+      setFile({ name: picked.name, table: await readTableFile(picked) })
+      setText('')
+    } catch (readError) {
+      setError(readError instanceof Error ? readError.message : '파일을 읽지 못했습니다.')
+    } finally {
+      if (fileInput.current) fileInput.current.value = ''
+    }
+  }
   const existing = useMemo(() => new Set(requests.map(visitKey)), [requests])
   const valid = parsed.filter((row): row is typeof row & { input: ManualInput } => Boolean(row.input))
   const fresh = valid.filter((row) => !existing.has(visitKey(row.input)))
@@ -48,6 +95,7 @@ export function ImportModal({
         skipped: response.skipped.map((item) => ({ line: fresh[item.index]?.line ?? 0, reason: item.reason })),
       })
       setText('')
+      setFile(null)
     } catch (importError) {
       setError(importError instanceof Error ? importError.message : '가져오기에 실패했습니다.')
     } finally {
@@ -59,7 +107,7 @@ export function ImportModal({
     <Modal
       eyebrow="Import History"
       title="기존 방문 이력 가져오기"
-      description="엑셀 · 구글 시트에서 표를 복사(Ctrl+C)해 아래에 붙여넣으세요. 제목 행은 있어도 되고 없어도 됩니다."
+      description="visit_requests 양식 파일(.xlsx · .csv)을 올리거나, 엑셀 · 구글 시트에서 표를 복사해 붙여넣으세요."
       onClose={onClose}
       className="max-w-6xl"
     >
@@ -81,24 +129,86 @@ export function ImportModal({
         </div>
       )}
 
-      <Textarea
-        rows={7}
-        value={text}
-        onChange={(e) => {
-          setText(e.target.value)
-          setResult(null)
+      <div
+        onDragOver={(event) => {
+          event.preventDefault()
+          setDragging(true)
         }}
-        placeholder={EXAMPLE}
-        aria-label="방문 이력 붙여넣기"
-        className="font-mono text-[12px] leading-relaxed"
-      />
-      <p className="mt-2 text-[12px] leading-relaxed text-warm-600">
-        열 순서: 순번 · 날짜 · 요일 · 시작시간 · 종료시간 · 구분(내부/외부) · 업체(기관)명 · 방문 목적 · 방문인원수 · 주요 인원 · 가이드 ·
-        유관부서1~4 · 완료유무 · 후속 진행현황
-        <br />
-        완료유무가 <b>완료</b>면 완료, <b>취소</b>면 취소(통계 제외), 비어 있으면 승인으로 가져옵니다. 시간이 TBD면 ‘시간 미정’, 인원수의
-        (E)는 영어 투어로 표시합니다. 이미 있는 방문(날짜 + 업체 + 시간)은 건너뜁니다.
-      </p>
+        onDragLeave={() => setDragging(false)}
+        onDrop={(event) => {
+          event.preventDefault()
+          setDragging(false)
+          void openFile(event.dataTransfer.files[0])
+        }}
+        className={cn(
+          'flex flex-wrap items-center gap-3 border border-dashed px-4 py-4 transition',
+          dragging ? 'border-brand bg-brand/5' : 'border-warm-300 bg-cream/40',
+        )}
+      >
+        <FileSpreadsheet width={22} height={22} className="shrink-0 text-warm-600" />
+        {file ? (
+          <p className="min-w-0 flex-1 text-sm text-warm-800">
+            <b className="break-all">{file.name}</b>
+            <span className="ml-2 text-[12px] text-warm-600">
+              {table.format === 'visit_requests' ? 'visit_requests 양식' : '기존 관리 양식'}으로 읽었습니다
+            </span>
+          </p>
+        ) : (
+          <p className="min-w-0 flex-1 text-sm text-warm-600">
+            파일을 여기로 끌어다 놓거나 <b className="text-warm-800">파일 선택</b>을 누르세요. (.xlsx · .csv)
+          </p>
+        )}
+        <input
+          ref={fileInput}
+          type="file"
+          accept=".xlsx,.xlsm,.csv,.tsv,.txt"
+          className="hidden"
+          aria-label="방문 이력 파일"
+          onChange={(event) => void openFile(event.target.files?.[0])}
+        />
+        {file && (
+          <Button variant="ghost" size="sm" onClick={() => setFile(null)}>
+            <X width={14} height={14} /> 파일 빼기
+          </Button>
+        )}
+        <Button variant="outline" size="sm" onClick={() => fileInput.current?.click()}>
+          <Upload width={14} height={14} /> 파일 선택
+        </Button>
+        <Button variant="outline" size="sm" onClick={downloadImportTemplate}>
+          <Download width={14} height={14} /> 양식 내려받기
+        </Button>
+      </div>
+
+      {!file && (
+        <>
+          <p className="mb-1.5 mt-4 font-mono text-[11px] text-warm-600">또는 표를 복사해 붙여넣기</p>
+          <Textarea
+            rows={5}
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value)
+              setResult(null)
+            }}
+            placeholder={EXAMPLE}
+            aria-label="방문 이력 붙여넣기"
+            className="font-mono text-[12px] leading-relaxed"
+          />
+        </>
+      )}
+      <details className="mt-2 text-[12px] leading-relaxed text-warm-600">
+        <summary className="cursor-pointer select-none font-semibold">읽을 수 있는 양식</summary>
+        <p className="mt-1">
+          <b>① visit_requests 양식</b> — 구글 시트 visit_requests 탭과 같은 제목 행 (양식 내려받기). 제목 이름으로 열을 찾으므로 순서가
+          달라도 되고, <b>방문일 · 업체명</b>만 있으면 됩니다. 구글 시트를 그대로 내려받은 파일도 됩니다. 상태가 비어 있으면 승인으로
+          가져옵니다.
+          <br />
+          <b>② 기존 관리 양식</b> — 순번 · 날짜 · 요일 · 시작시간 · 종료시간 · 구분(내부/외부) · 업체(기관)명 · 방문 목적 · 방문인원수 ·
+          주요 인원 · 가이드 · 유관부서1~4 · 완료유무 · 후속 진행현황. 완료유무가 완료면 완료, 취소면 취소(통계 제외), 비어 있으면 승인.
+          시간 TBD는 ‘시간 미정’, 인원수의 (E)는 영어 투어.
+          <br />
+          이미 있는 방문(날짜 + 업체 + 시간)은 건너뜁니다.
+        </p>
+      </details>
 
       {parsed.length > 0 && (
         <>
