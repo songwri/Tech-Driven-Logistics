@@ -99,7 +99,7 @@ export function useAdminData() {
     // 배포된 서버 버전을 확인해, 이전 버전이면 관리자 화면에 재배포 안내를 띄운다.
     if (!isLiveBackend || !key) return
     let cancelled = false
-    fetchServerVersion()
+    fetchServerVersion(key)
       .then((info) => {
         if (!cancelled) setServer(info)
       })
@@ -111,13 +111,21 @@ export function useAdminData() {
     }
   }, [key])
 
-  /** 새 관리자 기능을 쓰기 전에 서버가 지원하는지 확인한다 (재배포 직후에도 맞도록 매번 새로 확인). */
+  /**
+   * 새 관리자 기능을 쓰기 전에 서버가 지원하는지 확인한다 (재배포 직후에도 맞도록 매번 새로 확인).
+   * 확인 자체가 실패하면 막지 않는다 — 실제 요청이 원인을 담은 오류를 낸다.
+   */
   const requireServer = useCallback(async () => {
     if (!isLiveBackend) return
-    const info = await fetchServerVersion()
+    let info: ServerVersion
+    try {
+      info = await fetchServerVersion(key)
+    } catch {
+      return
+    }
     setServer(info)
     if (info.apiLevel < REQUIRED_API_LEVEL) throw new Error(outdatedServerMessage(info))
-  }, [])
+  }, [key])
 
   const load = useCallback(async (adminKey: string) => {
     if (!isLiveBackend) return true
