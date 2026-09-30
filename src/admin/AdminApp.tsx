@@ -266,6 +266,19 @@ export default function AdminApp() {
       ) : (
         <main className="mx-auto max-w-7xl space-y-5 px-4 py-6 md:px-8">
           {data.error && <p className="border border-brand/40 bg-brand/5 px-3 py-2 text-sm text-brand">{data.error}</p>}
+          {data.outdatedServer && (
+            <div className="border border-[#ffc078] bg-[#fff4e6] px-4 py-3 text-sm text-[#9a3412]" role="alert">
+              <p className="font-semibold">
+                구글 Apps Script 서버가 이전 버전({data.outdatedServer.version})입니다. 재배포가 필요합니다.
+              </p>
+              <p className="mt-1 text-[13px] leading-relaxed">
+                이 상태에서는 기존 이력 가져오기 · 수기 등록 · 완료/취소 등 새 기능이 동작하지 않습니다. 저장소의{' '}
+                <b>apps-script/Code.gs</b> 전체를 Apps Script 편집기에 붙여넣고 저장한 뒤,{' '}
+                <b>배포 관리 → 기존 배포(연필) → 버전: 새 버전 → 배포</b>로 다시 배포하고 이 페이지를 새로고침하세요. (‘새 배포’가
+                아니라 기존 배포를 수정해야 주소가 유지됩니다)
+              </p>
+            </div>
+          )}
           {reviewMissing && (
             <p className="flex items-center justify-between gap-3 border border-brand/40 bg-brand/5 px-3 py-2 text-sm text-brand">
               메일에서 연 예약(번호 {reviewId?.slice(0, 8)})을 찾을 수 없습니다. 삭제되었거나 다른 시트에 저장된 예약일 수 있습니다.

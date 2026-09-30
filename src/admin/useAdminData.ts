@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import { adminRequest, isLiveBackend } from '@/lib/labApi'
+import {
+  REQUIRED_API_LEVEL,
+  adminRequest,
+  fetchServerVersion,
+  isLiveBackend,
+  outdatedServerMessage,
+  type ServerVersion,
+} from '@/lib/labApi'
 import { busyFromRequests, isConfirmed, isSlotBusy, toDateKey, type VisitRequest, type VisitStatus } from '@/lib/visit'
 import { buildSampleRequests } from './sampleData'
 import { visitKey, type ManualInput } from './importLegacy'
@@ -86,6 +93,31 @@ export function useAdminData() {
   const [requests, setRequests] = useState<VisitRequest[]>(() => (isLiveBackend ? [] : readDemo()))
   const [loading, setLoading] = useState(isLiveBackend && Boolean(key))
   const [error, setError] = useState<string | null>(null)
+  const [server, setServer] = useState<ServerVersion | null>(null)
+
+  useEffect(() => {
+    // 배포된 서버 버전을 확인해, 이전 버전이면 관리자 화면에 재배포 안내를 띄운다.
+    if (!isLiveBackend || !key) return
+    let cancelled = false
+    fetchServerVersion()
+      .then((info) => {
+        if (!cancelled) setServer(info)
+      })
+      .catch(() => {
+        /* 버전 확인 실패는 무시 (기능 사용 시 다시 확인) */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [key])
+
+  /** 새 관리자 기능을 쓰기 전에 서버가 지원하는지 확인한다 (재배포 직후에도 맞도록 매번 새로 확인). */
+  const requireServer = useCallback(async () => {
+    if (!isLiveBackend) return
+    const info = await fetchServerVersion()
+    setServer(info)
+    if (info.apiLevel < REQUIRED_API_LEVEL) throw new Error(outdatedServerMessage(info))
+  }, [])
 
   const load = useCallback(async (adminKey: string) => {
     if (!isLiveBackend) return true
@@ -190,6 +222,7 @@ export function useAdminData() {
       if (conflicts({ ...input, id: '' }, requests)) {
         throw new Error('이미 승인된 다른 예약과 시간이 겹칩니다. 시간을 확인해 주세요.')
       }
+      await requireServer()
       const created = isLiveBackend
         ? (await adminRequest<{ request: VisitRequest }>(key, 'create', { request: input })).request
         : { ...input, source: 'manual' as const, id: newId(), createdAt: new Date().toISOString() }
@@ -200,7 +233,7 @@ export function useAdminData() {
       })
       return created
     },
-    [key, requests],
+    [key, requests, requireServer],
   )
 
   /** 기존 방문 이력 일괄 가져오기. 이미 있는 방문(날짜 + 업체 + 시간)은 건너뛴다. */
@@ -208,6 +241,7 @@ export function useAdminData() {
     async (inputs: ManualInput[]): Promise<ImportResult> => {
       let result: ImportResult
       if (isLiveBackend) {
+        await requireServer()
         result = await adminRequest<ImportResult>(key, 'import', { requests: inputs })
       } else {
         const seen = new Set(requests.map(visitKey))
@@ -229,7 +263,7 @@ export function useAdminData() {
       })
       return result
     },
-    [key, requests],
+    [key, requests, requireServer],
   )
 
   const resetDemo = useCallback(() => {
@@ -263,5 +297,7 @@ export function useAdminData() {
     remove,
     create,
     importMany,
+    /** 배포된 서버가 관리자 페이지보다 이전 버전이면 그 정보 */
+    outdatedServer: server && server.apiLevel < REQUIRED_API_LEVEL ? server : null,
   } as const
 }

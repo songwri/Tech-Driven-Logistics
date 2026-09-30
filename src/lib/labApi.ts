@@ -112,6 +112,35 @@ export async function submitReservation(draft: VisitDraft): Promise<void> {
   await post<{ ok: true }>({ type: 'reservation', ...draft })
 }
 
+/**
+ * 관리자 페이지가 필요로 하는 서버(Apps Script) 기능 수준. apps-script/Code.gs 의 API_LEVEL 과 맞춘다.
+ * 배포된 서버가 이보다 낮으면 Code.gs 를 새 버전으로 재배포해야 한다.
+ */
+export const REQUIRED_API_LEVEL = 2
+
+export interface ServerVersion {
+  version: string
+  /** apiLevel 이 없던 이전 서버는 1 로 본다 */
+  apiLevel: number
+}
+
+/** 배포된 Apps Script 의 코드 버전 (?action=version) */
+export async function fetchServerVersion(): Promise<ServerVersion> {
+  const url = new URL(API_BASE as string)
+  url.searchParams.set('action', 'version')
+  url.searchParams.set('t', String(Date.now())) // 캐시된 응답 방지
+  const response = await fetch(url, { redirect: 'follow' })
+  if (!response.ok) throw new Error(`서버 버전을 확인하지 못했습니다 (${response.status})`)
+  const data = (await response.json()) as { version?: string; apiLevel?: number; error?: string }
+  if (data.error) throw new Error(data.error)
+  return { version: String(data.version ?? '알 수 없음'), apiLevel: Number(data.apiLevel ?? 1) }
+}
+
+export const outdatedServerMessage = (server: ServerVersion) =>
+  `구글 Apps Script 서버가 이전 버전(${server.version})이라 이 기능을 쓸 수 없습니다. ` +
+  '저장소의 apps-script/Code.gs 를 Apps Script 편집기에 붙여넣고 저장한 뒤, ' +
+  '배포 관리 → 기존 배포(연필) → 버전: 새 버전 → 배포 로 다시 배포해 주세요.'
+
 /** 관리자 API는 Apps Script의 ADMIN_KEY 스크립트 속성과 같은 키를 요구합니다. */
 export async function adminRequest<T>(key: string, action: string, params: Record<string, unknown> = {}) {
   return post<T>({ type: 'admin', key, action, ...params })
