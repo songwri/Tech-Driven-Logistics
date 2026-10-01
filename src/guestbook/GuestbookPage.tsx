@@ -9,9 +9,10 @@ import type { GuestbookEntry } from '@/lib/labApi'
 import { useLab } from '@/lib/labContext'
 import { formatRating } from '@/lib/rating'
 import { RESERVE_URL } from '@/lib/routes'
+import { EntryConveyor } from './EntryConveyor'
+import { HeroScene } from './HeroScene'
 
 const PAGE_SIZE = 12
-const HERO_IMAGE = `${import.meta.env.BASE_URL}media/tdl-lab-hero.jpg`
 const EASE = [0.32, 0.72, 0, 1] as const
 
 type Sort = 'recent' | 'rating'
@@ -144,17 +145,13 @@ function GuestbookView() {
   const summary = useMemo(() => {
     if (entries.length === 0) return null
     const total = entries.reduce((sum, entry) => sum + entry.rating, 0)
-    // 대표 기록: 가장 최근에 남겨진 4점 이상의 기록 (없으면 가장 최근 기록)
-    const featured = entries.find((entry) => entry.rating >= 4) ?? entries[0]
-    return { count: entries.length, average: total / entries.length, featured }
+    return { count: entries.length, average: total / entries.length }
   }, [entries])
 
   const list = useMemo(() => {
-    if (!summary) return []
-    const rest = entries.filter((entry) => entry.id !== summary.featured.id)
-    if (sort === 'recent') return rest
-    return [...rest].sort((a, b) => b.rating - a.rating || b.createdAt.localeCompare(a.createdAt))
-  }, [entries, summary, sort])
+    if (sort === 'recent') return entries
+    return [...entries].sort((a, b) => b.rating - a.rating || b.createdAt.localeCompare(a.createdAt))
+  }, [entries, sort])
 
   const fade = (delay: number) =>
     reduce
@@ -179,8 +176,8 @@ function GuestbookView() {
       </header>
 
       <main>
-        <section className="mx-auto max-w-6xl px-5 pb-8 pt-8 md:px-6 md:pb-10 md:pt-12">
-          <div className="grid items-end gap-8 md:grid-cols-[minmax(0,1fr)_auto] md:gap-12">
+        <section className="mx-auto max-w-6xl px-5 pt-8 md:px-6 md:pt-10">
+          <div className="grid items-center gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,480px)] md:gap-10">
             <div>
               <motion.h1 {...fade(0)} className="text-3xl font-bold leading-tight tracking-tight text-ink md:text-4xl">
                 TDL Lab 방명록
@@ -191,43 +188,35 @@ function GuestbookView() {
               <motion.div {...fade(0.12)} ref={ctaRef} className="mt-6">
                 <CtaButton onClick={openGuestbook} />
               </motion.div>
-            </div>
 
-            <motion.div {...fade(0.1)} className="hidden items-end gap-8 md:flex">
               {!loading && summary && (
-                <div className="flex items-center gap-6">
+                <motion.div {...fade(0.18)} className="mt-8 flex items-center gap-6 border-t border-warm-300/60 pt-5">
                   <div>
-                    <p className="font-display text-5xl font-semibold tabular-nums leading-none tracking-tight text-ink">
+                    <p className="font-display text-4xl font-semibold tabular-nums leading-none tracking-tight text-ink">
                       {summary.average.toFixed(1)}
                     </p>
-                    <StarRating value={Math.round(summary.average * 2) / 2} size={14} className="mt-2.5" />
-                    <p className="mt-1.5 text-[13px] tabular-nums text-warm-600">{summary.count}건</p>
+                    <StarRating value={Math.round(summary.average * 2) / 2} size={13} className="mt-2" />
+                    <p className="mt-1 text-[12px] tabular-nums text-warm-600">기록 {summary.count}건 평균</p>
                   </div>
                   <Histogram entries={entries} />
-                </div>
+                </motion.div>
               )}
-              <div className="bg-warm-300/20 p-1">
-                <img
-                  src={HERO_IMAGE}
-                  alt="물류 창고에서 상자를 옮기는 TDL Lab의 휴머노이드 로봇"
-                  className="h-[132px] w-[110px] object-cover"
-                  fetchPriority="high"
-                />
-              </div>
+            </div>
+
+            <motion.div {...fade(0.1)}>
+              <HeroScene className="mx-auto w-full max-w-[480px]" />
             </motion.div>
           </div>
-
-          {/* 모바일: 평균은 한 줄로 */}
-          {!loading && summary && (
-            <p className="mt-5 flex items-center gap-2 text-sm text-warm-600 md:hidden">
-              <StarRating value={Math.round(summary.average * 2) / 2} size={13} />
-              <span className="font-semibold tabular-nums text-ink">{summary.average.toFixed(1)}</span>
-              <span className="tabular-nums">· {summary.count}건</span>
-            </p>
-          )}
         </section>
 
-        <section aria-label="방명록 기록" className="mx-auto max-w-6xl px-5 pb-28 md:px-6 md:pb-20">
+        {/* 남겨진 기록이 컨베이어를 따라 흐른다 */}
+        {!loading && !error && entries.length > 0 && (
+          <div className="mt-2 md:mt-0">
+            <EntryConveyor entries={entries} highlightId={highlightId} />
+          </div>
+        )}
+
+        <section aria-label="방명록 기록" className="mx-auto max-w-6xl px-5 pb-28 pt-10 md:px-6 md:pb-20">
           {loading ? (
             <EntrySkeletons />
           ) : error ? (
@@ -247,17 +236,8 @@ function GuestbookView() {
             </div>
           ) : (
             <>
-              <figure className="border-t border-ink pt-6">
-                <blockquote className="max-w-3xl text-pretty text-lg font-medium leading-snug tracking-tight text-ink md:text-xl">
-                  &ldquo;{summary.featured.message}&rdquo;
-                </blockquote>
-                <figcaption className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <StarRating value={summary.featured.rating} size={13} />
-                  <Attribution entry={summary.featured} />
-                </figcaption>
-              </figure>
 
-              <div className="mt-8 flex items-center justify-between gap-4">
+              <div className="flex items-center justify-between gap-4">
                 <h2 className="text-base font-bold text-ink">
                   전체 기록 <span className="ml-1 font-normal tabular-nums text-warm-600">{entries.length}</span>
                 </h2>
