@@ -143,34 +143,31 @@ function periodSheet(name: string, firstHeader: string, rows: PeriodRow[]): Shee
 }
 
 /**
- * 담당(실)별 방문 건수 · 인원. 주요 6개 담당 + 기타(그 외 담당 · 실, 미입력) 7개로 묶는다.
+ * 담당(실)별 방문 건수(방문 횟수, 인원수 아님). 주요 6개 담당 + 기타(그 외 담당 · 실, 미입력) 7개로 묶는다.
  * '전자담당' · 'LGLX담당' 처럼 표기가 달라도 같은 담당으로 센다 (divisionGroup).
  */
 export function divisionStats(requests: VisitRequest[]) {
-  const map = new Map(DIVISION_GROUPS.map((label) => [label, { label, count: 0, people: 0 }]))
+  const map = new Map(DIVISION_GROUPS.map((label) => [label, { label, count: 0 }]))
   for (const request of requests) {
     const row = map.get(divisionGroup(request.host.division))!
     row.count += 1
-    row.people += headcountOf(request)
   }
   return [...map.values()]
 }
 
 function divisionSheet(name: string, requests: VisitRequest[]): Sheet {
   const rows = divisionStats(requests)
-  const people = rows.reduce((sum, row) => sum + row.people, 0)
   const count = rows.reduce((sum, row) => sum + row.count, 0)
   return {
     name,
     columns: [
       { header: '담당(실)', width: 18 },
       { header: '방문 건수', width: 10 },
-      { header: '방문 인원', width: 10 },
-      { header: '인원 비율', width: 10, percent: true },
+      { header: '건수 비율', width: 10, percent: true },
     ],
     rows: [
-      ...rows.map((row) => [row.label, row.count, row.people, people > 0 ? row.people / people : 0]),
-      ['합계', count, people, people > 0 ? 1 : 0],
+      ...rows.map((row) => [row.label, row.count, count > 0 ? row.count / count : 0]),
+      ['합계', count, count > 0 ? 1 : 0],
     ],
   }
 }
