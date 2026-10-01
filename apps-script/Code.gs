@@ -26,6 +26,12 @@
  */
 var DEFAULT_MAIL_TO = 'daehyun.kim1@lxpantos.com';
 
+/**
+ * 메일에 표시되는 보내는 사람 이름. 보내는 사람 '주소'는 스크립트를 소유한 구글 계정이라 바꿀 수 없고,
+ * 이름만 바뀐다. (예: 'TDL Lab 방문예약 <계정 주소>')
+ */
+var MAIL_SENDER_NAME = 'TDL Lab 방문예약';
+
 /** 알림 수신자 (MailApp 의 to 에 그대로 쓰는 쉼표 구분 문자열) */
 function mailTo_() {
   var raw = PropertiesService.getScriptProperties().getProperty('MAIL_TO') || DEFAULT_MAIL_TO;
@@ -36,7 +42,7 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-01.guestbook-admin';
+var CODE_VERSION = '2026-10-01.sender-name';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -337,6 +343,7 @@ function addGuestbook_(payload) {
 
   MailApp.sendEmail({
     to: mailTo_(),
+    name: MAIL_SENDER_NAME,
     subject: '[TDL Lab] 방명록 등록 · ' + name + ' (' + company + ')',
     htmlBody: guestbookMailHtml_(name, company, role, rating, message, entry.createdAt),
   });
@@ -716,6 +723,7 @@ function addReservation_(payload) {
 
   MailApp.sendEmail({
     to: mailTo_(),
+    name: MAIL_SENDER_NAME,
     replyTo: request.host.email,
     subject: '[TDL Lab] 방문 예약 신청 · ' + TOURS[request.tour].label + ' · ' + request.company + ' · '
       + request.date + ' ' + request.slot,
@@ -1146,6 +1154,7 @@ function notifyHost_(r) {
       + '다른 날짜로 다시 신청해 주시거나, 이 메일에 회신해 일정을 조율해 주세요.';
   MailApp.sendEmail({
     to: r.host.email,
+    name: MAIL_SENDER_NAME,
     replyTo: mailTo_(),
     subject: '[TDL Lab] 방문 예약 ' + (approved ? '확정' : '불가') + ' 안내 · ' + r.date + ' ' + r.slot,
     htmlBody: mailShell_(approved ? '방문 일정 확정' : '방문 예약 결과 안내', lead, scheduleBox_(r) + rows_([
