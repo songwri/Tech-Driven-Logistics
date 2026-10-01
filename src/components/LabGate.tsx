@@ -35,7 +35,8 @@ export default function LabGate() {
       {/* legibility scrims: heavy on the left where the type sits, clear on the right */}
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,rgba(8,10,13,0.94)_0%,rgba(8,10,13,0.86)_28%,rgba(8,10,13,0.55)_52%,rgba(8,10,13,0.28)_75%,rgba(8,10,13,0.35)_100%)]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#0c0e11]/80 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0c0e11]/70 to-transparent" />
+      {/* 맨 아래는 완전한 어두운 색으로 끝나 아래 전환 구간과 이음매 없이 붙는다. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0c0e11] to-transparent" />
 
       <div className="absolute inset-0 flex items-center">
         <div className="mx-auto w-full max-w-7xl px-6 md:px-12">
