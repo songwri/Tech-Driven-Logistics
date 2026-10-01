@@ -10,6 +10,13 @@ export default function LabProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [guestbookOpen, setGuestbookOpen] = useState(false)
+  const [highlightId, setHighlightId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!highlightId) return
+    const timer = setTimeout(() => setHighlightId(null), 8000)
+    return () => clearTimeout(timer)
+  }, [highlightId])
 
   useEffect(() => {
     let cancelled = false
@@ -32,8 +39,8 @@ export default function LabProvider({ children }: { children: ReactNode }) {
   const closeGuestbook = useCallback(() => setGuestbookOpen(false), [])
 
   const value = useMemo(
-    () => ({ entries, loading, error, openGuestbook }),
-    [entries, loading, error, openGuestbook],
+    () => ({ entries, loading, error, openGuestbook, highlightId }),
+    [entries, loading, error, openGuestbook, highlightId],
   )
 
   return (
@@ -43,7 +50,10 @@ export default function LabProvider({ children }: { children: ReactNode }) {
         {guestbookOpen && (
           <GuestbookDialog
             onClose={closeGuestbook}
-            onSubmitted={(entry) => setEntries((current) => [entry, ...current])}
+            onSubmitted={(entry) => {
+              setEntries((current) => [entry, ...current])
+              setHighlightId(entry.id)
+            }}
           />
         )}
       </Suspense>
