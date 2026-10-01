@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, CalendarCheck, MailCheck, Send } from 'lucide-react'
+import { BookOpen, CalendarCheck, MailCheck, Send } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { ReservationForm } from '@/components/visit/ReservationForm'
 import { fetchLab } from '@/lib/labApi'
+import { GUESTBOOK_URL, RESERVE_URL } from '@/lib/routes'
 import type { BusySegment } from '@/lib/visit'
-
-const HOME_URL = import.meta.env.BASE_URL
 
 const STEPS = [
   { icon: Send, title: '예약 신청', text: '투어 · 일정 · 방문자 정보를 입력합니다.' },
@@ -15,7 +14,7 @@ const STEPS = [
 
 /**
  * 예약 신청 전용 페이지 (/reserve/).
- * 소개 사이트(3D · 영상)를 거치지 않고 바로 열리므로 링크 · QR 공유에 씁니다.
+ * 링크 · QR 로 바로 열어 쓰는 예약 신청 페이지.
  */
 export default function ReservePage() {
   const [busy, setBusy] = useState<BusySegment[]>([])
@@ -42,14 +41,14 @@ export default function ReservePage() {
     <div className="min-h-screen">
       <header className="border-b border-warm-300/40 bg-white/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
-          <a href={HOME_URL} aria-label="TDL 홈으로">
+          <a href={RESERVE_URL} aria-label="TDL 방문 예약">
             <Logo className="h-7" />
           </a>
           <a
-            href={HOME_URL}
+            href={GUESTBOOK_URL}
             className="inline-flex items-center gap-1.5 text-[13px] text-warm-600 transition hover:text-brand"
           >
-            <ArrowLeft width={14} height={14} /> TDL 소개 보기
+            <BookOpen width={14} height={14} /> 방명록 보기
           </a>
         </div>
       </header>

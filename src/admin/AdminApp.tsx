@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { BarChart3, CalendarRange, FileDown, FileInput, LogOut, Plus, RefreshCw, RotateCcw, X } from 'lucide-react'
+import { BarChart3, CalendarRange, FileDown, FileInput, LogOut, MessageSquareText, Plus, RefreshCw, RotateCcw, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/ui/Logo'
 import { Button } from '@/components/ui/Button'
@@ -12,12 +12,13 @@ import { ActionPanel, UpcomingPanel } from './ActionPanel'
 import { RequestTable, type StatusFilter } from './RequestTable'
 import { RequestModal } from './RequestModal'
 import { StatsView } from './StatsView'
+import { GuestbookAdmin } from './GuestbookAdmin'
 import { DiagnoseButton } from './DiagnosePanel'
 import { ManualVisitModal } from './ManualVisitModal'
 import { ImportModal } from './ImportModal'
 import { downloadVisitRequests } from './importTemplate'
 
-type Tab = 'dashboard' | 'stats'
+type Tab = 'dashboard' | 'stats' | 'guestbook'
 
 /** 메일의 '확인하고 승인 · 거절하기' 버튼이 여는 주소: /admin/?review=<예약 id> */
 function readReviewId() {
@@ -194,7 +195,7 @@ export default function AdminApp() {
             <Logo tone="light" className="h-8" />
             <div>
               <h1 className="text-lg font-bold">방문 예약 관리자</h1>
-              <p className="text-[12px] text-white/60">예약 요청 확인 · 승인/거절 · 방문 통계</p>
+              <p className="text-[12px] text-white/60">예약 요청 확인 · 승인/거절 · 방문 통계 · 방명록</p>
             </div>
           </div>
           {data.authenticated && (
@@ -235,6 +236,7 @@ export default function AdminApp() {
               [
                 ['dashboard', '예약 대시보드', CalendarRange],
                 ['stats', '방문 통계', BarChart3],
+                ['guestbook', '방명록', MessageSquareText],
               ] as const
             ).map(([id, label, Icon]) => (
               <button
@@ -430,8 +432,10 @@ export default function AdminApp() {
                 />
               </section>
             </>
-          ) : (
+          ) : tab === 'stats' ? (
             <StatsView requests={requests} />
+          ) : (
+            <GuestbookAdmin adminKey={data.adminKey} />
           )}
         </main>
       )}

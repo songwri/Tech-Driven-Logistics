@@ -26,6 +26,12 @@
  */
 var DEFAULT_MAIL_TO = 'daehyun.kim1@lxpantos.com';
 
+/**
+ * 메일에 표시되는 보내는 사람 이름. 보내는 사람 '주소'는 스크립트를 소유한 구글 계정이라 바꿀 수 없고,
+ * 이름만 바뀐다. (예: 'TDL Lab 방문예약 <계정 주소>')
+ */
+var MAIL_SENDER_NAME = 'TDL Lab 방문예약';
+
 /** 알림 수신자 (MailApp 의 to 에 그대로 쓰는 쉼표 구분 문자열) */
 function mailTo_() {
   var raw = PropertiesService.getScriptProperties().getProperty('MAIL_TO') || DEFAULT_MAIL_TO;
@@ -36,15 +42,19 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-01.mail-list';
+var CODE_VERSION = '2026-10-01.sender-name';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
  *   2: 수기 등록(create) · 기존 이력 가져오기(import) · 완료/취소 상태 · 운영 기록 열
  *   3: 신청 담당자의 담당(실) 열
+ *   4: 관리자 방명록 관리 (guestbookList · guestbookSetHidden · guestbookDelete)
  */
-var API_LEVEL = 3;
-var ADMIN_ACTIONS = ['list', 'health', 'delete', 'setStatus', 'update', 'create', 'import'];
+var API_LEVEL = 4;
+var ADMIN_ACTIONS = [
+  'list', 'health', 'delete', 'setStatus', 'update', 'create', 'import',
+  'guestbookList', 'guestbookSetHidden', 'guestbookDelete',
+];
 
 var GUESTBOOK_SHEET = 'guestbook';
 var VISIT_SHEET = 'visit_requests';
@@ -215,6 +225,17 @@ function normalizeTime_(value) {
 
 /* -------------------------------------------------------------- 방명록 */
 
+/** '숨김' 열에 값이 있으면(체크박스 TRUE, 'Y', '숨김' 등) 숨긴 글이다. */
+function isGuestbookHidden_(cell) {
+  var hidden = String(cell == null ? '' : cell).trim();
+  return Boolean(hidden) && hidden.toLowerCase() !== 'false';
+}
+
+function isoOrEmpty_(value) {
+  var date = new Date(value);
+  return isNaN(date.getTime()) ? '' : date.toISOString();
+}
+
 function readGuestbook_() {
   var target = sheet_(GUESTBOOK_SHEET, GUESTBOOK_HEADERS);
   var values = target.getDataRange().getValues();
@@ -222,9 +243,8 @@ function readGuestbook_() {
 
   for (var row = 1; row < values.length; row++) {
     if (!values[row][0]) continue;
-    // '숨김' 열에 값이 있으면(체크박스 TRUE, 'Y', '숨김' 등) 사이트에 내보내지 않는다.
-    var hidden = String(values[row][GUESTBOOK_HIDDEN_COL - 1] == null ? '' : values[row][GUESTBOOK_HIDDEN_COL - 1]).trim();
-    if (hidden && hidden.toLowerCase() !== 'false') continue;
+    // 숨긴 글은 사이트에 내보내지 않는다.
+    if (isGuestbookHidden_(values[row][GUESTBOOK_HIDDEN_COL - 1])) continue;
 
     entries.push({
       id: String(values[row][0]),
@@ -238,6 +258,64 @@ function readGuestbook_() {
   }
 
   return entries.reverse();
+}
+
+/**
+ * 관리자용 방명록 전체 목록: 숨긴 글 포함, 실명 · 실제 소속 포함, 최신순.
+ * (공개 GET 은 마스킹된 값만 내보내므로 이 함수는 관리자 키 뒤에서만 호출된다)
+ */
+function readGuestbookAdmin_() {
+  var values = sheet_(GUESTBOOK_SHEET, GUESTBOOK_HEADERS).getDataRange().getValues();
+  var entries = [];
+  for (var row = 1; row < values.length; row++) {
+    if (!values[row][0]) continue;
+    entries.push({
+      id: String(values[row][0]),
+      createdAt: isoOrEmpty_(values[row][1]),
+      displayName: String(values[row][2]),
+      displayCompany: String(values[row][3]),
+      role: String(values[row][4]),
+      rating: Number(values[row][5]),
+      message: String(values[row][6]),
+      name: String(values[row][7] == null ? '' : values[row][7]),
+      company: String(values[row][8] == null ? '' : values[row][8]),
+      hidden: isGuestbookHidden_(values[row][GUESTBOOK_HIDDEN_COL - 1]),
+    });
+  }
+  return entries.reverse();
+}
+
+/** id 가 같은 방명록의 시트 행 번호 (1-based, 없으면 0) */
+function findGuestbookRow_(target, id) {
+  var values = target.getDataRange().getValues();
+  for (var row = 1; row < values.length; row++) {
+    if (String(values[row][0]) === id) return row + 1;
+  }
+  return 0;
+}
+
+/** 방명록 숨김 · 다시 표시. 시트 메뉴의 '숨김'과 같은 값을 쓴다. */
+function setGuestbookHidden_(id, hidden) {
+  return withLock_(function () {
+    var target = sheet_(GUESTBOOK_SHEET, GUESTBOOK_HEADERS);
+    var rowNumber = findGuestbookRow_(target, id);
+    if (!rowNumber) throw new Error('방명록을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.');
+    target.getRange(rowNumber, GUESTBOOK_HIDDEN_COL).setValue(hidden ? '숨김' : '');
+    SpreadsheetApp.flush();
+    return { id: id, hidden: hidden };
+  });
+}
+
+/** 방명록을 시트에서 완전히 지운다 (되돌릴 수 없음). */
+function deleteGuestbook_(id) {
+  return withLock_(function () {
+    var target = sheet_(GUESTBOOK_SHEET, GUESTBOOK_HEADERS);
+    var rowNumber = findGuestbookRow_(target, id);
+    if (!rowNumber) throw new Error('방명록을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.');
+    target.deleteRow(rowNumber);
+    SpreadsheetApp.flush();
+    return { deleted: id };
+  });
 }
 
 function addGuestbook_(payload) {
@@ -265,6 +343,7 @@ function addGuestbook_(payload) {
 
   MailApp.sendEmail({
     to: mailTo_(),
+    name: MAIL_SENDER_NAME,
     subject: '[TDL Lab] 방명록 등록 · ' + name + ' (' + company + ')',
     htmlBody: guestbookMailHtml_(name, company, role, rating, message, entry.createdAt),
   });
@@ -644,6 +723,7 @@ function addReservation_(payload) {
 
   MailApp.sendEmail({
     to: mailTo_(),
+    name: MAIL_SENDER_NAME,
     replyTo: request.host.email,
     subject: '[TDL Lab] 방문 예약 신청 · ' + TOURS[request.tour].label + ' · ' + request.company + ' · '
       + request.date + ' ' + request.slot,
@@ -859,6 +939,10 @@ function admin_(payload) {
   if (payload.action === 'create') return createManual_(payload.request);
   if (payload.action === 'import') return importManual_(payload.requests);
 
+  if (payload.action === 'guestbookList') return { entries: readGuestbookAdmin_() };
+  if (payload.action === 'guestbookSetHidden') return setGuestbookHidden_(String(payload.id), payload.hidden === true);
+  if (payload.action === 'guestbookDelete') return deleteGuestbook_(String(payload.id));
+
   if (payload.action === 'delete') {
     // 예약을 시트에서 완전히 지운다 (되돌릴 수 없음). 잠금 안에서 id 로 다시 찾아 그 행만 삭제.
     return withLock_(function () {
@@ -1070,6 +1154,7 @@ function notifyHost_(r) {
       + '다른 날짜로 다시 신청해 주시거나, 이 메일에 회신해 일정을 조율해 주세요.';
   MailApp.sendEmail({
     to: r.host.email,
+    name: MAIL_SENDER_NAME,
     replyTo: mailTo_(),
     subject: '[TDL Lab] 방문 예약 ' + (approved ? '확정' : '불가') + ' 안내 · ' + r.date + ' ' + r.slot,
     htmlBody: mailShell_(approved ? '방문 일정 확정' : '방문 예약 결과 안내', lead, scheduleBox_(r) + rows_([
