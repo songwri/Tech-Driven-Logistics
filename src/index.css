@@ -119,3 +119,49 @@ body.plain-bg {
 .tdl-calendar .rdp-caption_label {
   font-weight: 600;
 }
+
+/* 방명록 컨베이어: 카드 줄이 왼쪽에서 오른쪽으로 일정한 속도로 흐른다 (두 벌을 이어 붙여 끊김 없이 반복). */
+@keyframes conveyor-flow {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes conveyor-belt {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: 28px;
+  }
+}
+
+.conveyor-track {
+  animation: conveyor-flow var(--conveyor-duration, 60s) linear infinite;
+}
+
+.conveyor-belt {
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0 26px,
+    color-mix(in srgb, var(--color-warm-800) 22%, transparent) 26px 28px
+  );
+  animation: conveyor-belt calc(28px / 40px * 1s) linear infinite;
+}
+
+.conveyor:hover .conveyor-track,
+.conveyor:hover .conveyor-belt,
+.conveyor:focus-within .conveyor-track,
+.conveyor:focus-within .conveyor-belt {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .conveyor-track,
+  .conveyor-belt {
+    animation: none;
+  }
+}
