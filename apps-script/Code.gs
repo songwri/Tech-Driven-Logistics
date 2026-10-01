@@ -16,33 +16,55 @@
  */
 
 /**
- * 알림 메일 수신자: 방문 예약 신청 · 방명록 등록 알림을 받는 담당자들.
+ * 알림 메일 수신자: 방문 예약 신청 알림을 투어 종류에 따라 두 담당자 그룹에 나눠 보낸다.
+ *   종합 투어  → 센터 투어 담당자 + TDL 투어 담당자
+ *   TDL Lab 투어 → TDL 투어 담당자
+ *   센터 투어  → 센터 투어 담당자
+ * 방명록 등록은 메일을 보내지 않는다. (관리자 페이지 · 시트에서 확인)
  *
- * 이 저장소는 공개라 직원 메일 주소를 코드에 적지 않고, Apps Script 의 스크립트 속성 MAIL_TO 에 둔다.
- *   프로젝트 설정(톱니바퀴) → 스크립트 속성 → MAIL_TO = a@lxpantos.com,b@lxpantos.com,...
+ * 이 저장소는 공개라 직원 메일 주소를 코드에 적지 않고, Apps Script 의 스크립트 속성에 둔다.
+ *   프로젝트 설정(톱니바퀴) → 스크립트 속성
+ *     MAIL_TO        = TDL 투어 담당자 a@lxpantos.com,b@lxpantos.com,...
+ *     CENTER_MAIL_TO = 센터 투어 담당자 c@lxpantos.com,d@lxpantos.com,...
  * 쉼표 · 세미콜론 · 줄바꿈으로 여러 명을 구분한다. 속성은 저장 즉시 적용되어 재배포가 필요 없다.
- * 속성이 비어 있으면 DEFAULT_MAIL_TO 로 보낸다.
- * 신청자에게 가는 승인 · 거절 메일의 회신 주소도 같은 수신자들이다.
+ * MAIL_TO 가 비어 있으면 DEFAULT_MAIL_TO 로, CENTER_MAIL_TO 가 비어 있으면 TDL 담당자에게 대신 보낸다
+ * (알림이 아무에게도 가지 않는 일이 없게).
+ * 신청자에게 가는 승인 · 거절 메일의 회신 주소는 그 예약의 알림을 받은 담당자들이다.
  */
 var DEFAULT_MAIL_TO = 'daehyun.kim1@lxpantos.com';
 
 /**
  * 메일에 표시되는 보내는 사람 이름. 보내는 사람 '주소'는 스크립트를 소유한 구글 계정이라 바꿀 수 없고,
- * 이름만 바뀐다. (예: 'TDL Lab 방문예약 <계정 주소>')
+ * 이름만 바뀐다. (예: '메가와이즈 + TDL 방문관리 <계정 주소>')
  */
-var MAIL_SENDER_NAME = 'TDL Lab 방문예약';
+var MAIL_SENDER_NAME = '메가와이즈 + TDL 방문관리';
 
-/** 알림 수신자 (MailApp 의 to 에 그대로 쓰는 쉼표 구분 문자열) */
-function mailTo_() {
-  var raw = PropertiesService.getScriptProperties().getProperty('MAIL_TO') || DEFAULT_MAIL_TO;
-  var list = String(raw).split(/[,;\s]+/).filter(function (address) { return address; });
-  return (list.length ? list : [DEFAULT_MAIL_TO]).join(',');
+function mailList_(property) {
+  var raw = PropertiesService.getScriptProperties().getProperty(property) || '';
+  return String(raw).split(/[,;\s]+/).filter(function (address) { return address; });
+}
+
+/** 투어 종류별 알림 수신자 (MailApp 의 to 에 그대로 쓰는 쉼표 구분 문자열, 중복 제거) */
+function mailTo_(tour) {
+  var tdl = mailList_('MAIL_TO');
+  if (!tdl.length) tdl = [DEFAULT_MAIL_TO];
+  var center = mailList_('CENTER_MAIL_TO');
+  if (!center.length) center = tdl;
+
+  var list = tour === 'combined' ? center.concat(tdl) : tour === 'center' ? center : tdl;
+  var seen = {};
+  return list.filter(function (address) {
+    var key = address.toLowerCase();
+    if (seen[key]) return false;
+    seen[key] = true;
+    return true;
+  }).join(',');
 }
 var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-03.team-mask';
+var CODE_VERSION = '2026-10-04.mail-split';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -75,7 +97,7 @@ var TOURS = {
   combined: { label: '종합 투어', slots: ['09:30-11:30', '13:00-15:00'] },
   center: {
     label: '센터 투어',
-    slots: ['10:00-11:00', '11:00-12:00', '13:00-14:00', '14:00-15:00', '15:00-16:00'],
+    slots: ['09:30-10:30', '10:30-11:30', '13:00-14:00', '14:00-15:00', '15:00-16:00'],
   },
   lab: { label: 'TDL Lab 투어', slots: ['10:30-11:30', '14:00-15:00'] },
   // 기존 방문 이력 · 관리자 수기 등록 전용 (예약 화면에서는 고를 수 없음). 시간 자유.
@@ -353,13 +375,7 @@ function addGuestbook_(payload) {
     entry.role, entry.rating, entry.message, name, company, '', team,
   ]);
 
-  MailApp.sendEmail({
-    to: mailTo_(),
-    name: MAIL_SENDER_NAME,
-    subject: '[TDL Lab] 방명록 등록 · ' + name + ' (' + company + ')',
-    htmlBody: guestbookMailHtml_(name, company, team, role, rating, message, entry.createdAt),
-  });
-
+  // 방명록은 메일을 보내지 않는다. 관리자 페이지(방명록 탭)나 guestbook 시트에서 확인한다.
   return { entry: entry };
 }
 
@@ -734,7 +750,7 @@ function addReservation_(payload) {
   });
 
   MailApp.sendEmail({
-    to: mailTo_(),
+    to: mailTo_(request.tour),
     name: MAIL_SENDER_NAME,
     replyTo: request.host.email,
     subject: '[TDL Lab] 방문 예약 신청 · ' + TOURS[request.tour].label + ' · ' + request.company + ' · '
@@ -1167,7 +1183,7 @@ function notifyHost_(r) {
   MailApp.sendEmail({
     to: r.host.email,
     name: MAIL_SENDER_NAME,
-    replyTo: mailTo_(),
+    replyTo: mailTo_(r.tour),
     subject: '[TDL Lab] 방문 예약 ' + (approved ? '확정' : '불가') + ' 안내 · ' + r.date + ' ' + r.slot,
     htmlBody: mailShell_(approved ? '방문 일정 확정' : '방문 예약 결과 안내', lead, scheduleBox_(r) + rows_([
       [r.category === 'internal' ? '방문 조직' : '업체명', escapeHtml_(r.company)],
@@ -1175,42 +1191,6 @@ function notifyHost_(r) {
       ['방문 인원', r.visitors.length + '명'],
     ])),
   });
-}
-
-function guestbookMailHtml_(name, company, team, role, rating, message, createdAt) {
-  var lead = [
-    '안녕하세요, TDL Lab 담당자님.<br>',
-    '<b style="color:#3d3532;">', escapeHtml_(company), ' ', escapeHtml_(name),
-    '</b> 님이 방명록을 남기셨습니다.',
-  ].join('');
-
-  var stars = '';
-  for (var i = 1; i <= 5; i++) {
-    // 0.5점은 반쪽 별 대신 연한 색으로 표시한다.
-    var star = rating >= i ? BRAND : (rating >= i - 0.5 ? '#d9a3a3' : '#ddd9d7');
-    stars += '<span style="color:' + star + ';font-size:16px;">★</span>';
-  }
-
-  var detail = rows_([
-    ['이름', escapeHtml_(name)],
-    ['회사명', escapeHtml_(company)],
-    ['팀명', escapeHtml_(team || '-')],
-    ['직책', escapeHtml_(role)],
-    ['평가', stars + ' <span style="color:#aca8a7;font-size:12px;">' + rating.toFixed(1) + ' / 5</span>'],
-    ['메시지', escapeHtml_(message)],
-    ['등록일시', escapeHtml_(formatDateTimeKo_(createdAt))],
-  ]);
-
-  var hint = [
-    '<p style="margin:22px 0 0;font-size:12px;color:#aca8a7;line-height:1.7;">',
-    '사이트에는 <b>', escapeHtml_(maskName_(name)), ' · ', escapeHtml_(maskToken_(company)),
-    '</b> 로 마스킹되어 표시됩니다.<br>',
-    '내려야 할 내용이면 스프레드시트 <b>guestbook</b> 시트에서 해당 행의 ',
-    '<b>숨김</b> 열에 체크하거나, 행을 그대로 삭제하시면 사이트에서 사라집니다.',
-    '</p>',
-  ].join('');
-
-  return mailShell_('방명록 등록', lead, detail + hint);
 }
 
 function resultPage_(title, message, tone) {

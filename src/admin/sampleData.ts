@@ -27,7 +27,7 @@ const MOCKUP: VisitRequest[] = [
     '단순 시설 견학 요청, 일정 조율 어려움으로 거절', ['최유리', '선임', 'CL사업담당 신사업팀'], [
       ['김소라', '매니저', '마케팅팀', 'sr.kim@topfashion.example', '', ['마케팅']],
     ]),
-  mock('m5', '2026-09-28', 'center', '10:00-11:00', 'pending', '그린푸드', 'existing', ['식품'], ['기존 고객사 Lock-in'],
+  mock('m5', '2026-09-28', 'center', '09:30-10:30', 'pending', '그린푸드', 'existing', ['식품'], ['기존 고객사 Lock-in'],
     '냉동/냉장 물류 자동화 확장 검토', ['김도현', '책임', 'CL사업담당 풀필먼트팀'], [
       ['서민준', '팀장', '영업1팀', 'mj.seo@greenfood.example', '78라 4567', ['영업']],
       ['배지현', '매니저', '물류운영팀', 'jh.bae@greenfood.example', '', ['물류']],
@@ -163,7 +163,7 @@ const PURPOSE_POOL = ['기존 고객사 Lock-in', '신규 영업', '신규 영�
 
 const MORNING: [TourType, string][] = [
   ['combined', '09:30-11:30'], ['combined', '09:30-11:30'], ['lab', '10:30-11:30'],
-  ['center', '10:00-11:00'], ['center', '11:00-12:00'],
+  ['center', '09:30-10:30'], ['center', '10:30-11:30'],
 ]
 const AFTERNOON: [TourType, string][] = [
   ['combined', '13:00-15:00'], ['lab', '14:00-15:00'], ['center', '13:00-14:00'], ['center', '15:00-16:00'],
