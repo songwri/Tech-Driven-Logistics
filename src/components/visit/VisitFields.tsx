@@ -399,7 +399,18 @@ function LanguageFields({ draft, onChange }: { draft: VisitDraft; onChange: Patc
 const MAX_INDUSTRIES = 3
 
 /** 방문 유형 · 고객 유형 · 업체명 · 업종 */
-export function CompanyFields({ draft, onChange, errors }: { draft: VisitDraft; onChange: Patch; errors?: Errors }) {
+export function CompanyFields({
+  draft,
+  onChange,
+  errors,
+  hideInternalCompany,
+}: {
+  draft: VisitDraft
+  onChange: Patch
+  errors?: Errors
+  /** 예약 화면: 내부 방문은 방문 조직명을 받지 않는다 (신청 담당자 정보로 대신 채움). */
+  hideInternalCompany?: boolean
+}) {
   const external = draft.category === 'external'
   const industryFull = draft.industries.length >= MAX_INDUSTRIES
   return (
@@ -460,22 +471,24 @@ export function CompanyFields({ draft, onChange, errors }: { draft: VisitDraft; 
             <GroupError show={Boolean(errors?.has('clientType'))}>고객 유형을 선택해 주세요.</GroupError>
           </div>
         )}
-        <div className={external ? undefined : 'sm:col-span-2'}>
-          <Field
-            label={external ? '업체명' : '방문 조직명'}
-            required
-            error={errors?.has('company') ? (external ? '업체명을 입력해 주세요.' : '방문 조직명을 입력해 주세요.') : null}
-          >
-            <Input
-              value={draft.company}
-              onChange={(e) => onChange({ company: e.target.value })}
+        {(external || !hideInternalCompany) && (
+          <div className={external ? undefined : 'sm:col-span-2'}>
+            <Field
+              label={external ? '업체명' : '방문 조직명'}
               required
-              maxLength={60}
-              placeholder={external ? '예) LX판토스' : '예) CL사업담당 풀필먼트팀'}
-              invalid={errors?.has('company')}
-            />
-          </Field>
-        </div>
+              error={errors?.has('company') ? (external ? '업체명을 입력해 주세요.' : '방문 조직명을 입력해 주세요.') : null}
+            >
+              <Input
+                value={draft.company}
+                onChange={(e) => onChange({ company: e.target.value })}
+                required
+                maxLength={60}
+                placeholder={external ? '예) LX판토스' : '예) CL사업담당 풀필먼트팀'}
+                invalid={errors?.has('company')}
+              />
+            </Field>
+          </div>
+        )}
       </div>
 
       {external && (

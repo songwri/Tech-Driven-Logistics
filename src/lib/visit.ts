@@ -239,6 +239,15 @@ export interface BusySegment {
 
 export const emptyHost = (): VisitHost => ({ name: '', title: '', division: '', org: '', phone: '', email: '' })
 
+/**
+ * 내부 방문은 예약 화면에서 방문 조직명을 따로 받지 않는다.
+ * 대신 신청 담당자의 담당(실) · 조직명으로 채워, 관리자 목록 · 검색 · 메일에서 어느 조직 방문인지 알 수 있게 한다.
+ * 담당자 정보가 아직 비어 있으면 '내부 방문'.
+ */
+export function internalCompanyName(host: Pick<VisitHost, 'division' | 'org'>) {
+  return [host.division, host.org].map((part) => part.trim()).filter(Boolean).join(' ') || '내부 방문'
+}
+
 /* ------------------------------------------------------- 담당(실) 분류 */
 
 /** 방문 통계의 주요 담당 6개 + 나머지는 '기타' */

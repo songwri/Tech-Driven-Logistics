@@ -12,6 +12,7 @@ import {
   emptyHost,
   emptyVisitor,
   firstProblem,
+  internalCompanyName,
   formatDateLong,
   formatSlot,
   isSlotBusy,
@@ -145,16 +146,22 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
     setDraft((current) => ({ ...current, ...next }))
     setError(null)
   }
-  const problems = useMemo(() => sectionProblems(draft), [draft])
+  // 내부 방문은 방문 조직명 칸이 없으므로, 검사 · 제출에는 담당자 정보로 채운 값을 쓴다.
+  // (입력해 둔 업체명은 draft 에 그대로 남아, 고객 방문으로 돌아가면 다시 보인다)
+  const effective = useMemo<VisitDraft>(
+    () => (draft.category === 'internal' ? { ...draft, company: internalCompanyName(draft.host) } : draft),
+    [draft],
+  )
+  const problems = useMemo(() => sectionProblems(effective), [effective])
   const doneCount = FORM_SECTIONS.filter((section) => problems[section.id] === null).length
-  const errors = useMemo(() => (showErrors ? missingFields(draft) : undefined), [showErrors, draft])
+  const errors = useMemo(() => (showErrors ? missingFields(effective) : undefined), [showErrors, effective])
   const openProblems = FORM_SECTIONS.filter((section) => problems[section.id] !== null)
   const tour = TOUR_BY_ID[draft.tour]
   const defaultOrg = draft.category === 'external' ? draft.company.trim() : ''
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
-    const problem = firstProblem(draft)
+    const problem = firstProblem(effective)
     if (problem) {
       setShowErrors(true)
       setError(
@@ -164,7 +171,7 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
       return
     }
     // A slot that gets confirmed while the form is open would otherwise slip through.
-    if (isSlotBusy(draft.tour, draft.date, draft.slot, busy)) {
+    if (isSlotBusy(effective.tour, effective.date, effective.slot, busy)) {
       setError('이미 확정된 일정과 겹치는 시간대입니다. 다른 날짜나 시간을 선택해 주세요.')
       scrollToSection('schedule')
       return
@@ -173,7 +180,7 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
     setStatus('sending')
     setError(null)
     try {
-      await submitReservation(trimDraft(draft))
+      await submitReservation(trimDraft(effective))
       setStatus('done')
     } catch (submitError) {
       setStatus('idle')
@@ -198,7 +205,7 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
               </dd>
               <dt className="text-warm-600">방문</dt>
               <dd>
-                {draft.company} · {draft.visitors.length}명
+                {effective.company} · {draft.visitors.length}명
               </dd>
             </dl>
           </div>
@@ -303,7 +310,7 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
         <SectionTitle index="3" done={problems.company === null}>
           방문 기관
         </SectionTitle>
-        <CompanyFields draft={draft} onChange={patch} errors={errors} />
+        <CompanyFields draft={draft} onChange={patch} errors={errors} hideInternalCompany />
       </section>
 
       <section id={sectionId('purpose')} className="scroll-mt-24">
