@@ -358,7 +358,7 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
                         <p className="mt-1 text-sm text-ink">
                           <span className="font-semibold">{maskName(name) || '홍**'}</span>
                           <span className="ml-2 text-warm-600">
-                            {[maskCompany(company) || 'L**', team.trim(), role.trim()].filter(Boolean).join(' · ')}
+                            {[maskCompany(company) || 'L**', maskCompany(team), role.trim()].filter(Boolean).join(' · ')}
                           </span>
                         </p>
                       </div>
