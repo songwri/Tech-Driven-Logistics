@@ -105,9 +105,7 @@ export function SchedulePicker({
                   </span>
                   <span className="block text-[12px] tabular-nums text-warm-600">
                     {item.duration} ·{' '}
-                    {item.id === 'center'
-                      ? '10:00 – 16:00 매시 정각 시작'
-                      : `${item.slots.map((slot) => slot.slice(0, 5)).join(' / ')} 시작`}
+                    {item.slots.map((slot) => slot.slice(0, 5)).join(' / ')} 시작
                   </span>
                 </span>
               </button>

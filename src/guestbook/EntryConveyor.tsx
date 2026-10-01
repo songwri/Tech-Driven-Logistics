@@ -8,7 +8,6 @@ const CARD = 272
 const GAP = 16
 /** 초당 이동 거리(px). 벨트 무늬(.conveyor-belt)와 같은 속도 */
 const SPEED = 40
-const LIMIT = 16
 
 /** 송장 번호처럼 보이는 기록 번호: 작성 월일 + 순번 */
 function trackingNo(entry: GuestbookEntry, index: number) {
@@ -65,14 +64,14 @@ function useWidth(ref: React.RefObject<HTMLElement | null>) {
 }
 
 /**
- * 최근 방명록이 컨베이어 위 소포처럼 흘러가는 띠. 남겨진 기록 수만큼만 흐르고, 한 건이면 한 장만 지나간다.
+ * 방명록이 컨베이어 위 소포처럼 흘러가는 띠. 남겨진 기록 수만큼만 흐르고, 한 건이면 한 장만 지나간다.
  * 기록이 화면 폭보다 적으면 빈 벨트가 이어진다. 마우스를 올리거나 포커스하면 멈춘다.
  * 움직임 줄이기 설정이면 멈춘 채 가로로 스크롤한다. 전체 기록은 아래 목록에서 읽는다.
  */
 export function EntryConveyor({ entries, highlightId }: { entries: GuestbookEntry[]; highlightId: string | null }) {
   const frameRef = useRef<HTMLDivElement>(null)
   const viewport = useWidth(frameRef)
-  const recent = entries.slice(0, LIMIT)
+  const recent = entries
   if (recent.length === 0) return null
 
   // 한 바퀴의 길이: 카드가 모두 지나가고 화면이 비워질 만큼. 같은 줄 두 벌을 이어 붙여 끊김 없이 반복한다.
