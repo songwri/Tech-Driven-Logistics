@@ -3,6 +3,7 @@ import { Download, ExternalLink, Eye, EyeOff, RefreshCw, RotateCcw, Search, Star
 import { cn } from '@/lib/utils'
 import { downloadWorkbook } from '@/lib/xlsx'
 import { GUESTBOOK_URL } from '@/lib/routes'
+import { formatRating } from '@/lib/rating'
 import { toDateKey } from '@/lib/visit'
 import type { AdminGuestbookEntry } from './guestbookData'
 import { useAdminGuestbook } from './useAdminGuestbook'
@@ -19,7 +20,7 @@ function Rating({ value }: { value: number }) {
   return (
     <span className="inline-flex items-center gap-1 font-mono text-[13px] tabular-nums text-warm-800">
       <Star width={13} height={13} className="fill-brand text-brand" strokeWidth={1.5} aria-hidden />
-      {value}
+      {formatRating(value)}
       <span className="sr-only">점</span>
     </span>
   )
@@ -66,7 +67,7 @@ export function GuestbookAdmin({ adminKey }: { adminKey: string }) {
       .filter(
         (entry) =>
           !needle ||
-          [entry.name, entry.company, entry.role, entry.message, entry.displayName, entry.displayCompany]
+          [entry.name, entry.company, entry.team, entry.role, entry.message, entry.displayName, entry.displayCompany]
             .join(' ')
             .toLowerCase()
             .includes(needle),
@@ -94,8 +95,9 @@ export function GuestbookAdmin({ adminKey }: { adminKey: string }) {
           { header: '작성일', width: 12 },
           { header: '평가', width: 6 },
           { header: '이름(실명)', width: 12 },
-          { header: '소속(실제)', width: 18 },
-          { header: '직함', width: 18 },
+          { header: '회사명(실제)', width: 18 },
+          { header: '팀명', width: 18 },
+          { header: '직책', width: 14 },
           { header: '메시지', width: 60 },
           { header: '공개 이름', width: 10 },
           { header: '공개 소속', width: 10 },
@@ -106,6 +108,7 @@ export function GuestbookAdmin({ adminKey }: { adminKey: string }) {
           entry.rating,
           entry.name,
           entry.company,
+          entry.team,
           entry.role,
           entry.message,
           entry.displayName,
@@ -254,7 +257,7 @@ export function GuestbookAdmin({ adminKey }: { adminKey: string }) {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="이름 · 소속 · 메시지 검색"
+              placeholder="이름 · 회사 · 팀 · 메시지 검색"
               aria-label="방명록 검색"
               className="w-48 bg-transparent text-[13px] text-warm-800 outline-none placeholder:text-warm-600/70"
             />
@@ -323,7 +326,9 @@ export function GuestbookAdmin({ adminKey }: { adminKey: string }) {
                           {entry.name || '(이름 없음)'}
                           {entry.role && <span className="ml-1.5 font-normal text-warm-600">{entry.role}</span>}
                         </p>
-                        <p className="text-[12px] text-warm-600">{entry.company || '-'}</p>
+                        <p className="text-[12px] text-warm-600">
+                          {[entry.company, entry.team].filter(Boolean).join(' · ') || '-'}
+                        </p>
                         <p className="mt-0.5 text-[11px] text-warm-600/80">
                           공개 표시 {entry.displayName || '-'} / {entry.displayCompany || '-'}
                         </p>

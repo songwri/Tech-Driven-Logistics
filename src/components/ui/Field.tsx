@@ -58,6 +58,16 @@ export function Input({ className, invalid, ...props }: InputHTMLAttributes<HTML
   )
 }
 
-export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea className={cn(controlStyles, 'resize-none', className)} {...props} />
+export function Textarea({
+  className,
+  invalid,
+  ...props
+}: TextareaHTMLAttributes<HTMLTextAreaElement> & { invalid?: boolean }) {
+  return (
+    <textarea
+      className={cn(controlStyles, 'resize-none', invalid && invalidStyles, className)}
+      aria-invalid={invalid || undefined}
+      {...props}
+    />
+  )
 }

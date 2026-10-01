@@ -42,13 +42,14 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-01.sender-name';
+var CODE_VERSION = '2026-10-02.guestbook-team';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
  *   2: 수기 등록(create) · 기존 이력 가져오기(import) · 완료/취소 상태 · 운영 기록 열
  *   3: 신청 담당자의 담당(실) 열
  *   4: 관리자 방명록 관리 (guestbookList · guestbookSetHidden · guestbookDelete)
+ *   (방명록 팀 열 · 0.5점 단위 평가는 공개 방명록 쓰기 변경이라 수준을 올리지 않는다)
  */
 var API_LEVEL = 4;
 var ADMIN_ACTIONS = [
@@ -91,6 +92,8 @@ var BRAND = '#a72b2b';
 
 var GUESTBOOK_HEADERS = [
   'id', 'createdAt', '표시이름', '표시소속', '직함', '평가', '메시지', '실명', '실제소속', '숨김',
+  // 새 열은 기존 시트와 맞도록 맨 뒤에 붙인다.
+  '팀',
 ];
 /** src/admin/importLegacy.ts 의 VISIT_SHEET_HEADERS 와 같아야 합니다 (가져오기 양식). */
 var VISIT_HEADERS = [
@@ -104,6 +107,7 @@ var VISIT_HEADERS = [
 var BLOCKED_HEADERS = ['날짜', '시간대(비우면 종일)', '사유'];
 
 var GUESTBOOK_HIDDEN_COL = 10; // 1-based
+var GUESTBOOK_TEAM_COL = 11; // 1-based
 
 /* ------------------------------------------------------------------ 공통 */
 
@@ -251,6 +255,7 @@ function readGuestbook_() {
       createdAt: new Date(values[row][1]).toISOString(),
       name: String(values[row][2]),
       company: String(values[row][3]),
+      team: String(values[row][GUESTBOOK_TEAM_COL - 1] == null ? '' : values[row][GUESTBOOK_TEAM_COL - 1]),
       role: String(values[row][4]),
       rating: Number(values[row][5]),
       message: String(values[row][6]),
@@ -274,6 +279,7 @@ function readGuestbookAdmin_() {
       createdAt: isoOrEmpty_(values[row][1]),
       displayName: String(values[row][2]),
       displayCompany: String(values[row][3]),
+      team: String(values[row][GUESTBOOK_TEAM_COL - 1] == null ? '' : values[row][GUESTBOOK_TEAM_COL - 1]),
       role: String(values[row][4]),
       rating: Number(values[row][5]),
       message: String(values[row][6]),
@@ -320,17 +326,22 @@ function deleteGuestbook_(id) {
 
 function addGuestbook_(payload) {
   var name = requireText_(payload.name, '이름', 40);
-  var company = requireText_(payload.company, '소속', 60);
-  var role = requireText_(payload.role, '직함', 60);
+  var company = requireText_(payload.company, '회사명', 60);
+  var team = optionalText_(payload.team, 60);
+  var role = requireText_(payload.role, '직책', 60);
   var message = requireText_(payload.message, '메시지', MESSAGE_LIMIT);
   var rating = Number(payload.rating);
-  if (!(rating >= 1 && rating <= 5)) throw new Error('평가는 1~5점 사이여야 합니다.');
+  // 0.5점 단위 (0.5 ~ 5). 이전 사이트가 보내는 1~5 정수도 그대로 받는다.
+  if (!(rating >= 0.5 && rating <= 5) || rating * 2 !== Math.round(rating * 2)) {
+    throw new Error('평가는 0.5~5점 사이에서 0.5점 단위로 입력해 주세요.');
+  }
 
   var entry = {
     id: Utilities.getUuid(),
     createdAt: new Date().toISOString(),
     name: maskName_(name),
     company: maskToken_(company),
+    team: team,
     role: role,
     rating: rating,
     message: message,
@@ -338,14 +349,14 @@ function addGuestbook_(payload) {
 
   sheet_(GUESTBOOK_SHEET, GUESTBOOK_HEADERS).appendRow([
     entry.id, entry.createdAt, entry.name, entry.company,
-    entry.role, entry.rating, entry.message, name, company, '',
+    entry.role, entry.rating, entry.message, name, company, '', team,
   ]);
 
   MailApp.sendEmail({
     to: mailTo_(),
     name: MAIL_SENDER_NAME,
     subject: '[TDL Lab] 방명록 등록 · ' + name + ' (' + company + ')',
-    htmlBody: guestbookMailHtml_(name, company, role, rating, message, entry.createdAt),
+    htmlBody: guestbookMailHtml_(name, company, team, role, rating, message, entry.createdAt),
   });
 
   return { entry: entry };
@@ -1165,7 +1176,7 @@ function notifyHost_(r) {
   });
 }
 
-function guestbookMailHtml_(name, company, role, rating, message, createdAt) {
+function guestbookMailHtml_(name, company, team, role, rating, message, createdAt) {
   var lead = [
     '안녕하세요, TDL Lab 담당자님.<br>',
     '<b style="color:#3d3532;">', escapeHtml_(company), ' ', escapeHtml_(name),
@@ -1174,14 +1185,17 @@ function guestbookMailHtml_(name, company, role, rating, message, createdAt) {
 
   var stars = '';
   for (var i = 1; i <= 5; i++) {
-    stars += '<span style="color:' + (i <= rating ? BRAND : '#ddd9d7') + ';font-size:16px;">★</span>';
+    // 0.5점은 반쪽 별 대신 연한 색으로 표시한다.
+    var star = rating >= i ? BRAND : (rating >= i - 0.5 ? '#d9a3a3' : '#ddd9d7');
+    stars += '<span style="color:' + star + ';font-size:16px;">★</span>';
   }
 
   var detail = rows_([
     ['이름', escapeHtml_(name)],
-    ['소속', escapeHtml_(company)],
-    ['직함', escapeHtml_(role)],
-    ['평가', stars + ' <span style="color:#aca8a7;font-size:12px;">' + rating + ' / 5</span>'],
+    ['회사명', escapeHtml_(company)],
+    ['팀명', escapeHtml_(team || '-')],
+    ['직책', escapeHtml_(role)],
+    ['평가', stars + ' <span style="color:#aca8a7;font-size:12px;">' + rating.toFixed(1) + ' / 5</span>'],
     ['메시지', escapeHtml_(message)],
     ['등록일시', escapeHtml_(formatDateTimeKo_(createdAt))],
   ]);

@@ -6,6 +6,8 @@ export interface GuestbookEntry {
   /** Already masked — raw names never reach the public repository. */
   name: string
   company: string
+  /** 팀명 (선택 입력, 이전 기록에는 없다) */
+  team?: string
   role: string
   rating: number
   message: string
@@ -15,6 +17,7 @@ export interface GuestbookEntry {
 export interface GuestbookDraft {
   name: string
   company: string
+  team: string
   role: string
   rating: number
   message: string
@@ -129,6 +132,7 @@ export async function submitGuestbook(draft: GuestbookDraft): Promise<GuestbookE
       id: crypto.randomUUID(),
       name: maskName(draft.name),
       company: maskCompany(draft.company),
+      team: draft.team,
       role: draft.role,
       rating: draft.rating,
       message: draft.message,
