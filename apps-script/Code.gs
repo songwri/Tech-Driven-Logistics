@@ -16,19 +16,27 @@
  */
 
 /**
- * 알림 메일 수신: 방문 예약 신청 · 방명록 등록 알림은 MAIL_TO 로 보내고 MAIL_CC 를 참조로 건다.
- * 공용 메일함(PANTOSKR_403144)이 외부 발신 메일을 직접 받지 않아, 개인 주소를 받는 사람으로 두고
- * 공용 메일함은 참조로 넣는다.
+ * 알림 메일 수신자: 방문 예약 신청 · 방명록 등록 알림을 받는 담당자들.
+ *
+ * 이 저장소는 공개라 직원 메일 주소를 코드에 적지 않고, Apps Script 의 스크립트 속성 MAIL_TO 에 둔다.
+ *   프로젝트 설정(톱니바퀴) → 스크립트 속성 → MAIL_TO = a@lxpantos.com,b@lxpantos.com,...
+ * 쉼표 · 세미콜론 · 줄바꿈으로 여러 명을 구분한다. 속성은 저장 즉시 적용되어 재배포가 필요 없다.
+ * 속성이 비어 있으면 DEFAULT_MAIL_TO 로 보낸다.
+ * 신청자에게 가는 승인 · 거절 메일의 회신 주소도 같은 수신자들이다.
  */
-var MAIL_TO = 'daehyun.kim1@lxpantos.com';
-var MAIL_CC = 'PANTOSKR_403144@lxpantos.com';
-/** 신청자에게 가는 승인 · 거절 메일의 회신 주소 (공용 메일함) */
-var MAIL_REPLY_TO = MAIL_CC;
+var DEFAULT_MAIL_TO = 'daehyun.kim1@lxpantos.com';
+
+/** 알림 수신자 (MailApp 의 to 에 그대로 쓰는 쉼표 구분 문자열) */
+function mailTo_() {
+  var raw = PropertiesService.getScriptProperties().getProperty('MAIL_TO') || DEFAULT_MAIL_TO;
+  var list = String(raw).split(/[,;\s]+/).filter(function (address) { return address; });
+  return (list.length ? list : [DEFAULT_MAIL_TO]).join(',');
+}
 var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-01.mail-cc';
+var CODE_VERSION = '2026-10-01.mail-list';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -256,8 +264,7 @@ function addGuestbook_(payload) {
   ]);
 
   MailApp.sendEmail({
-    to: MAIL_TO,
-    cc: MAIL_CC,
+    to: mailTo_(),
     subject: '[TDL Lab] 방명록 등록 · ' + name + ' (' + company + ')',
     htmlBody: guestbookMailHtml_(name, company, role, rating, message, entry.createdAt),
   });
@@ -636,8 +643,7 @@ function addReservation_(payload) {
   });
 
   MailApp.sendEmail({
-    to: MAIL_TO,
-    cc: MAIL_CC,
+    to: mailTo_(),
     replyTo: request.host.email,
     subject: '[TDL Lab] 방문 예약 신청 · ' + TOURS[request.tour].label + ' · ' + request.company + ' · '
       + request.date + ' ' + request.slot,
@@ -1064,7 +1070,7 @@ function notifyHost_(r) {
       + '다른 날짜로 다시 신청해 주시거나, 이 메일에 회신해 일정을 조율해 주세요.';
   MailApp.sendEmail({
     to: r.host.email,
-    replyTo: MAIL_REPLY_TO,
+    replyTo: mailTo_(),
     subject: '[TDL Lab] 방문 예약 ' + (approved ? '확정' : '불가') + ' 안내 · ' + r.date + ' ' + r.slot,
     htmlBody: mailShell_(approved ? '방문 일정 확정' : '방문 예약 결과 안내', lead, scheduleBox_(r) + rows_([
       [r.category === 'internal' ? '방문 조직' : '업체명', escapeHtml_(r.company)],
