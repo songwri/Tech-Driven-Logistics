@@ -24,6 +24,7 @@ export interface TourDefinition {
   duration: string
   /** 'HH:mm-HH:mm' */
   slots: string[]
+  /** 투어 색: 상태 색(주황 · 초록 · 파랑 · 회색)과 겹치지 않게 남색 · 보라 · 청록을 쓴다. */
   color: string
 }
 
@@ -42,7 +43,7 @@ export const TOURS: TourDefinition[] = [
     description: '물류센터 + TDL Lab',
     duration: '약 2시간',
     slots: ['09:30-11:30', '13:00-15:00'],
-    color: '#2a78d6',
+    color: '#3b4a6b',
   },
   {
     id: 'lab',
@@ -51,7 +52,7 @@ export const TOURS: TourDefinition[] = [
     description: '기술 체험 공간',
     duration: '약 1시간',
     slots: ['10:30-11:30', '14:00-15:00'],
-    color: '#1baf7a',
+    color: '#7c5cc4',
   },
   {
     id: 'center',
@@ -60,7 +61,7 @@ export const TOURS: TourDefinition[] = [
     description: '물류센터 현장',
     duration: '약 1시간',
     slots: ['10:00-11:00', '11:00-12:00', '13:00-14:00', '14:00-15:00', '15:00-16:00'],
-    color: '#eb6834',
+    color: '#1a8fa0',
   },
   {
     id: 'other',
