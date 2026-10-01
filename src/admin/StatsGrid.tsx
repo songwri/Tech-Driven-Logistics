@@ -7,7 +7,7 @@ function formatValue(value: number | null, percent?: boolean) {
 }
 
 /**
- * 기간 × 지표 그리드. 열마다 값이 클수록 진한 파랑으로 칠해(히트맵)
+ * 기간 × 지표 그리드. 열마다 값이 클수록 진한 남색으로 칠해(히트맵)
  * 어느 달/해에 몰렸는지 한눈에 보이게 합니다. 마지막 줄은 합계.
  */
 export function StatsGrid({ rows, firstHeader }: { rows: PeriodRow[]; firstHeader: string }) {
@@ -25,7 +25,7 @@ export function StatsGrid({ rows, firstHeader }: { rows: PeriodRow[]; firstHeade
 
   const shade = (value: number | null, peak: number) => {
     if (!value || peak <= 0) return undefined
-    return `rgba(42, 120, 214, ${(0.06 + 0.42 * (value / peak)).toFixed(3)})`
+    return `rgba(48, 64, 95, ${(0.05 + 0.32 * (value / peak)).toFixed(3)})`
   }
 
   return (
@@ -60,7 +60,7 @@ export function StatsGrid({ rows, firstHeader }: { rows: PeriodRow[]; firstHeade
                 <td
                   key={column.key}
                   className={cn(
-                    'border border-warm-300/40 px-2 py-1.5 text-right font-mono text-warm-800',
+                    'border border-warm-300/40 px-2 py-1.5 text-right font-mono tabular-nums text-warm-800',
                     row.total === 0 && 'text-warm-300',
                   )}
                   style={{ background: shade(row[column.key], peaks[column.key]) }}

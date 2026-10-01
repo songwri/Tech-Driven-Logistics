@@ -7,10 +7,16 @@
   --color-warm-600: #736662;
   --color-warm-300: #aca8a7;
   --color-cream: #f3f2f1;
+  /* 큰 제목용 진한 잉크색 (warm-800과 같은 계열) */
+  --color-ink: #2b2522;
 
-  --font-sans: "Noto Sans KR", "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-  --font-display: "Space Grotesk", "Noto Sans KR", var(--font-sans);
+  /* 영문 · 숫자는 Geist, 한글은 Pretendard로 떨어지도록 순서를 둔다.
+     고정폭도 한글은 Pretendard로 받아 OS 기본 폰트가 섞이지 않게 한다. */
+  --font-sans: "Geist Variable", "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui,
+    "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-mono: "Geist Mono Variable", "Pretendard Variable", Pretendard, ui-monospace, "SFMono-Regular", Menlo,
+    monospace;
+  --font-display: var(--font-sans);
 }
 
 html {
@@ -27,6 +33,20 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* 한글이 어절 중간에서 끊기지 않게 한다. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 /* 예약 · 관리자 페이지는 입력이 많아 격자 배경 없이 깔끔한 단색으로 쓴다. */
@@ -37,7 +57,7 @@ body.plain-bg {
 
 .font-display {
   font-family: var(--font-display);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.035em;
 }
 
 ::selection {

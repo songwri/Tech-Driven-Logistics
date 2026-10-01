@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '../ui/Button'
 import { Textarea } from '../ui/Field'
 import { SchedulePicker } from './SchedulePicker'
-import { HostFields, PrivacyConsent, SectionTitle, VisitInfoFields, VisitorsFields } from './VisitFields'
+import { CompanyFields, HostFields, PrivacyConsent, PurposeFields, SectionTitle, VisitorsFields } from './VisitFields'
 import { submitReservation, isLiveBackend } from '@/lib/labApi'
 import {
   FORM_SECTIONS,
@@ -15,6 +15,7 @@ import {
   formatSlot,
   isSlotBusy,
   languageSummary,
+  missingFields,
   sectionProblems,
   type BusySegment,
   type FormSection,
@@ -80,35 +81,43 @@ function scrollToSection(section: FormSection) {
 function ProgressSteps({
   problems,
   vertical,
+  flagged,
 }: {
   problems: Record<FormSection, string | null>
   vertical?: boolean
+  /** 신청을 눌러 본 뒤에는 남은 섹션을 빨간색으로 표시한다. */
+  flagged?: boolean
 }) {
   return (
-    <ol className={cn('flex gap-1.5', vertical ? 'flex-col' : 'flex-wrap')}>
+    <ol className={cn('flex gap-2', vertical ? 'flex-col' : 'flex-wrap')}>
       {FORM_SECTIONS.map((section, index) => {
         const done = problems[section.id] === null
+        const missing = flagged && !done
         return (
           <li key={section.id}>
             <button
               type="button"
               onClick={() => scrollToSection(section.id)}
               className={cn(
-                'inline-flex items-center gap-1.5 text-[12px] transition hover:text-brand',
-                done ? 'text-warm-800' : 'text-warm-600',
+                'inline-flex items-center gap-2 text-[13px] transition hover:text-brand',
+                done ? 'text-warm-800' : missing ? 'font-semibold text-brand' : 'text-warm-600',
               )}
             >
               <span
                 className={cn(
-                  'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[9px] font-bold',
-                  done ? 'border-[#2f9e44] bg-[#2f9e44] text-white' : 'border-warm-300 text-warm-600',
+                  'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border font-mono text-[10px] font-semibold',
+                  done
+                    ? 'border-[#2f9e44] bg-[#2f9e44] text-white'
+                    : missing
+                      ? 'border-brand text-brand'
+                      : 'border-warm-300 text-warm-600',
                 )}
                 aria-hidden
               >
                 {done ? <Check width={10} height={10} strokeWidth={3.5} /> : index + 1}
               </span>
               {section.label}
-              <span className="sr-only">{done ? '완료' : '미완료'}</span>
+              <span className="sr-only">{done ? '완료' : '입력 필요'}</span>
             </button>
           </li>
         )
@@ -127,6 +136,8 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
   const [draft, setDraft] = useState<VisitDraft>(initialDraft)
   const [status, setStatus] = useState<'idle' | 'sending' | 'done'>('idle')
   const [error, setError] = useState<string | null>(null)
+  // 한 번 신청을 눌러 본 뒤부터 칸마다 오류를 표시한다 (처음부터 빨간 칸이 가득하지 않게).
+  const [showErrors, setShowErrors] = useState(false)
 
   const patch = (next: Partial<VisitDraft>) => {
     setDraft((current) => ({ ...current, ...next }))
@@ -134,6 +145,8 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
   }
   const problems = useMemo(() => sectionProblems(draft), [draft])
   const doneCount = FORM_SECTIONS.filter((section) => problems[section.id] === null).length
+  const errors = useMemo(() => (showErrors ? missingFields(draft) : undefined), [showErrors, draft])
+  const openProblems = FORM_SECTIONS.filter((section) => problems[section.id] !== null)
   const tour = TOUR_BY_ID[draft.tour]
   const defaultOrg = draft.category === 'external' ? draft.company.trim() : ''
 
@@ -141,7 +154,10 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
     event.preventDefault()
     const problem = firstProblem(draft)
     if (problem) {
-      setError(problem.message)
+      setShowErrors(true)
+      setError(
+        openProblems.length > 1 ? `${openProblems.length}개 섹션에 입력이 필요합니다. ${problem.message}` : problem.message,
+      )
       scrollToSection(problem.section)
       return
     }
@@ -191,6 +207,7 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
             className="flex-1"
             onClick={() => {
               setDraft(initialDraft())
+              setShowErrors(false)
               setStatus('idle')
               window.scrollTo({ top: 0 })
             }}
@@ -207,6 +224,26 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
       </div>
     )
   }
+
+  const summaryRows: [string, string | null][] = [
+    ['투어', tour.label],
+    ['날짜', draft.date ? formatDateLong(draft.date) : null],
+    ['시간', draft.slot ? formatSlot(draft.slot) : null],
+    ['인원', `${draft.visitors.length}명${draft.language === 'foreign' ? ` · ${languageSummary(draft)}` : ''}`],
+  ]
+
+  const summaryList = (
+    <dl className="grid grid-cols-[40px_1fr] gap-y-2 text-[13px]">
+      {summaryRows.map(([label, value]) => (
+        <div key={label} className="contents">
+          <dt className="text-warm-600">{label}</dt>
+          <dd className={cn('font-semibold tabular-nums', value ? 'text-warm-800' : 'font-normal text-warm-300')}>
+            {value ?? '선택 전'}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  )
 
   const summary = (
     <p className="min-w-0 text-[13px] leading-relaxed text-warm-800">
@@ -236,45 +273,70 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
   )
 
   const sections = (
-    <div className="space-y-10">
-      <div className="grid gap-8 md:grid-cols-[320px_1fr]">
-        <section id={sectionId('schedule')} className="scroll-mt-24">
-          <SectionTitle index="01">투어 · 일정</SectionTitle>
-          <SchedulePicker
-            tour={draft.tour}
-            date={draft.date}
-            slot={draft.slot}
-            busy={busy}
-            closedDays={closedDays}
-            onChange={patch}
-          />
-        </section>
+    <div className="space-y-14">
+      <section id={sectionId('schedule')} className="scroll-mt-24">
+        <SectionTitle index="1" done={problems.schedule === null}>
+          투어 · 일정
+        </SectionTitle>
+        <SchedulePicker
+          tour={draft.tour}
+          date={draft.date}
+          slot={draft.slot}
+          busy={busy}
+          closedDays={closedDays}
+          onChange={patch}
+          errors={errors}
+          wide
+        />
+      </section>
 
-        <section id={sectionId('host')} className="scroll-mt-24">
-          <SectionTitle index="02" aside={<span className="text-[12px] text-warm-600">예약을 신청하고 결과를 받을 분</span>}>
-            신청 담당자
-          </SectionTitle>
-          <HostFields host={draft.host} onChange={(host) => patch({ host })} />
-        </section>
-      </div>
+      <section id={sectionId('host')} className="scroll-mt-24">
+        <SectionTitle index="2" done={problems.host === null} aside="예약을 신청하고 승인 결과를 받을 분">
+          신청 담당자
+        </SectionTitle>
+        <HostFields host={draft.host} onChange={(host) => patch({ host })} errors={errors} />
+      </section>
 
-      <section id={sectionId('info')} className="scroll-mt-24">
-        <SectionTitle index="03">방문 정보</SectionTitle>
-        <VisitInfoFields draft={draft} onChange={patch} />
+      <section id={sectionId('company')} className="scroll-mt-24">
+        <SectionTitle index="3" done={problems.company === null}>
+          방문 기관
+        </SectionTitle>
+        <CompanyFields draft={draft} onChange={patch} errors={errors} />
+      </section>
+
+      <section id={sectionId('purpose')} className="scroll-mt-24">
+        <SectionTitle index="4" done={problems.purpose === null}>
+          방문 목적 · 언어
+        </SectionTitle>
+        <PurposeFields draft={draft} onChange={patch} errors={errors} />
       </section>
 
       <section id={sectionId('visitors')} className="scroll-mt-24">
         <SectionTitle
-          index="04"
-          aside={<span className="text-[12px] text-warm-600">출입 · 주차 등록에 사용 · 단체는 엑셀 붙여넣기</span>}
+          index="5"
+          done={problems.visitors === null}
+          aside="출입 · 주차 등록에 사용 · 단체는 엑셀 붙여넣기"
         >
           방문자 명단
         </SectionTitle>
-        <VisitorsFields visitors={draft.visitors} onChange={(visitors) => patch({ visitors })} defaultOrg={defaultOrg} />
+        <VisitorsFields
+          visitors={draft.visitors}
+          onChange={(visitors) => patch({ visitors })}
+          defaultOrg={defaultOrg}
+          errors={errors}
+        />
+        {showErrors && problems.visitors && (
+          <p className="mt-2 flex items-center gap-1 text-[12px] text-brand">
+            <CircleAlert width={13} height={13} className="shrink-0" />
+            {problems.visitors}
+          </p>
+        )}
       </section>
 
       <section>
-        <SectionTitle index="05">기타 요청사항</SectionTitle>
+        <SectionTitle index="6" aside="선택 입력">
+          기타 요청사항
+        </SectionTitle>
         <Textarea
           rows={3}
           value={draft.note}
@@ -287,12 +349,18 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
 
       {/* 입력을 모두 마친 뒤 동의하도록 폼 맨 끝, 신청 버튼 바로 위에 둔다. */}
       <section id={sectionId('consent')} className="scroll-mt-24">
-        <SectionTitle index="06">개인정보 수집 · 이용 동의</SectionTitle>
-        <PrivacyConsent checked={draft.consent} onChange={(consent) => patch({ consent })} />
+        <SectionTitle index="7" done={problems.consent === null}>
+          개인정보 수집 · 이용 동의
+        </SectionTitle>
+        <PrivacyConsent
+          checked={draft.consent}
+          onChange={(consent) => patch({ consent })}
+          invalid={Boolean(errors?.has('consent'))}
+        />
         <p className="mt-4 border-l-2 border-brand bg-cream px-4 py-3 text-[13px] text-warm-800">
           예약 신청 시 담당자에게 승인 요청이 전달되며, 일정 확정 후 입력하신 이메일로 확정 안내가 발송됩니다.
           {!isLiveBackend && (
-            <span className="mt-1 block font-mono text-[11px] text-warm-600">
+            <span className="mt-1 block text-[12px] text-warm-600">
               ※ 예약 접수 서버 연결 전입니다. 연결 후 정상 접수됩니다.
             </span>
           )}
@@ -302,7 +370,7 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
   )
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="grid gap-8 lg:grid-cols-[1fr_280px]">
+    <form onSubmit={handleSubmit} noValidate className="grid gap-10 lg:grid-cols-[1fr_260px]">
       <div className="min-w-0">
         {sections}
         <div className="mt-6 hidden items-center justify-end gap-4 lg:flex">
@@ -312,14 +380,23 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
       </div>
       {/* 데스크톱: 우측 고정 요약 패널 / 모바일: 하단 고정 바 */}
       <aside className="hidden lg:block">
-        <div className="sticky top-6 space-y-4 border border-warm-300/50 bg-white p-5">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-brand">신청 요약</p>
-          {summary}
-          <div className="border-t border-warm-300/40 pt-3">
-            <p className="mb-2 text-[12px] text-warm-600">
-              입력 진행 <b className="text-warm-800">{doneCount}</b> / {FORM_SECTIONS.length}
-            </p>
-            <ProgressSteps problems={problems} vertical />
+        <div className="sticky top-6 space-y-5 border border-warm-300/50 bg-white p-5">
+          <p className="text-[15px] font-bold text-warm-800">신청 요약</p>
+          {summaryList}
+          <div className="border-t border-warm-300/40 pt-4">
+            <div className="mb-3 flex items-baseline justify-between">
+              <p className="text-[13px] font-semibold text-warm-800">입력 진행</p>
+              <p className="font-mono text-[13px] tabular-nums text-warm-600">
+                <b className="text-warm-800">{doneCount}</b> / {FORM_SECTIONS.length}
+              </p>
+            </div>
+            <div className="mb-3 h-1 overflow-hidden bg-warm-300/30">
+              <div
+                className="h-full bg-[#2f9e44] transition-[width] duration-300"
+                style={{ width: `${(doneCount / FORM_SECTIONS.length) * 100}%` }}
+              />
+            </div>
+            <ProgressSteps problems={problems} vertical flagged={showErrors} />
           </div>
           {errorBox}
           <div className="[&>button]:w-full">{submitButton}</div>
@@ -330,7 +407,7 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             {summary}
-            <p className="text-[11px] text-warm-600">
+            <p className="text-[12px] tabular-nums text-warm-600">
               입력 진행 {doneCount} / {FORM_SECTIONS.length}
             </p>
           </div>

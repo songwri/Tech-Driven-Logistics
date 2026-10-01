@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion'
-import BlueprintFrame from './BlueprintFrame'
 
 const cases = [
   {
@@ -21,7 +20,7 @@ const cases = [
 
 export default function CaseStudy() {
   return (
-    <section id="case-study" className="bg-cream py-28">
+    <section id="case-study" className="bg-white py-28">
       <div className="mx-auto max-w-7xl px-6">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -29,31 +28,32 @@ export default function CaseStudy() {
           viewport={{ once: true, amount: 0.4 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
         >
-          <p className="mb-3 font-mono text-xs uppercase tracking-[0.3em] text-brand">
-            Case Study
-          </p>
-          <h2 className="text-3xl font-bold text-warm-800 md:text-4xl">기술 적용 사례 · 성과</h2>
+          <p className="mb-3 font-mono text-xs uppercase tracking-[0.3em] text-brand">Case Study</p>
+          <h2 className="text-3xl font-bold leading-tight text-ink md:text-[2.75rem]">기술 적용 사례 · 성과</h2>
         </motion.div>
 
-        <div className="mt-12 grid gap-5 md:grid-cols-3">
+        {/* 카드 대신 한 줄씩 넓게 읽히는 목록: 성과 키워드를 크게, 사례 · 설명을 옆에 */}
+        <ol className="mt-14 border-t border-ink">
           {cases.map((item, i) => (
-            <motion.div
+            <motion.li
               key={item.title}
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.4 }}
-              transition={{ duration: 0.5, delay: i * 0.1, ease: 'easeOut' }}
-              className="relative border border-warm-300/50 bg-white p-6"
+              viewport={{ once: true, amount: 0.5 }}
+              transition={{ duration: 0.5, delay: i * 0.08, ease: 'easeOut' }}
+              className="group grid gap-3 border-b border-warm-300/60 py-8 transition-colors hover:bg-cream/60 md:grid-cols-[56px_minmax(0,1.1fr)_minmax(0,1fr)] md:items-baseline md:gap-8 md:px-4"
             >
-              <BlueprintFrame size={14} />
-              <span className="font-mono text-xs uppercase tracking-wider text-brand">
-                {item.metric}
-              </span>
-              <h3 className="mt-2 text-lg font-semibold text-warm-800">{item.title}</h3>
-              <p className="mt-3 text-sm text-warm-600">{item.description}</p>
-            </motion.div>
+              <span className="font-mono text-[13px] tabular-nums text-warm-300">{String(i + 1).padStart(2, '0')}</span>
+              <div>
+                <p className="text-2xl font-bold tracking-tight text-ink transition-colors group-hover:text-brand md:text-[2rem]">
+                  {item.metric}
+                </p>
+                <h3 className="mt-1 text-[15px] font-semibold text-warm-600">{item.title}</h3>
+              </div>
+              <p className="max-w-md text-[15px] leading-relaxed text-warm-600">{item.description}</p>
+            </motion.li>
           ))}
-        </div>
+        </ol>
       </div>
     </section>
   )

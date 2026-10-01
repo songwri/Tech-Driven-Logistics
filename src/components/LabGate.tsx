@@ -35,7 +35,8 @@ export default function LabGate() {
       {/* legibility scrims: heavy on the left where the type sits, clear on the right */}
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,rgba(8,10,13,0.94)_0%,rgba(8,10,13,0.86)_28%,rgba(8,10,13,0.55)_52%,rgba(8,10,13,0.28)_75%,rgba(8,10,13,0.35)_100%)]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#0c0e11]/80 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-[#0c0e11] to-transparent" />
+      {/* 영상 아래쪽을 다음 섹션의 흰 배경으로 서서히 넘겨, 어두운 첫 화면과 밝은 본문이 끊기지 않게 한다. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[34vh] bg-[linear-gradient(to_bottom,transparent_0%,rgba(255,255,255,0.12)_35%,rgba(255,255,255,0.55)_65%,rgba(255,255,255,0.9)_85%,#ffffff_100%)]" />
 
       <div className="absolute inset-0 flex items-center">
         <div className="mx-auto w-full max-w-7xl px-6 md:px-12">
@@ -46,7 +47,7 @@ export default function LabGate() {
               TDL Lab · Visit & Experience
             </p>
 
-            <h1 className="mt-6 font-display text-[2.2rem] font-bold leading-[1.12] text-white md:text-[3.5rem]">
+            <h1 className="mt-6 font-display text-[2.4rem] font-bold leading-[1.08] text-white md:text-[4rem]">
               <span className="block whitespace-nowrap">미래의 물류를</span>
               <span className="block whitespace-nowrap">
                 <span className="text-brand">먼저 경험</span>하세요
@@ -104,7 +105,7 @@ export default function LabGate() {
       </div>
 
       <div className="pointer-events-none absolute inset-x-0 bottom-8 flex justify-center">
-        <span className="animate-pulse font-mono text-[10px] uppercase tracking-[0.3em] text-white/40">
+        <span className="animate-pulse font-mono text-[10px] uppercase tracking-[0.3em] text-warm-600">
           Scroll ↓
         </span>
       </div>

@@ -22,7 +22,7 @@ export default function TechMap() {
         <p className="mb-3 font-mono text-xs uppercase tracking-[0.3em] text-brand">
           Interactive Tech Map
         </p>
-        <h2 className="text-3xl font-bold text-warm-800 md:text-4xl">
+        <h2 className="text-3xl font-bold leading-tight text-ink md:text-[2.75rem]">
           기술을 보여주는 사이트가 아니라, 기술이 움직이는 사이트
         </h2>
         <p className="mt-4 text-warm-600">

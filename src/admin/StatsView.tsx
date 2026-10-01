@@ -19,12 +19,12 @@ import { ColumnChart, DonutChart, type Datum } from './charts'
 import { StatsGrid } from './StatsGrid'
 import { buildStatsSheets, monthlyRows, yearlyRows } from './statsData'
 
-/** 방문 유형 색 (투어 색과 겹치지 않는 3색, 팔레트 검증 완료) */
+/** 방문 유형 색: 차트와 같은 슬레이트 계열 + 신규 고객만 브랜드 색으로 강조 */
 const SEGMENTS = [
-  { label: '고객 · 기존', color: '#4a3aa7' },
-  { label: '고객 · 신규', color: '#e87ba4' },
-  { label: '내부 방문', color: '#eda100' },
-  { label: '고객 · 미분류', color: '#adb5bd' },
+  { label: '고객 · 기존', color: '#30405f' },
+  { label: '고객 · 신규', color: '#a72b2b' },
+  { label: '내부 방문', color: '#8e99ae' },
+  { label: '고객 · 미분류', color: '#d5d9e0' },
 ]
 
 type Period = 'year' | 'month'
@@ -43,7 +43,7 @@ function Card({ title, subtitle, children, className }: { title: string; subtitl
     <section className={cn('border border-warm-300/50 bg-white p-5', className)}>
       <header className="mb-4 flex items-baseline justify-between gap-2">
         <h3 className="text-[15px] font-bold text-warm-800">{title}</h3>
-        {subtitle && <span className="font-mono text-[11px] text-warm-600">{subtitle}</span>}
+        {subtitle && <span className="text-[12px] text-warm-600">{subtitle}</span>}
       </header>
       {children}
     </section>
@@ -192,7 +192,13 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
       unit: '건',
       delta: scoped.length - previous.length,
     },
-    { label: '방문 인원', value: visitors, unit: '명', delta: visitors - previousVisitors },
+    {
+      // 집계 기준이 '전체'면 승인 대기까지 포함한 신청 인원이라 아래 통계표의 '방문 인원(승인·완료)'과 다르다.
+      label: basis === 'approved' ? '방문 인원' : '신청 인원 (대기 포함)',
+      value: visitors,
+      unit: '명',
+      delta: visitors - previousVisitors,
+    },
     {
       label: '승인률',
       value: decided > 0 ? Math.round((approved / decided) * 100) : 0,
@@ -254,25 +260,33 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
             { value: 'approved', label: '승인·완료만' },
           ]}
         />
-        <span className="ml-auto font-mono text-[11px] text-warm-600">방문일 기준 · {periodLabel}</span>
+        <span className="ml-auto text-[12px] text-warm-600">방문일 기준 · {periodLabel}</span>
         <button
           type="button"
           onClick={exportExcel}
-          className="inline-flex items-center gap-1.5 border border-[#1e6b2e] bg-[#1e6b2e] px-3 py-1.5 text-[13px] font-semibold text-white transition hover:brightness-110"
+          className="inline-flex items-center gap-1.5 border border-warm-800 bg-warm-800 px-3 py-1.5 text-[13px] font-semibold text-white transition hover:brightness-110"
         >
           <Download width={14} height={14} /> 엑셀 다운로드
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {kpis.map((kpi) => (
-          <div key={kpi.label} className="border border-warm-300/50 bg-white px-4 py-3">
-            <p className="font-mono text-[11px] text-warm-600">{kpi.label}</p>
-            <p className="mt-1 text-3xl font-bold text-warm-800">
+      <div className="grid grid-cols-2 border border-warm-300/50 bg-white lg:grid-cols-4">
+        {kpis.map((kpi, index) => (
+          <div
+            key={kpi.label}
+            className={cn(
+              'px-5 py-4',
+              index % 2 === 1 && 'border-l border-warm-300/40',
+              index >= 2 && 'border-t border-warm-300/40 lg:border-t-0',
+              index === 2 && 'lg:border-l',
+            )}
+          >
+            <p className="text-[13px] font-semibold text-warm-600">{kpi.label}</p>
+            <p className="mt-1 text-[2rem] font-semibold leading-none tracking-tight tabular-nums text-warm-800">
               {kpi.value}
-              <span className="ml-0.5 text-base font-semibold text-warm-600">{kpi.unit}</span>
+              <span className="ml-1 text-base font-medium text-warm-600">{kpi.unit}</span>
             </p>
-            <p className="mt-0.5 text-[11px] text-warm-600">
+            <p className="mt-2 text-[12px] tabular-nums text-warm-600">
               {'delta' in kpi && kpi.delta !== undefined ? (
                 <>
                   {period === 'year' ? '전년' : '전월'} 대비{' '}
@@ -288,48 +302,48 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
         ))}
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-        <Card title="방문 목적" subtitle={`${periodLabel} · 복수 선택 포함`}>
-          <ColumnChart data={purposes} total={scoped.length} />
+      {/* 핵심: 추이를 가장 크게, 세부 분석은 아래로 작게 */}
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <Card title="월별 추이" subtitle={`${year}년 · 월별 ${basis === 'approved' ? '승인' : '신청'} 건수`}>
+          <ColumnChart data={monthly} height={220} />
         </Card>
+        <Card title="연도별 추이" subtitle="연도별 합계">
+          <ColumnChart data={yearly} height={220} />
+        </Card>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-3">
         <Card title="방문 유형" subtitle={periodLabel}>
-          <div className="flex min-h-[208px] items-center justify-center">
+          <div className="flex min-h-[188px] items-center justify-center">
             <DonutChart data={segments} />
           </div>
         </Card>
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-        <Card title="월별 추이" subtitle={`${year}년 · 월별 ${basis === 'approved' ? '승인' : '신청'} 건수`}>
-          <ColumnChart data={monthly} height={160} />
+        <Card title="방문 목적" subtitle="복수 선택 포함">
+          <ColumnChart data={purposes} total={scoped.length} height={150} />
         </Card>
-        <Card title="연도별 추이" subtitle="연도별 합계">
-          <ColumnChart data={yearly} height={160} />
-        </Card>
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-2">
         <Card title="투어 종류" subtitle={periodLabel}>
-          <ColumnChart data={tours} height={160} />
-        </Card>
-        <Card title="투어 언어" subtitle={`${periodLabel} · 방문 측 통역 동반 여부`}>
-          <ColumnChart data={languages} height={160} />
+          <ColumnChart data={tours} height={150} />
         </Card>
       </div>
 
-      <Card title="업종 (고객 방문)" subtitle={`${periodLabel} · 많은 순`}>
-        <ColumnChart data={industries} height={160} total={external.length} />
-      </Card>
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <Card title="업종 (고객 방문)" subtitle={`${periodLabel} · 많은 순`}>
+          <ColumnChart data={industries} height={150} total={external.length} />
+        </Card>
+        <Card title="투어 언어" subtitle="방문 측 통역 동반 여부">
+          <ColumnChart data={languages} height={150} />
+        </Card>
+      </div>
 
       <Card title="방문자 직무" subtitle={`${periodLabel} · 방문자 수 기준`}>
-        <ColumnChart data={jobs} height={140} unit="명" />
+        <ColumnChart data={jobs} height={130} unit="명" />
       </Card>
 
       <section className="border border-warm-300/50 bg-white p-5">
         <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-[15px] font-bold text-warm-800">기간별 통계표</h3>
-            <p className="font-mono text-[11px] text-warm-600">
+            <p className="mt-0.5 text-[12px] text-warm-600">
               거절 · 취소 건은 통계에서 제외(해당 열만 참고 표시) · 열마다 값이 클수록 진하게 표시 · 엑셀에는 월별/연도별/항목별/예약 목록 시트가 함께 저장됩니다
             </p>
           </div>

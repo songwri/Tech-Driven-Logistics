@@ -24,6 +24,7 @@ export interface TourDefinition {
   duration: string
   /** 'HH:mm-HH:mm' */
   slots: string[]
+  /** 투어 색: 상태 색(주황 · 초록 · 파랑 · 회색)과 겹치지 않게 남색 · 보라 · 청록을 쓴다. */
   color: string
 }
 
@@ -42,7 +43,7 @@ export const TOURS: TourDefinition[] = [
     description: '물류센터 + TDL Lab',
     duration: '약 2시간',
     slots: ['09:30-11:30', '13:00-15:00'],
-    color: '#2a78d6',
+    color: '#3b4a6b',
   },
   {
     id: 'lab',
@@ -51,7 +52,7 @@ export const TOURS: TourDefinition[] = [
     description: '기술 체험 공간',
     duration: '약 1시간',
     slots: ['10:30-11:30', '14:00-15:00'],
-    color: '#1baf7a',
+    color: '#7c5cc4',
   },
   {
     id: 'center',
@@ -60,7 +61,7 @@ export const TOURS: TourDefinition[] = [
     description: '물류센터 현장',
     duration: '약 1시간',
     slots: ['10:00-11:00', '11:00-12:00', '13:00-14:00', '14:00-15:00', '15:00-16:00'],
-    color: '#eb6834',
+    color: '#1a8fa0',
   },
   {
     id: 'other',
@@ -337,12 +338,13 @@ export function clientSegment(request: Pick<VisitDraft, 'category' | 'clientType
 
 /* ------------------------------------------------------- 입력 검사 */
 
-export type FormSection = 'schedule' | 'host' | 'info' | 'visitors' | 'consent'
+export type FormSection = 'schedule' | 'host' | 'company' | 'purpose' | 'visitors' | 'consent'
 
 export const FORM_SECTIONS: { id: FormSection; label: string }[] = [
   { id: 'schedule', label: '투어 · 일정' },
   { id: 'host', label: '신청 담당자' },
-  { id: 'info', label: '방문 정보' },
+  { id: 'company', label: '방문 기관' },
+  { id: 'purpose', label: '방문 목적 · 언어' },
   { id: 'visitors', label: '방문자 명단' },
   { id: 'consent', label: '개인정보 동의' },
 ]
@@ -371,7 +373,7 @@ export function sectionProblems(draft: VisitDraft): Record<FormSection, string |
           : null
 
   const external = draft.category === 'external'
-  const info = external && !draft.clientType
+  const company = external && !draft.clientType
     ? '고객 유형(기존 / 신규)을 선택해 주세요.'
     : blank(draft.company)
       ? external ? '업체명을 입력해 주세요.' : '방문 조직명을 입력해 주세요.'
@@ -379,13 +381,15 @@ export function sectionProblems(draft: VisitDraft): Record<FormSection, string |
         ? '업종을 선택해 주세요.'
         : draft.industries.includes(OTHER)
           ? '기타 업종을 입력해 주세요.'
-          : draft.purposes.length === 0
-            ? '방문 목적을 선택해 주세요.'
-            : draft.purposes.includes(OTHER)
-              ? '기타 방문 목적을 입력해 주세요.'
-              : draft.language === 'foreign' && (!draft.foreignLanguage || draft.foreignLanguage === OTHER)
-                ? '투어 진행 언어를 선택해 주세요.'
-                : null
+          : null
+
+  const purpose = draft.purposes.length === 0
+    ? '방문 목적을 선택해 주세요.'
+    : draft.purposes.includes(OTHER)
+      ? '기타 방문 목적을 입력해 주세요.'
+      : draft.language === 'foreign' && (!draft.foreignLanguage || draft.foreignLanguage === OTHER)
+        ? '투어 진행 언어를 선택해 주세요.'
+        : null
 
   const missingIndex = draft.visitors.findIndex(
     (visitor) => blank(visitor.name) || blank(visitor.title) || blank(visitor.org) || !EMAIL.test(visitor.email.trim()),
@@ -400,7 +404,8 @@ export function sectionProblems(draft: VisitDraft): Record<FormSection, string |
   return {
     schedule,
     host: hostProblem,
-    info,
+    company,
+    purpose,
     visitors,
     consent: draft.consent ? null : '개인정보 수집 · 이용에 동의해 주세요.',
   }
@@ -414,6 +419,37 @@ export function firstProblem(draft: VisitDraft): { section: FormSection; message
     if (message) return { section: id, message }
   }
   return null
+}
+
+/**
+ * 비어 있거나 형식이 틀린 입력 칸 목록. 제출을 시도한 뒤 칸마다 빨간 테두리를 그리는 데 쓴다.
+ * 키: date · slot · host.name … · clientType · company · industries · purposes · language
+ *     · visitor.<번호>.name|title|org|email · consent
+ */
+export function missingFields(draft: VisitDraft): Set<string> {
+  const missing = new Set<string>()
+  const mark = (key: string, bad: boolean) => bad && missing.add(key)
+  mark('date', !draft.date || draft.date < toDateKey(earliestBookableDate()))
+  mark('slot', !draft.slot)
+  mark('host.name', blank(draft.host.name))
+  mark('host.title', blank(draft.host.title))
+  mark('host.org', blank(draft.host.org))
+  mark('host.phone', blank(draft.host.phone))
+  mark('host.email', !EMAIL.test(draft.host.email.trim()))
+  const external = draft.category === 'external'
+  mark('clientType', external && !draft.clientType)
+  mark('company', blank(draft.company))
+  mark('industries', external && (draft.industries.length === 0 || draft.industries.includes(OTHER)))
+  mark('purposes', draft.purposes.length === 0 || draft.purposes.includes(OTHER))
+  mark('language', draft.language === 'foreign' && (!draft.foreignLanguage || draft.foreignLanguage === OTHER))
+  draft.visitors.forEach((visitor, index) => {
+    mark(`visitor.${index}.name`, blank(visitor.name))
+    mark(`visitor.${index}.title`, blank(visitor.title))
+    mark(`visitor.${index}.org`, blank(visitor.org))
+    mark(`visitor.${index}.email`, !EMAIL.test(visitor.email.trim()))
+  })
+  mark('consent', !draft.consent)
+  return missing
 }
 
 export function validateVisitDraft(draft: VisitDraft): string | null {

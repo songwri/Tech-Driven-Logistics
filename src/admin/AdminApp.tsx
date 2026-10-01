@@ -8,6 +8,7 @@ import { formatDateShort, headcountOf, isConfirmed, isCounted, toDateKey, type V
 import { SERVER_URL } from '@/lib/labApi'
 import { useAdminData } from './useAdminData'
 import { AdminCalendar } from './AdminCalendar'
+import { ActionPanel, UpcomingPanel } from './ActionPanel'
 import { RequestTable, type StatusFilter } from './RequestTable'
 import { RequestModal } from './RequestModal'
 import { StatsView } from './StatsView'
@@ -112,14 +113,16 @@ export default function AdminApp() {
     const inMonth = requests.filter((request) => request.date.startsWith(monthPrefix))
     const upcomingApproved = requests.filter((request) => request.status === 'approved' && request.date >= today)
     const counted = inMonth.filter((request) => isCounted(request.status))
+    const pending = requests.filter((request) => request.status === 'pending')
+    const overdue = pending.filter((request) => request.date < today).length
     return [
       {
         label: '승인 대기',
-        value: requests.filter((request) => request.status === 'pending').length,
+        value: pending.length - overdue,
         unit: '건',
         accent: 'text-[#c2410c]',
-        hint: '전체 기간 · 눌러서 목록 보기',
-        focus: ['all', 'pending'] as const,
+        hint: overdue > 0 ? `방문일 지난 대기 ${overdue}건 별도` : '방문일이 남은 요청',
+        focus: ['upcoming', 'pending'] as const,
       },
       {
         label: '다가오는 확정 방문',
@@ -295,22 +298,39 @@ export default function AdminApp() {
 
           {tab === 'dashboard' ? (
             <>
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                {summary.map((card) => (
+              <div className="grid grid-cols-2 border border-warm-300/50 bg-white lg:grid-cols-4">
+                {summary.map((card, index) => (
                   <button
                     key={card.label}
                     type="button"
                     onClick={() => focusList(card.focus[0], card.focus[1])}
-                    className="border border-warm-300/50 bg-white px-4 py-3 text-left transition hover:border-warm-800"
+                    className={cn(
+                      'px-5 py-4 text-left transition hover:bg-cream/60',
+                      index % 2 === 1 && 'border-l border-warm-300/40',
+                      index >= 2 && 'border-t border-warm-300/40 lg:border-t-0',
+                      index === 2 && 'lg:border-l',
+                    )}
                   >
-                    <p className="font-mono text-[11px] text-warm-600">{card.label}</p>
-                    <p className={cn('mt-1 text-3xl font-bold', card.accent)}>
+                    <p className="text-[13px] font-semibold text-warm-600">{card.label}</p>
+                    <p className={cn('mt-1 text-[2rem] font-semibold leading-none tracking-tight tabular-nums', card.accent)}>
                       {card.value}
-                      <span className="ml-0.5 text-base font-semibold text-warm-600">{card.unit}</span>
+                      <span className="ml-1 text-base font-medium text-warm-600">{card.unit}</span>
                     </p>
-                    <p className="text-[11px] text-warm-600">{card.hint}</p>
+                    <p className="mt-2 text-[12px] text-warm-600">{card.hint}</p>
                   </button>
                 ))}
+              </div>
+
+              <div className="grid gap-5 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+                <ActionPanel
+                  requests={requests}
+                  today={today}
+                  busyId={busyId}
+                  onOpen={setOpenId}
+                  onSetStatus={(id, status) => void setStatus(id, status)}
+                  onShowAll={() => focusList('all', 'pending')}
+                />
+                <UpcomingPanel requests={requests} today={today} onOpen={setOpenId} />
               </div>
 
               <AdminCalendar

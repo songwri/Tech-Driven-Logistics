@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
-import { Check, ClipboardPaste, Plus, X } from 'lucide-react'
+import { Check, CircleAlert, ClipboardPaste, Plus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Field, Input, Textarea } from '../ui/Field'
+import { Field, Input, Label, Textarea } from '../ui/Field'
 import {
   CATEGORY_LABEL,
   CLIENT_TYPE_LABEL,
@@ -22,15 +22,54 @@ import {
 } from '@/lib/visit'
 
 type Patch = (patch: Partial<VisitDraft>) => void
+/** 제출 시도 후 문제가 있는 칸의 키 목록 (missingFields). 없으면 오류 표시를 하지 않는다. */
+type Errors = Set<string> | undefined
 
-export function SectionTitle({ index, children, aside }: { index?: string; children: ReactNode; aside?: ReactNode }) {
+/** 선택형 묶음(칩 · 라디오) 아래에 붙는 오류 문구 */
+export function GroupError({ show, children }: { show: boolean; children: ReactNode }) {
+  if (!show) return null
   return (
-    <div className="mb-4 flex items-baseline justify-between gap-3 border-b border-warm-300/40 pb-2">
-      <h4 className="flex shrink-0 items-baseline gap-2 whitespace-nowrap text-[15px] font-bold text-warm-800">
-        {index && <span className="font-mono text-xs text-brand">{index}</span>}
-        {children}
-      </h4>
-      {aside && <div className="hidden text-right sm:block">{aside}</div>}
+    <p className="mt-1.5 flex items-center gap-1 text-[12px] text-brand">
+      <CircleAlert width={13} height={13} className="shrink-0" />
+      {children}
+    </p>
+  )
+}
+
+export function SectionTitle({
+  index,
+  children,
+  aside,
+  done,
+}: {
+  index?: string
+  children: ReactNode
+  aside?: ReactNode
+  /** 섹션 입력이 끝나면 번호 자리에 체크를 보여준다. */
+  done?: boolean
+}) {
+  if (!index) {
+    return (
+      <div className="mb-4 flex items-baseline justify-between gap-3 border-b border-warm-300/40 pb-2">
+        <h4 className="shrink-0 whitespace-nowrap text-[15px] font-bold text-warm-800">{children}</h4>
+        {aside && <div className="hidden text-right sm:block">{aside}</div>}
+      </div>
+    )
+  }
+  return (
+    <div className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-1">
+      <span
+        className={cn(
+          'flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-[12px] font-semibold transition',
+          done ? 'bg-[#2f9e44] text-white' : 'bg-warm-800 text-white',
+        )}
+        aria-hidden
+      >
+        {done ? <Check width={14} height={14} strokeWidth={3} /> : index}
+      </span>
+      <h3 className="text-lg font-bold text-warm-800 md:text-xl">{children}</h3>
+      {done && <span className="sr-only">입력 완료</span>}
+      {aside && <div className="w-full pl-10 text-[13px] text-warm-600 sm:ml-auto sm:w-auto sm:pl-0">{aside}</div>}
     </div>
   )
 }
@@ -123,23 +162,47 @@ function OtherOption({
 
 /* ------------------------------------------------------------ 담당자 */
 
-export function HostFields({ host, onChange }: { host: VisitHost; onChange: (host: VisitHost) => void }) {
+export function HostFields({
+  host,
+  onChange,
+  errors,
+}: {
+  host: VisitHost
+  onChange: (host: VisitHost) => void
+  errors?: Errors
+}) {
+  const bad = (key: keyof VisitHost) => Boolean(errors?.has(`host.${key}`))
   const set = (key: keyof VisitHost) => (e: React.ChangeEvent<HTMLInputElement>) =>
     onChange({ ...host, [key]: e.target.value })
   return (
     <div className="grid grid-cols-2 gap-3">
-      <Field label="성함" required>
-        <Input value={host.name} onChange={set('name')} required maxLength={40} placeholder="홍길동" autoComplete="name" />
+      <Field label="성함" required error={bad('name') ? '성함을 입력해 주세요.' : null}>
+        <Input
+          value={host.name}
+          onChange={set('name')}
+          required
+          maxLength={40}
+          placeholder="예) 홍길동"
+          autoComplete="name"
+          invalid={bad('name')}
+        />
       </Field>
-      <Field label="직책" required>
-        <Input value={host.title} onChange={set('title')} required maxLength={40} placeholder="책임" />
+      <Field label="직책" required error={bad('title') ? '직책을 입력해 주세요.' : null}>
+        <Input value={host.title} onChange={set('title')} required maxLength={40} placeholder="예) 책임" invalid={bad('title')} />
       </Field>
       <div className="col-span-2">
-        <Field label="조직명" required>
-          <Input value={host.org} onChange={set('org')} required maxLength={60} placeholder="테크이노베이션팀" />
+        <Field label="조직명" required error={bad('org') ? '조직명을 입력해 주세요.' : null}>
+          <Input
+            value={host.org}
+            onChange={set('org')}
+            required
+            maxLength={60}
+            placeholder="예) 테크이노베이션팀"
+            invalid={bad('org')}
+          />
         </Field>
       </div>
-      <Field label="연락처" required>
+      <Field label="연락처" required error={bad('phone') ? '연락처를 입력해 주세요.' : null}>
         <Input
           type="tel"
           inputMode="tel"
@@ -148,10 +211,16 @@ export function HostFields({ host, onChange }: { host: VisitHost; onChange: (hos
           onChange={set('phone')}
           required
           maxLength={30}
-          placeholder="010-0000-0000"
+          placeholder="예) 010-1234-5678"
+          invalid={bad('phone')}
         />
       </Field>
-      <Field label="이메일" required hint="승인 결과가 이 주소로 발송됩니다.">
+      <Field
+        label="이메일"
+        required
+        hint="승인 결과가 이 주소로 발송됩니다."
+        error={bad('email') ? '이메일 주소를 정확히 입력해 주세요.' : null}
+      >
         <Input
           type="email"
           inputMode="email"
@@ -160,7 +229,8 @@ export function HostFields({ host, onChange }: { host: VisitHost; onChange: (hos
           onChange={set('email')}
           required
           maxLength={120}
-          placeholder="name@lxpantos.com"
+          placeholder="예) name@lxpantos.com"
+          invalid={bad('email')}
         />
       </Field>
     </div>
@@ -169,7 +239,15 @@ export function HostFields({ host, onChange }: { host: VisitHost; onChange: (hos
 
 /* ---------------------------------------------------- 개인정보 동의 */
 
-export function PrivacyConsent({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
+export function PrivacyConsent({
+  checked,
+  onChange,
+  invalid,
+}: {
+  checked: boolean
+  onChange: (checked: boolean) => void
+  invalid?: boolean
+}) {
   return (
     <div>
       <div
@@ -204,12 +282,22 @@ export function PrivacyConsent({ checked, onChange }: { checked: boolean; onChan
           담당자는 방문자 정보를 입력하기 전에 방문자 본인에게 위 내용을 안내하고 동의를 받았음을 확인합니다.
         </p>
       </div>
-      <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm text-warm-800">
+      <label
+        className={cn(
+          'mt-3 flex cursor-pointer items-center gap-3 border px-4 py-3.5 text-[15px] text-warm-800 transition',
+          checked
+            ? 'border-brand bg-brand/5'
+            : invalid
+              ? 'border-brand/70 bg-brand/[0.03]'
+              : 'border-warm-300/70 bg-white hover:border-warm-600/60',
+        )}
+      >
         <input
           type="checkbox"
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
-          className="h-4 w-4 accent-[var(--color-brand)]"
+          aria-invalid={invalid || undefined}
+          className="h-5 w-5 shrink-0 accent-[var(--color-brand)]"
         />
         <span>
           위 개인정보 수집 · 이용에 <b>동의합니다</b>
@@ -290,14 +378,15 @@ function LanguageFields({ draft, onChange }: { draft: VisitDraft; onChange: Patc
 
 const MAX_INDUSTRIES = 3
 
-export function VisitInfoFields({ draft, onChange }: { draft: VisitDraft; onChange: Patch }) {
+/** 방문 유형 · 고객 유형 · 업체명 · 업종 */
+export function CompanyFields({ draft, onChange, errors }: { draft: VisitDraft; onChange: Patch; errors?: Errors }) {
   const external = draft.category === 'external'
   const industryFull = draft.industries.length >= MAX_INDUSTRIES
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div>
         <FieldLabel required>방문 유형</FieldLabel>
-        <div className="mt-1.5 grid gap-2 sm:grid-cols-2" role="radiogroup">
+        <div className="mt-2 grid gap-2 sm:grid-cols-2" role="radiogroup">
           {(Object.keys(CATEGORY_LABEL) as VisitCategory[]).map((category) => {
             const active = draft.category === category
             return (
@@ -315,7 +404,7 @@ export function VisitInfoFields({ draft, onChange }: { draft: VisitDraft; onChan
                 }
                 className={cn(
                   'flex items-center gap-3 border px-4 py-3 text-left transition',
-                  active ? 'border-brand bg-brand/5' : 'border-warm-300/60 hover:border-brand/60',
+                  active ? 'border-brand bg-brand/5' : 'border-warm-300/70 hover:border-brand/60',
                 )}
               >
                 <RadioDot active={active} />
@@ -331,11 +420,11 @@ export function VisitInfoFields({ draft, onChange }: { draft: VisitDraft; onChan
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-5 sm:grid-cols-2">
         {external && (
           <div>
             <FieldLabel required>고객 유형</FieldLabel>
-            <div className="mt-1.5 flex flex-wrap gap-2" role="radiogroup">
+            <div className="mt-2 flex flex-wrap gap-2" role="radiogroup">
               {(Object.keys(CLIENT_TYPE_LABEL) as ClientType[]).map((clientType) => (
                 <Chip
                   key={clientType}
@@ -348,16 +437,22 @@ export function VisitInfoFields({ draft, onChange }: { draft: VisitDraft; onChan
                 </Chip>
               ))}
             </div>
+            <GroupError show={Boolean(errors?.has('clientType'))}>고객 유형을 선택해 주세요.</GroupError>
           </div>
         )}
         <div className={external ? undefined : 'sm:col-span-2'}>
-          <Field label={external ? '업체명' : '방문 조직명'} required>
+          <Field
+            label={external ? '업체명' : '방문 조직명'}
+            required
+            error={errors?.has('company') ? (external ? '업체명을 입력해 주세요.' : '방문 조직명을 입력해 주세요.') : null}
+          >
             <Input
               value={draft.company}
               onChange={(e) => onChange({ company: e.target.value })}
               required
               maxLength={60}
-              placeholder={external ? 'LX판토스' : '예) CL사업담당 풀필먼트팀'}
+              placeholder={external ? '예) LX판토스' : '예) CL사업담당 풀필먼트팀'}
+              invalid={errors?.has('company')}
             />
           </Field>
         </div>
@@ -367,14 +462,15 @@ export function VisitInfoFields({ draft, onChange }: { draft: VisitDraft; onChan
         <div>
           <div className="flex items-baseline justify-between gap-2">
             <FieldLabel required>업종</FieldLabel>
-            <span className="font-mono text-[11px] text-warm-600">
-              주 업종부터 최대 {MAX_INDUSTRIES}개 · {draft.industries.length}개 선택
+            <span className="text-[12px] text-warm-600">
+              주 업종부터 최대 {MAX_INDUSTRIES}개 · <b className="font-semibold text-warm-800">{draft.industries.length}</b>개
+              선택
             </span>
           </div>
-          <div className="mt-1.5 space-y-2">
+          <div className="mt-2 space-y-2.5">
             {INDUSTRY_GROUPS.map((group) => (
               <div key={group.label} className="flex flex-wrap items-center gap-2">
-                <span className="w-full shrink-0 font-mono text-[11px] text-warm-600 sm:w-24">{group.label}</span>
+                <span className="w-full shrink-0 text-[12px] text-warm-600 sm:w-24">{group.label}</span>
                 {group.items.map((item) => (
                   <Chip
                     key={item}
@@ -388,7 +484,7 @@ export function VisitInfoFields({ draft, onChange }: { draft: VisitDraft; onChan
               </div>
             ))}
             <div className="flex flex-wrap items-center gap-2">
-              <span className="w-full shrink-0 font-mono text-[11px] text-warm-600 sm:w-24">그 외</span>
+              <span className="w-full shrink-0 text-[12px] text-warm-600 sm:w-24">그 외</span>
               <OtherOption
                 values={draft.industries}
                 onChange={(industries) => onChange({ industries })}
@@ -397,15 +493,25 @@ export function VisitInfoFields({ draft, onChange }: { draft: VisitDraft; onChan
               />
             </div>
           </div>
+          <GroupError show={Boolean(errors?.has('industries'))}>
+            {draft.industries.includes(OTHER) ? '기타 업종을 입력해 주세요.' : '업종을 하나 이상 선택해 주세요.'}
+          </GroupError>
         </div>
       )}
+    </div>
+  )
+}
 
+/** 방문 목적 · 투어 진행 언어 · 담당자 의견 */
+export function PurposeFields({ draft, onChange, errors }: { draft: VisitDraft; onChange: Patch; errors?: Errors }) {
+  return (
+    <div className="space-y-6">
       <div>
         <div className="flex items-baseline justify-between gap-2">
           <FieldLabel required>방문 목적</FieldLabel>
-          <span className="font-mono text-[11px] text-warm-600">해당하는 항목 모두 선택</span>
+          <span className="text-[12px] text-warm-600">해당하는 항목 모두 선택</span>
         </div>
-        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           {PURPOSES.map((purpose) => (
             <Chip
               key={purpose}
@@ -421,11 +527,14 @@ export function VisitInfoFields({ draft, onChange }: { draft: VisitDraft; onChan
             placeholder="방문 목적 직접 입력"
           />
         </div>
+        <GroupError show={Boolean(errors?.has('purposes'))}>
+          {draft.purposes.includes(OTHER) ? '기타 방문 목적을 입력해 주세요.' : '방문 목적을 하나 이상 선택해 주세요.'}
+        </GroupError>
       </div>
 
       <LanguageFields draft={draft} onChange={onChange} />
 
-      <Field label="담당자 의견" hint="방문 배경, 고객사 니즈 등 안내에 참고할 내용을 적어주세요.">
+      <Field label="담당자 의견" optional hint="방문 배경, 고객사 니즈 등 안내에 참고할 내용을 적어주세요.">
         <Textarea
           rows={3}
           value={draft.hostComment}
@@ -437,12 +546,21 @@ export function VisitInfoFields({ draft, onChange }: { draft: VisitDraft; onChan
   )
 }
 
-export function FieldLabel({ children, required }: { children: ReactNode; required?: boolean }) {
+/** 관리자 수정 화면용: 방문 기관과 방문 목적을 한 번에 */
+export function VisitInfoFields({ draft, onChange }: { draft: VisitDraft; onChange: Patch }) {
   return (
-    <span className="font-mono text-[11px] uppercase tracking-wider text-warm-600">
+    <div className="space-y-6">
+      <CompanyFields draft={draft} onChange={onChange} />
+      <PurposeFields draft={draft} onChange={onChange} />
+    </div>
+  )
+}
+
+export function FieldLabel({ children, required, optional }: { children: ReactNode; required?: boolean; optional?: boolean }) {
+  return (
+    <Label required={required} optional={optional}>
       {children}
-      {required && <span className="text-brand"> *</span>}
-    </span>
+    </Label>
   )
 }
 
@@ -480,12 +598,16 @@ export function VisitorsFields({
   visitors,
   onChange,
   defaultOrg = '',
+  errors,
 }: {
   visitors: Visitor[]
   onChange: (visitors: Visitor[]) => void
   /** 새 방문자의 조직명 기본값 (보통 업체명) */
   defaultOrg?: string
+  errors?: Errors
 }) {
+  const bad = (index: number, key: 'name' | 'title' | 'org' | 'email') => Boolean(errors?.has(`visitor.${index}.${key}`))
+  const rowHasError = (index: number) => (['name', 'title', 'org', 'email'] as const).some((key) => bad(index, key))
   const [pasteOpen, setPasteOpen] = useState(false)
   const [pasteText, setPasteText] = useState('')
   const [pasteResult, setPasteResult] = useState<string | null>(null)
@@ -513,12 +635,12 @@ export function VisitorsFields({
     )
   }
 
-  const cellLabel = 'mb-1 block font-mono text-[10px] text-warm-600 md:sr-only'
-  const cellInput = 'py-1.5'
+  const cellLabel = 'mb-1 block text-[12px] font-semibold text-warm-800 md:sr-only'
+  const cellInput = 'py-2'
 
   return (
     <div>
-      <div className={cn('hidden gap-2 border-b border-warm-300/50 pb-1.5 font-mono text-[11px] text-warm-600 md:grid', rowGrid)}>
+      <div className={cn('hidden gap-2 border-b border-warm-300/50 pb-2 text-[12px] font-semibold text-warm-800 md:grid', rowGrid)}>
         <span>#</span>
         <span>
           성함<span className="text-brand">*</span>
@@ -532,8 +654,12 @@ export function VisitorsFields({
         <span>
           이메일<span className="text-brand">*</span>
         </span>
-        <span>차량번호</span>
-        <span>직무</span>
+        <span>
+          차량번호 <span className="font-normal text-warm-600">선택</span>
+        </span>
+        <span>
+          직무 <span className="font-normal text-warm-600">선택</span>
+        </span>
         <span />
       </div>
 
@@ -541,7 +667,11 @@ export function VisitorsFields({
         {visitors.map((visitor, index) => (
           <li
             key={index}
-            className={cn('relative grid grid-cols-2 gap-2 py-3 md:items-center md:py-2', rowGrid)}
+            className={cn(
+              'relative grid grid-cols-2 gap-2 py-3 md:items-center md:py-2',
+              rowGrid,
+              rowHasError(index) && 'bg-brand/[0.02]',
+            )}
           >
             <span className="col-span-2 font-mono text-[12px] font-semibold text-warm-800 md:col-span-1 md:text-center md:font-normal md:text-warm-600">
               <span className="md:hidden">방문자 </span>
@@ -553,6 +683,8 @@ export function VisitorsFields({
                 aria-label={`방문자 ${index + 1} 성함`}
                 value={visitor.name}
                 onChange={(e) => update(index, { name: e.target.value })}
+                placeholder="홍길동"
+                invalid={bad(index, 'name')}
                 maxLength={40}
                 className={cellInput}
               />
@@ -563,6 +695,8 @@ export function VisitorsFields({
                 aria-label={`방문자 ${index + 1} 직책`}
                 value={visitor.title}
                 onChange={(e) => update(index, { title: e.target.value })}
+                placeholder="책임"
+                invalid={bad(index, 'title')}
                 maxLength={40}
                 className={cellInput}
               />
@@ -573,6 +707,8 @@ export function VisitorsFields({
                 aria-label={`방문자 ${index + 1} 조직명`}
                 value={visitor.org}
                 onChange={(e) => update(index, { org: e.target.value })}
+                placeholder="소속 조직"
+                invalid={bad(index, 'org')}
                 maxLength={60}
                 className={cellInput}
               />
@@ -585,12 +721,16 @@ export function VisitorsFields({
                 aria-label={`방문자 ${index + 1} 이메일`}
                 value={visitor.email}
                 onChange={(e) => update(index, { email: e.target.value })}
+                placeholder="name@company.com"
+                invalid={bad(index, 'email')}
                 maxLength={120}
                 className={cellInput}
               />
             </label>
             <label>
-              <span className={cellLabel}>차량번호 (주차 등록)</span>
+              <span className={cellLabel}>
+                차량번호 <span className="font-normal text-warm-600">선택 · 주차 등록</span>
+              </span>
               <Input
                 aria-label={`방문자 ${index + 1} 차량번호`}
                 value={visitor.car}
@@ -601,12 +741,14 @@ export function VisitorsFields({
               />
             </label>
             <label>
-              <span className={cellLabel}>직무</span>
+              <span className={cellLabel}>
+                직무 <span className="font-normal text-warm-600">선택</span>
+              </span>
               <select
                 aria-label={`방문자 ${index + 1} 직무`}
                 value={visitor.jobs[0] ?? ''}
                 onChange={(e) => update(index, { jobs: e.target.value ? [e.target.value] : [] })}
-                className="w-full border border-warm-300/60 bg-white px-2 py-1.5 text-sm text-warm-800 outline-none focus:border-brand"
+                className="w-full border border-warm-300/70 bg-white px-2 py-2 text-sm text-warm-800 outline-none transition focus:border-brand"
               >
                 <option value="">선택</option>
                 {JOBS.map((job) => (
