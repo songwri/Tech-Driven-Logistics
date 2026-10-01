@@ -7,7 +7,7 @@ Tech Innovation Team의 TDL Lab 방문 예약 · 방명록 · 관리자 사이�
 | 주소 | 내용 |
 | --- | --- |
 | `/reserve/` | 방문 예약 신청 |
-| `/guestbook/` | 방명록 (흐르는 최근 소감 10건, 별점 3점 이상만 표시 · 남기기) |
+| `/guestbook/` | 방명록 (흐르는 최근 소감 10건, 별점 4점 이상만 표시 · 남기기) |
 | `/admin/` | 관리자 (예약 대시보드 · 방문 통계 · 방명록 관리) |
 | `/` | 바로가기 페이지: 방문 예약 · 방명록 버튼만 있고, 오른쪽 아래 구석의 작은 점이 관리자(`/admin/`) 링크입니다. 소개 사이트(랜딩)는 운영하지 않습니다 |
 
@@ -50,7 +50,7 @@ npm run lint
 
 ## 구조
 
-- `src/guestbook/` — 방명록 페이지 (`guestbook/index.html`). 로봇팔 · 컨베이어 장면, 흐르는 최근 기록(별점 3점 이상, 10건)
+- `src/guestbook/` — 방명록 페이지 (`guestbook/index.html`). 로봇팔 · 컨베이어 장면, 흐르는 최근 기록(별점 4점 이상, 10건)
 - `src/admin/GuestbookAdmin.tsx`, `useAdminGuestbook.ts`, `guestbookData.ts` — 관리자 방명록 관리 (조회 · 숨김 · 삭제 · 엑셀)
 - `src/data/techData.ts` — 로봇팔, AMR/AGV, 자율주행, 자동화 설비, 신기술 PoC 기술 항목 데이터
   (라벨 순서가 각 3D 모델의 동작 페이즈 순서와 1:1로 매칭됩니다)

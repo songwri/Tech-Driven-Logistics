@@ -10,8 +10,8 @@ import { EntryConveyor } from './EntryConveyor'
 import { HeroScene } from './HeroScene'
 
 const EASE = [0.32, 0.72, 0, 1] as const
-/** 컨베이어에 올리는 기록: 별점 3점 이상만, 최근 10건 */
-const MIN_RATING = 3
+/** 컨베이어에 올리는 기록: 별점 4점 이상만, 최근 10건 */
+const MIN_RATING = 4
 const SHOWN = 10
 
 function CtaButton({ onClick, className = '' }: { onClick: () => void; className?: string }) {
