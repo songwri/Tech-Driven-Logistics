@@ -277,7 +277,7 @@ export function PrivacyConsent({
       >
         <p className="font-semibold text-warm-800">개인정보 수집 · 이용 동의 (필수)</p>
         <p className="mt-2">
-          TDL(Tech Innovation Team)은 방문 예약 접수 및 출입 관리를 위해 아래와 같이 개인정보를 수집 · 이용합니다.
+          LX Pantos는 방문 예약 접수 및 출입 관리를 위해 아래와 같이 개인정보를 수집 · 이용합니다.
         </p>
         <p className="mt-2 font-semibold text-warm-800">1. 수집 항목</p>
         <p>
