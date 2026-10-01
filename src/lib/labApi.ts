@@ -163,8 +163,13 @@ export interface ServerVersion {
   apiLevel: number
 }
 
-/** 코드 버전 → 기능 수준. apiLevel 을 알려주지 않는 서버용 (2026-09-30.legacy-import 부터 2) */
+/**
+ * 코드 버전 → 기능 수준. 관리자 확인(health) 응답에 apiLevel 이 없던 서버용.
+ * 2026-09-30.legacy-import 부터 2, 2026-10-01.division(담당(실) 열)부터 3.
+ * 그 이후 버전은 health 가 apiLevel 을 직접 알려준다.
+ */
 function levelOf(version: string) {
+  if (version === '2026-10-01.division') return 3
   const date = version.slice(0, 10)
   if (date > '2026-09-30') return 2
   return version === '2026-09-30.legacy-import' ? 2 : 1

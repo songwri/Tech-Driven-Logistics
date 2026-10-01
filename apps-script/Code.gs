@@ -1157,6 +1157,7 @@ function health_() {
   var target = book.getSheetByName(VISIT_SHEET);
   var info = {
     version: CODE_VERSION,
+    apiLevel: API_LEVEL,
     spreadsheet: { name: book.getName(), url: book.getUrl() },
     webAppUrl: webAppUrl_(),
     tabs: book.getSheets().map(function (sheet) {
