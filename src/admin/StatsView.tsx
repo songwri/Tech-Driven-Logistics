@@ -155,7 +155,7 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
   }))
 
   const divisions = divisionStats(scoped)
-  const divisionPeople: Datum[] = divisions.map((row) => ({ label: row.label, value: row.people }))
+  const divisionCounts: Datum[] = divisions.map((row) => ({ label: row.label, value: row.count }))
 
   const monthly: Datum[] = Array.from({ length: 12 }, (_, index) => {
     const key = `${year}-${String(index + 1).padStart(2, '0')}-`
@@ -315,16 +315,8 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
         </Card>
       </div>
 
-      <Card title="담당(실)별 방문 인원" subtitle={`${periodLabel} · 주요 6개 담당 + 기타`}>
-        <ColumnChart data={divisionPeople} height={170} unit="명" />
-        <dl className="mt-3 grid grid-cols-7 gap-[2px] border-t border-warm-300/40 pl-9 pr-1 pt-2 text-center">
-          {divisions.map((row) => (
-            <div key={row.label}>
-              <dt className="sr-only">{row.label} 방문 건수</dt>
-              <dd className="font-mono text-[11px] tabular-nums text-warm-600">{row.count}건</dd>
-            </div>
-          ))}
-        </dl>
+      <Card title="담당(실)별 방문 건수" subtitle={`${periodLabel} · 방문 횟수 기준 · 주요 6개 담당 + 기타`}>
+        <ColumnChart data={divisionCounts} height={170} unit="건" />
       </Card>
 
       <div className="grid gap-5 lg:grid-cols-3">
