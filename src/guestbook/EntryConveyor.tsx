@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { StarRating } from '@/components/ui/StarRating'
 import type { GuestbookEntry } from '@/lib/labApi'
 import { formatRating } from '@/lib/rating'
@@ -50,38 +51,57 @@ function Parcel({ entry, index, fresh }: { entry: GuestbookEntry; index: number;
   )
 }
 
+/** 요소의 가로 폭 (화면 크기가 바뀌면 따라간다) */
+function useWidth(ref: React.RefObject<HTMLElement | null>) {
+  const [width, setWidth] = useState(1200)
+  useEffect(() => {
+    const node = ref.current
+    if (!node || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(([item]) => setWidth(item.contentRect.width))
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [ref])
+  return width
+}
+
 /**
- * 최근 방명록이 컨베이어 위 소포처럼 흘러가는 띠. 마우스를 올리거나 포커스하면 멈춘다.
+ * 최근 방명록이 컨베이어 위 소포처럼 흘러가는 띠. 남겨진 기록 수만큼만 흐르고, 한 건이면 한 장만 지나간다.
+ * 기록이 화면 폭보다 적으면 빈 벨트가 이어진다. 마우스를 올리거나 포커스하면 멈춘다.
  * 움직임 줄이기 설정이면 멈춘 채 가로로 스크롤한다. 전체 기록은 아래 목록에서 읽는다.
  */
 export function EntryConveyor({ entries, highlightId }: { entries: GuestbookEntry[]; highlightId: string | null }) {
+  const frameRef = useRef<HTMLDivElement>(null)
+  const viewport = useWidth(frameRef)
   const recent = entries.slice(0, LIMIT)
   if (recent.length === 0) return null
-  // 화면보다 짧으면 빈 벨트가 보이지 않게 여러 번 이어 붙인 뒤, 끊김 없는 반복을 위해 두 벌로 만든다.
-  const repeat = Math.max(1, Math.ceil(8 / recent.length))
-  const lane = Array.from({ length: repeat }, () => recent).flat()
-  const duration = (lane.length * (CARD + GAP)) / SPEED
+
+  // 한 바퀴의 길이: 카드가 모두 지나가고 화면이 비워질 만큼. 같은 줄 두 벌을 이어 붙여 끊김 없이 반복한다.
+  const lane = Math.max(recent.length * (CARD + GAP), viewport + CARD)
+  const duration = lane / SPEED
 
   return (
     <section aria-label="최근 방명록" className="conveyor relative">
-      <div className="overflow-hidden motion-reduce:overflow-x-auto [mask-image:linear-gradient(to_right,transparent,black_6%,black_94%,transparent)]">
+      <div
+        ref={frameRef}
+        className="overflow-hidden motion-reduce:overflow-x-auto [mask-image:linear-gradient(to_right,transparent,black_6%,black_94%,transparent)]"
+      >
         <ul
           // 새 기록이 도착하면 처음부터 다시 흘려 맨 앞에서 보이게 한다.
           key={highlightId ?? 'flow'}
-          className="conveyor-track flex w-max gap-4 px-2 pb-3 pt-4"
+          className="conveyor-track flex w-max px-2 pb-3 pt-4"
           style={{ ['--conveyor-duration' as string]: `${duration}s` }}
         >
-          {[0, 1].flatMap((copy) =>
-            lane.map((entry, index) => (
-              <li
-                key={`${copy}-${index}-${entry.id}`}
-                aria-hidden={copy === 1 || index >= recent.length || undefined}
-                className="shrink-0"
-              >
-                <Parcel entry={entry} index={index % recent.length} fresh={entry.id === highlightId} />
-              </li>
-            )),
-          )}
+          {[0, 1].map((copy) => (
+            <li key={copy} aria-hidden={copy === 1 || undefined} className="shrink-0" style={{ width: lane }}>
+              <ul className="flex gap-4">
+                {recent.map((entry, index) => (
+                  <li key={entry.id} className="shrink-0">
+                    <Parcel entry={entry} index={index} fresh={entry.id === highlightId} />
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
         </ul>
       </div>
       {/* 벨트 */}

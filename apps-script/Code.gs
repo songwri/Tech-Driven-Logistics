@@ -42,7 +42,7 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-02.guestbook-team';
+var CODE_VERSION = '2026-10-03.team-mask';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -255,7 +255,8 @@ function readGuestbook_() {
       createdAt: new Date(values[row][1]).toISOString(),
       name: String(values[row][2]),
       company: String(values[row][3]),
-      team: String(values[row][GUESTBOOK_TEAM_COL - 1] == null ? '' : values[row][GUESTBOOK_TEAM_COL - 1]),
+      // 팀명도 회사명처럼 가려서 내보낸다 (시트에는 입력한 그대로 있다).
+      team: maskToken_(values[row][GUESTBOOK_TEAM_COL - 1]),
       role: String(values[row][4]),
       rating: Number(values[row][5]),
       message: String(values[row][6]),
@@ -341,7 +342,7 @@ function addGuestbook_(payload) {
     createdAt: new Date().toISOString(),
     name: maskName_(name),
     company: maskToken_(company),
-    team: team,
+    team: maskToken_(team),
     role: role,
     rating: rating,
     message: message,

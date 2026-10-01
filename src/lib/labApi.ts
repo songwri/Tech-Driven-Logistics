@@ -132,7 +132,7 @@ export async function submitGuestbook(draft: GuestbookDraft): Promise<GuestbookE
       id: crypto.randomUUID(),
       name: maskName(draft.name),
       company: maskCompany(draft.company),
-      team: draft.team,
+      team: maskCompany(draft.team),
       role: draft.role,
       rating: draft.rating,
       message: draft.message,
