@@ -16,15 +16,19 @@
  */
 
 /**
- * 알림 메일 수신 주소: 방문 예약 신청 · 방명록 등록 알림을 모두 받는다.
- * 신청자에게 가는 승인 · 거절 메일의 회신 주소로도 쓴다.
+ * 알림 메일 수신: 방문 예약 신청 · 방명록 등록 알림은 MAIL_TO 로 보내고 MAIL_CC 를 참조로 건다.
+ * 공용 메일함(PANTOSKR_403144)이 외부 발신 메일을 직접 받지 않아, 개인 주소를 받는 사람으로 두고
+ * 공용 메일함은 참조로 넣는다.
  */
-var MAIL_TO = 'PANTOSKR_403144@lxpantos.com';
+var MAIL_TO = 'daehyun.kim1@lxpantos.com';
+var MAIL_CC = 'PANTOSKR_403144@lxpantos.com';
+/** 신청자에게 가는 승인 · 거절 메일의 회신 주소 (공용 메일함) */
+var MAIL_REPLY_TO = MAIL_CC;
 var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-01.division';
+var CODE_VERSION = '2026-10-01.mail-cc';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -253,6 +257,7 @@ function addGuestbook_(payload) {
 
   MailApp.sendEmail({
     to: MAIL_TO,
+    cc: MAIL_CC,
     subject: '[TDL Lab] 방명록 등록 · ' + name + ' (' + company + ')',
     htmlBody: guestbookMailHtml_(name, company, role, rating, message, entry.createdAt),
   });
@@ -632,6 +637,7 @@ function addReservation_(payload) {
 
   MailApp.sendEmail({
     to: MAIL_TO,
+    cc: MAIL_CC,
     replyTo: request.host.email,
     subject: '[TDL Lab] 방문 예약 신청 · ' + TOURS[request.tour].label + ' · ' + request.company + ' · '
       + request.date + ' ' + request.slot,
@@ -1058,7 +1064,7 @@ function notifyHost_(r) {
       + '다른 날짜로 다시 신청해 주시거나, 이 메일에 회신해 일정을 조율해 주세요.';
   MailApp.sendEmail({
     to: r.host.email,
-    replyTo: MAIL_TO,
+    replyTo: MAIL_REPLY_TO,
     subject: '[TDL Lab] 방문 예약 ' + (approved ? '확정' : '불가') + ' 안내 · ' + r.date + ' ' + r.slot,
     htmlBody: mailShell_(approved ? '방문 일정 확정' : '방문 예약 결과 안내', lead, scheduleBox_(r) + rows_([
       [r.category === 'internal' ? '방문 조직' : '업체명', escapeHtml_(r.company)],
