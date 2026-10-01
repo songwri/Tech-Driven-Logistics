@@ -78,6 +78,7 @@ export function RequestTable({
             request.company,
             request.host.name,
             request.host.org,
+            request.host.division ?? '',
             ...request.visitors.map((visitor) => visitor.name),
             ...request.purposes,
             request.keyPersons ?? '',

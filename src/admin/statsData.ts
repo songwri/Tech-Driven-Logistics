@@ -1,4 +1,5 @@
 import {
+  DIVISION_GROUPS,
   INDUSTRIES,
   JOBS,
   OTHER,
@@ -8,6 +9,7 @@ import {
   TOUR_BY_ID,
   baseOption,
   clientSegment,
+  divisionGroup,
   formatDateShort,
   headcountOf,
   isConfirmed,
@@ -140,6 +142,39 @@ function periodSheet(name: string, firstHeader: string, rows: PeriodRow[]): Shee
   }
 }
 
+/**
+ * 담당(실)별 방문 건수 · 인원. 주요 6개 담당 + 기타(그 외 담당 · 실, 미입력) 7개로 묶는다.
+ * '전자담당' · 'LGLX담당' 처럼 표기가 달라도 같은 담당으로 센다 (divisionGroup).
+ */
+export function divisionStats(requests: VisitRequest[]) {
+  const map = new Map(DIVISION_GROUPS.map((label) => [label, { label, count: 0, people: 0 }]))
+  for (const request of requests) {
+    const row = map.get(divisionGroup(request.host.division))!
+    row.count += 1
+    row.people += headcountOf(request)
+  }
+  return [...map.values()]
+}
+
+function divisionSheet(name: string, requests: VisitRequest[]): Sheet {
+  const rows = divisionStats(requests)
+  const people = rows.reduce((sum, row) => sum + row.people, 0)
+  const count = rows.reduce((sum, row) => sum + row.count, 0)
+  return {
+    name,
+    columns: [
+      { header: '담당(실)', width: 18 },
+      { header: '방문 건수', width: 10 },
+      { header: '방문 인원', width: 10 },
+      { header: '인원 비율', width: 10, percent: true },
+    ],
+    rows: [
+      ...rows.map((row) => [row.label, row.count, row.people, people > 0 ? row.people / people : 0]),
+      ['합계', count, people, people > 0 ? 1 : 0],
+    ],
+  }
+}
+
 function distributionSheet(name: string, requests: VisitRequest[]): Sheet {
   const rows: (string | number)[][] = []
   const push = (group: string, counts: [string, number][], base: number) => {
@@ -197,6 +232,8 @@ function listSheet(name: string, requests: VisitRequest[]): Sheet {
       { header: '업종', width: 18 },
       { header: '방문 목적', width: 22 },
       { header: '담당자', width: 10 },
+      { header: '담당(실)', width: 16 },
+      { header: '담당(실) 분류', width: 14 },
       { header: '담당자 조직', width: 22 },
       { header: '방문 인원', width: 10 },
       { header: '주요 인원', width: 22 },
@@ -217,6 +254,8 @@ function listSheet(name: string, requests: VisitRequest[]): Sheet {
       request.industries.join(', '),
       request.purposes.join(', '),
       request.host.name,
+      request.host.division,
+      divisionGroup(request.host.division),
       request.host.org,
       headcountOf(request),
       request.keyPersons ?? '',
@@ -252,6 +291,7 @@ export function buildStatsSheets({
     periodSheet(`${year}년 월별`, '월', monthlyRows(requests, year)),
     periodSheet('연도별', '연도', yearlyRows(requests, years)),
     distributionSheet(`항목별 분포(${periodLabel})`, scoped),
+    divisionSheet(`담당(실)별(${periodLabel})`, scoped),
     listSheet(`예약 목록(${periodLabel})`, periodRequests),
   ]
 }

@@ -17,7 +17,7 @@ import {
 } from '@/lib/visit'
 import { ColumnChart, DonutChart, type Datum } from './charts'
 import { StatsGrid } from './StatsGrid'
-import { buildStatsSheets, monthlyRows, yearlyRows } from './statsData'
+import { buildStatsSheets, divisionStats, monthlyRows, yearlyRows } from './statsData'
 
 /** 방문 유형 색: 차트와 같은 슬레이트 계열 + 신규 고객만 브랜드 색으로 강조 */
 const SEGMENTS = [
@@ -153,6 +153,9 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
     label: job,
     value: scoped.reduce((sum, request) => sum + request.visitors.filter((visitor) => visitor.jobs.includes(job)).length, 0),
   }))
+
+  const divisions = divisionStats(scoped)
+  const divisionPeople: Datum[] = divisions.map((row) => ({ label: row.label, value: row.people }))
 
   const monthly: Datum[] = Array.from({ length: 12 }, (_, index) => {
     const key = `${year}-${String(index + 1).padStart(2, '0')}-`
@@ -311,6 +314,18 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
           <ColumnChart data={yearly} height={220} />
         </Card>
       </div>
+
+      <Card title="담당(실)별 방문 인원" subtitle={`${periodLabel} · 주요 6개 담당 + 기타`}>
+        <ColumnChart data={divisionPeople} height={170} unit="명" />
+        <dl className="mt-3 grid grid-cols-7 gap-[2px] border-t border-warm-300/40 pl-9 pr-1 pt-2 text-center">
+          {divisions.map((row) => (
+            <div key={row.label}>
+              <dt className="sr-only">{row.label} 방문 건수</dt>
+              <dd className="font-mono text-[11px] tabular-nums text-warm-600">{row.count}건</dd>
+            </div>
+          ))}
+        </dl>
+      </Card>
 
       <div className="grid gap-5 lg:grid-cols-3">
         <Card title="방문 유형" subtitle={periodLabel}>

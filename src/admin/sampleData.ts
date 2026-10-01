@@ -100,7 +100,14 @@ function mock(
     industries,
     purposes,
     hostComment,
-    host: { name: host[0], title: host[1], org: host[2], phone: '010-0000-0000', email: 'host@lxpantos.example' },
+    host: {
+      name: host[0],
+      title: host[1],
+      division: 'CL운영담당',
+      org: host[2],
+      phone: '010-0000-0000',
+      email: 'host@lxpantos.example',
+    },
     visitors: visitors.map(([name, title, org, email, car, jobs]): Visitor => ({ name, title, org, email, car, jobs })),
     note: '',
     consent: true,
@@ -108,6 +115,22 @@ function mock(
 }
 
 /* ------------------------------------------------------- 생성 데이터 */
+
+/** 데모용 담당(실): 표기가 제각각이어도 통계에서 같은 담당으로 묶이는지 보이도록 섞어 둔다. */
+const DIVISION_SAMPLES = [
+  'CL전자담당',
+  '전자담당',
+  'CL LG/LX담당',
+  'LGLX담당',
+  'cl영업담당',
+  'CL운영담당',
+  '운영담당',
+  'CL컨설팅담당',
+  'EC사업담당',
+  'ec사업담당',
+  '경영지원실',
+  'IT전략실',
+]
 
 function mulberry32(seed: number) {
   return () => {
@@ -205,7 +228,7 @@ function generate(): VisitRequest[] {
             : { language: 'ko' as const, foreignLanguage: '', interpreter: false }),
           industries: internal ? [] : industries,
           purposes: internal ? ['교육'] : [pick(PURPOSE_POOL)],
-          host: { ...toHost(pick(HOSTS)) },
+          host: { ...toHost(pick(HOSTS)), division: pick(DIVISION_SAMPLES) },
           hostComment: '',
           visitors,
           note: '',

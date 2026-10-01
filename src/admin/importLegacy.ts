@@ -1,4 +1,4 @@
-import { TOURS, type TourType, type Visitor, type VisitRequest, type VisitStatus } from '@/lib/visit'
+import { TOURS, emptyHost, type TourType, type Visitor, type VisitRequest, type VisitStatus } from '@/lib/visit'
 
 /**
  * 방문 이력 가져오기 (붙여넣기 · .xlsx · .csv 파일). 두 가지 양식을 알아본다.
@@ -176,6 +176,8 @@ export const VISIT_SHEET_HEADERS = [
   '방문목적', '담당자', '담당자직책', '담당자조직', '담당자연락처', '담당자이메일', '담당자의견',
   '방문인원', '방문자명단', '요청사항', '개인정보동의', '관리자메모', '토큰', '수정일시', '방문자JSON',
   '투어언어', '외국어', '통역동반', '출처', '주요인원', '가이드', '유관부서', '후속진행',
+  // 새 열은 기존 시트와 맞도록 맨 뒤에 붙인다.
+  '담당(실)',
 ] as const
 
 /** 가져올 때 쓰지 않는 열 (시스템이 채움) */
@@ -287,6 +289,7 @@ function parseVisitSheet(table: string[][], headerAt: number): ParsedRow[] {
         host: {
           name: get('담당자'),
           title: get('담당자직책'),
+          division: get('담당(실)'),
           org: get('담당자조직'),
           phone: get('담당자연락처'),
           email: get('담당자이메일'),
@@ -376,7 +379,7 @@ function parseLegacyTable(table: string[][]): ParsedRow[] {
         company,
         industries: [],
         purposes: purpose ? [purpose.replace(/,/g, ' ')] : [],
-        host: { name: '', title: '', org: '', phone: '', email: '' },
+        host: emptyHost(),
         hostComment: '',
         visitors: [],
         headcount: headcountNumber ? Number(headcountNumber[0]) : undefined,

@@ -9,6 +9,7 @@ import { submitReservation, isLiveBackend } from '@/lib/labApi'
 import {
   FORM_SECTIONS,
   TOUR_BY_ID,
+  emptyHost,
   emptyVisitor,
   firstProblem,
   formatDateLong,
@@ -34,7 +35,7 @@ const initialDraft = (): VisitDraft => ({
   company: '',
   industries: [],
   purposes: [],
-  host: { name: '', title: '', org: '', phone: '', email: '' },
+  host: emptyHost(),
   hostComment: '',
   visitors: [emptyVisitor()],
   note: '',
@@ -51,6 +52,7 @@ function trimDraft(draft: VisitDraft): VisitDraft {
     host: {
       name: text(draft.host.name),
       title: text(draft.host.title),
+      division: text(draft.host.division),
       org: text(draft.host.org),
       phone: text(draft.host.phone),
       email: text(draft.host.email),

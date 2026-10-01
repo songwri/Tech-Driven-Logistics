@@ -155,7 +155,7 @@ export async function submitReservation(draft: VisitDraft): Promise<void> {
  * 관리자 페이지가 필요로 하는 서버(Apps Script) 기능 수준. apps-script/Code.gs 의 API_LEVEL 과 맞춘다.
  * 배포된 서버가 이보다 낮으면 Code.gs 를 새 버전으로 재배포해야 한다.
  */
-export const REQUIRED_API_LEVEL = 2
+export const REQUIRED_API_LEVEL = 3
 
 export interface ServerVersion {
   version: string
