@@ -15,10 +15,11 @@
  * 키를 보내야 예약 목록을 볼 수 있습니다.
  */
 
-/** 방명록 등록 알림 메일 수신 주소 */
-var MAIL_TO = 'daehyun.kim1@lxpantos.com';
-/** 방문 예약 신청 알림 수신 주소. 신청자에게 가는 승인 · 거절 메일의 회신 주소로도 쓴다. */
-var RESERVATION_MAIL_TO = 'PANTOSKR_403144@lxpantos.com';
+/**
+ * 알림 메일 수신 주소: 방문 예약 신청 · 방명록 등록 알림을 모두 받는다.
+ * 신청자에게 가는 승인 · 거절 메일의 회신 주소로도 쓴다.
+ */
+var MAIL_TO = 'PANTOSKR_403144@lxpantos.com';
 var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
@@ -630,7 +631,7 @@ function addReservation_(payload) {
   });
 
   MailApp.sendEmail({
-    to: RESERVATION_MAIL_TO,
+    to: MAIL_TO,
     replyTo: request.host.email,
     subject: '[TDL Lab] 방문 예약 신청 · ' + TOURS[request.tour].label + ' · ' + request.company + ' · '
       + request.date + ' ' + request.slot,
@@ -1057,7 +1058,7 @@ function notifyHost_(r) {
       + '다른 날짜로 다시 신청해 주시거나, 이 메일에 회신해 일정을 조율해 주세요.';
   MailApp.sendEmail({
     to: r.host.email,
-    replyTo: RESERVATION_MAIL_TO,
+    replyTo: MAIL_TO,
     subject: '[TDL Lab] 방문 예약 ' + (approved ? '확정' : '불가') + ' 안내 · ' + r.date + ' ' + r.slot,
     htmlBody: mailShell_(approved ? '방문 일정 확정' : '방문 예약 결과 안내', lead, scheduleBox_(r) + rows_([
       [r.category === 'internal' ? '방문 조직' : '업체명', escapeHtml_(r.company)],

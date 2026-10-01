@@ -23,7 +23,7 @@ export default function ContactCta() {
         </div>
         <div className="flex flex-col gap-3 md:items-end">
           <a
-            href="mailto:daehyun.kim1@lxpantos.com"
+            href="mailto:PANTOSKR_403144@lxpantos.com"
             className="group inline-flex items-center justify-between gap-6 bg-ink px-7 py-4 text-white transition hover:bg-brand active:translate-y-px md:min-w-72"
           >
             <span className="text-[15px] font-semibold">협업 문의하기</span>
