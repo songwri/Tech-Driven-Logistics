@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Field, Input, Textarea } from '@/components/ui/Field'
 import { cn } from '@/lib/utils'
 import {
+  MAIN_DIVISIONS,
   STATUS_LABEL,
   TOURS,
   formatDateShort,
@@ -108,6 +109,7 @@ export function ManualVisitModal({
   const [language, setLanguage] = useState(initial?.language ?? 'ko')
   const [interpreter, setInterpreter] = useState(initial?.interpreter ?? false)
   const [hostName, setHostName] = useState(initial?.host.name ?? '')
+  const [hostDivision, setHostDivision] = useState(initial?.host.division ?? '')
   const [hostOrg, setHostOrg] = useState(initial?.host.org ?? '')
   const [ops, setOps] = useState(() => opsFromRequest(initial ?? {}))
   const [memo, setMemo] = useState(initial?.adminMemo ?? '')
@@ -139,6 +141,7 @@ export function ManualVisitModal({
       host: {
         name: hostName.trim(),
         title: initial?.host.title ?? '',
+        division: hostDivision.trim(),
         org: hostOrg.trim(),
         phone: initial?.host.phone ?? '',
         email: initial?.host.email ?? '',
@@ -282,7 +285,20 @@ export function ManualVisitModal({
             <Field label="담당자 (선택)">
               <Input value={hostName} onChange={(e) => setHostName(e.target.value)} placeholder="홍길동 책임" />
             </Field>
-            <Field label="담당 조직 (선택)">
+            <Field label="담당(실) (선택)" hint="방문 통계의 담당별 집계에 쓰입니다">
+              <Input
+                value={hostDivision}
+                onChange={(e) => setHostDivision(e.target.value)}
+                list="tdl-manual-division-options"
+                placeholder="CL운영담당"
+              />
+              <datalist id="tdl-manual-division-options">
+                {MAIN_DIVISIONS.map((division) => (
+                  <option key={division} value={division} />
+                ))}
+              </datalist>
+            </Field>
+            <Field label="담당 조직(팀) (선택)">
               <Input value={hostOrg} onChange={(e) => setHostOrg(e.target.value)} />
             </Field>
           </div>

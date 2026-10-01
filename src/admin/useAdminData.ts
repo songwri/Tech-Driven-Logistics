@@ -26,7 +26,7 @@ export interface ServerHealth {
   }
 }
 
-const DEMO_KEY = 'tdl-lab-admin-demo-v3'
+const DEMO_KEY = 'tdl-lab-admin-demo-v4'
 const SESSION_KEY = 'tdl-lab-admin-key'
 
 function readDemo(): VisitRequest[] {

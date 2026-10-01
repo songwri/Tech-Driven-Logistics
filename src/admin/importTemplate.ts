@@ -38,6 +38,7 @@ const GUIDE: Record<Header, [string, string]> = {
   주요인원: ['줄바꿈 또는 쉼표로 구분', '김철수 상무'],
   가이드: ['안내한 인원, 줄바꿈으로 구분', '홍길동 책임\n김영희 선임'],
   유관부서: ['쉼표로 구분', '풀필먼트영업팀, SC품질팀'],
+  '담당(실)': ['신청 담당자의 담당(실). 통계는 6개 주요 담당 + 기타로 집계', 'CL운영담당'],
   후속진행: ['', 'PoC 논의'],
 }
 
@@ -108,6 +109,7 @@ function toSheetRow(request: VisitRequest): CellValue[] {
     주요인원: request.keyPersons ?? '',
     가이드: request.guides ?? '',
     유관부서: (request.departments ?? []).join(', '),
+    '담당(실)': request.host.division,
     후속진행: request.followUp ?? '',
   }
   return VISIT_SHEET_HEADERS.map((header) => values[header])

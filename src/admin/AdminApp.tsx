@@ -279,7 +279,7 @@ export default function AdminApp() {
                 연결된 웹앱 주소: <code className="break-all bg-white/70 px-1 font-mono text-[12px]">{SERVER_URL}</code>
                 <br />
                 Apps Script <b>배포 → 배포 관리</b>에서 <b>이 주소의 배포 ID</b>와 같은 배포를 연필로 열고 <b>버전: 새 버전 → 배포</b>
-                하세요. 최신 버전이면 괄호 안이 <b>2026-10-01.version-check</b> 이후로 바뀝니다.
+                하세요. 최신 버전이면 괄호 안이 <b>2026-10-01.division</b> 이후로 바뀝니다.
                 <br />
                 주소 끝이 <b>/dev</b>인 ‘테스트 배포’는 항상 최신 코드로 돌아가므로 테스트가 통과해도, 사이트가 쓰는 <b>/exec</b>{' '}
                 배포는 배포할 때 고른 버전에 고정되어 있습니다. 새 배포를 만들었다면 GitHub 변수 VITE_LAB_API 도 그 주소로 바꾸고 Actions

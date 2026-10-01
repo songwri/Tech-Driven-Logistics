@@ -7,6 +7,7 @@ import {
   CLIENT_TYPE_LABEL,
   INDUSTRY_GROUPS,
   JOBS,
+  MAIN_DIVISIONS,
   MAX_VISITORS,
   OTHER,
   FOREIGN_LANGUAGE,
@@ -190,18 +191,37 @@ export function HostFields({
       <Field label="직책" required error={bad('title') ? '직책을 입력해 주세요.' : null}>
         <Input value={host.title} onChange={set('title')} required maxLength={40} placeholder="예) 책임" invalid={bad('title')} />
       </Field>
-      <div className="col-span-2">
-        <Field label="조직명" required error={bad('org') ? '조직명을 입력해 주세요.' : null}>
-          <Input
-            value={host.org}
-            onChange={set('org')}
-            required
-            maxLength={60}
-            placeholder="예) 테크이노베이션팀"
-            invalid={bad('org')}
-          />
-        </Field>
-      </div>
+      <Field
+        label="담당(실)"
+        required
+        hint="목록에서 고르거나 직접 입력"
+        error={bad('division') ? '담당(실)을 입력해 주세요.' : null}
+      >
+        <Input
+          value={host.division}
+          onChange={set('division')}
+          required
+          maxLength={40}
+          list="tdl-division-options"
+          placeholder="예) CL운영담당"
+          invalid={bad('division')}
+        />
+        <datalist id="tdl-division-options">
+          {MAIN_DIVISIONS.map((division) => (
+            <option key={division} value={division} />
+          ))}
+        </datalist>
+      </Field>
+      <Field label="조직명(팀)" required error={bad('org') ? '조직명을 입력해 주세요.' : null}>
+        <Input
+          value={host.org}
+          onChange={set('org')}
+          required
+          maxLength={60}
+          placeholder="예) 테크이노베이션팀"
+          invalid={bad('org')}
+        />
+      </Field>
       <Field label="연락처" required error={bad('phone') ? '연락처를 입력해 주세요.' : null}>
         <Input
           type="tel"

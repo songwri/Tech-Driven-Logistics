@@ -15,18 +15,22 @@
  * 키를 보내야 예약 목록을 볼 수 있습니다.
  */
 
+/** 방명록 등록 알림 메일 수신 주소 */
 var MAIL_TO = 'daehyun.kim1@lxpantos.com';
+/** 방문 예약 신청 알림 수신 주소. 신청자에게 가는 승인 · 거절 메일의 회신 주소로도 쓴다. */
+var RESERVATION_MAIL_TO = 'PANTOSKR_403144@lxpantos.com';
 var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-01.version-check';
+var CODE_VERSION = '2026-10-01.division';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
  *   2: 수기 등록(create) · 기존 이력 가져오기(import) · 완료/취소 상태 · 운영 기록 열
+ *   3: 신청 담당자의 담당(실) 열
  */
-var API_LEVEL = 2;
+var API_LEVEL = 3;
 var ADMIN_ACTIONS = ['list', 'health', 'delete', 'setStatus', 'update', 'create', 'import'];
 
 var GUESTBOOK_SHEET = 'guestbook';
@@ -71,6 +75,8 @@ var VISIT_HEADERS = [
   '방문목적', '담당자', '담당자직책', '담당자조직', '담당자연락처', '담당자이메일', '담당자의견',
   '방문인원', '방문자명단', '요청사항', '개인정보동의', '관리자메모', '토큰', '수정일시', '방문자JSON',
   '투어언어', '외국어', '통역동반', '출처', '주요인원', '가이드', '유관부서', '후속진행',
+  // 새 열은 기존 시트와 맞도록 맨 뒤에 붙인다 (시트를 열면 제목이 자동으로 추가된다).
+  '담당(실)',
 ];
 var BLOCKED_HEADERS = ['날짜', '시간대(비우면 종일)', '사유'];
 
@@ -373,6 +379,7 @@ function rowToRequest_(row, col) {
     host: {
       name: String(get('담당자')),
       title: String(get('담당자직책')),
+      division: String(get('담당(실)')),
       org: String(get('담당자조직')),
       phone: String(get('담당자연락처')),
       email: String(get('담당자이메일')),
@@ -464,6 +471,7 @@ function fillVisitRow_(values, col, request, extra) {
   set('방문목적', request.purposes.join(', '));
   set('담당자', request.host.name);
   set('담당자직책', request.host.title);
+  set('담당(실)', request.host.division || '');
   set('담당자조직', request.host.org);
   set('담당자연락처', request.host.phone);
   set('담당자이메일', request.host.email);
@@ -559,6 +567,10 @@ function sanitizeVisit_(payload, requireConsent) {
     host: {
       name: requireText_(host.name, '담당자 성함', 40),
       title: requireText_(host.title, '담당자 직책', 40),
+      // 웹 신청은 필수, 관리자 수정은 담당(실)이 없던 이전 기록도 고칠 수 있게 선택.
+      division: requireConsent
+        ? requireText_(host.division, '담당자 담당(실)', 40)
+        : optionalText_(host.division, 40),
       org: requireText_(host.org, '담당자 조직명', 60),
       phone: requireText_(host.phone, '담당자 연락처', 30),
       email: requireText_(host.email, '담당자 이메일', 120),
@@ -618,7 +630,7 @@ function addReservation_(payload) {
   });
 
   MailApp.sendEmail({
-    to: MAIL_TO,
+    to: RESERVATION_MAIL_TO,
     replyTo: request.host.email,
     subject: '[TDL Lab] 방문 예약 신청 · ' + TOURS[request.tour].label + ' · ' + request.company + ' · '
       + request.date + ' ' + request.slot,
@@ -706,7 +718,8 @@ function sanitizeManual_(payload) {
     industries: category === 'external' ? list(payload.industries, 50) : [],
     purposes: list(payload.purposes, 80),
     host: {
-      name: optionalText_(host.name, 40), title: optionalText_(host.title, 40), org: optionalText_(host.org, 60),
+      name: optionalText_(host.name, 40), title: optionalText_(host.title, 40),
+      division: optionalText_(host.division, 40), org: optionalText_(host.org, 60),
       phone: optionalText_(host.phone, 30), email: optionalText_(host.email, 120),
     },
     hostComment: optionalText_(payload.hostComment, 500),
@@ -989,7 +1002,8 @@ function reservationMailHtml_(r) {
 
   var lead = [
     '안녕하세요, TDL Lab 담당자님.<br>',
-    '<b style="color:#3d3532;">', escapeHtml_(r.host.org), ' ', escapeHtml_(r.host.name), ' ',
+    '<b style="color:#3d3532;">', escapeHtml_([r.host.division, r.host.org].filter(Boolean).join(' ')), ' ',
+    escapeHtml_(r.host.name), ' ',
     escapeHtml_(r.host.title), '</b> 님으로부터 방문 예약이 도착하였습니다.<br>',
     '아래 내용을 확인하시고 일정을 승인해 주시기 바랍니다.',
   ].join('');
@@ -1002,7 +1016,8 @@ function reservationMailHtml_(r) {
     ['업종', listOrNone_(r.industries)],
     ['방문 목적', listOrNone_(r.purposes)],
     ['방문 인원', r.visitors.length + '명'],
-    ['담당자', escapeHtml_(r.host.name + ' ' + r.host.title + ' · ' + r.host.org)],
+    ['담당자', escapeHtml_(r.host.name + ' ' + r.host.title + ' · '
+      + [r.host.division, r.host.org].filter(Boolean).join(' '))],
     ['연락처', '<a href="tel:' + escapeHtml_(r.host.phone) + '" style="color:#3d3532;">'
       + escapeHtml_(r.host.phone) + '</a>'],
     ['이메일', '<a href="mailto:' + escapeHtml_(r.host.email) + '" style="color:#3d3532;">'
@@ -1042,7 +1057,7 @@ function notifyHost_(r) {
       + '다른 날짜로 다시 신청해 주시거나, 이 메일에 회신해 일정을 조율해 주세요.';
   MailApp.sendEmail({
     to: r.host.email,
-    replyTo: MAIL_TO,
+    replyTo: RESERVATION_MAIL_TO,
     subject: '[TDL Lab] 방문 예약 ' + (approved ? '확정' : '불가') + ' 안내 · ' + r.date + ' ' + r.slot,
     htmlBody: mailShell_(approved ? '방문 일정 확정' : '방문 예약 결과 안내', lead, scheduleBox_(r) + rows_([
       [r.category === 'internal' ? '방문 조직' : '업체명', escapeHtml_(r.company)],

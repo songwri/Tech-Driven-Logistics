@@ -166,6 +166,8 @@ export interface Visitor {
 export interface VisitHost {
   name: string
   title: string
+  /** 담당(실): 팀보다 상위 조직. 예) CL운영담당. 이전 기록에는 비어 있을 수 있다. */
+  division: string
   org: string
   phone: string
   email: string
@@ -233,6 +235,52 @@ export interface BusySegment {
   resource: Resource | 'all'
   from: string
   to: string
+}
+
+export const emptyHost = (): VisitHost => ({ name: '', title: '', division: '', org: '', phone: '', email: '' })
+
+/* ------------------------------------------------------- 담당(실) 분류 */
+
+/** 방문 통계의 주요 담당 6개 + 나머지는 '기타' */
+export const MAIN_DIVISIONS = [
+  'CL전자담당',
+  'CL LG/LX담당',
+  'CL영업담당',
+  'CL운영담당',
+  'CL컨설팅담당',
+  'EC사업담당',
+] as const
+export const OTHER_DIVISION = '기타'
+export const DIVISION_GROUPS = [...MAIN_DIVISIONS, OTHER_DIVISION]
+
+/** 비교용 키: 소문자 · 공백/기호 제거 · 앞의 'CL' 과 뒤의 '담당' 을 뗀다. 'CL LG/LX담당' → 'lglx' */
+function divisionKey(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[\s/·・.,_\-()]/g, '')
+    .replace(/^cl/, '')
+    .replace(/담당$/, '')
+}
+
+const DIVISION_ALIASES: Record<string, (typeof MAIN_DIVISIONS)[number]> = {
+  전자: 'CL전자담당',
+  lglx: 'CL LG/LX담당',
+  lxlg: 'CL LG/LX담당',
+  영업: 'CL영업담당',
+  운영: 'CL운영담당',
+  컨설팅: 'CL컨설팅담당',
+  ec사업: 'EC사업담당',
+  ec: 'EC사업담당',
+}
+
+/**
+ * 입력된 담당(실) → 통계용 7개 분류.
+ * '전자담당' · 'cl전자담당' → CL전자담당, 'LGLX담당' · 'lg/lx' → CL LG/LX담당.
+ * 6개에 해당하지 않거나 비어 있으면 '기타'.
+ */
+export function divisionGroup(value: string | undefined): string {
+  const key = divisionKey(String(value ?? ''))
+  return (key && DIVISION_ALIASES[key]) || OTHER_DIVISION
 }
 
 export const emptyVisitor = (): Visitor => ({ name: '', title: '', org: '', email: '', car: '', jobs: [] })
@@ -364,8 +412,8 @@ export function sectionProblems(draft: VisitDraft): Record<FormSection, string |
 
   const { host } = draft
   const hostProblem =
-    blank(host.name) || blank(host.title) || blank(host.org)
-      ? '신청 담당자의 성함 · 직책 · 조직명을 입력해 주세요.'
+    blank(host.name) || blank(host.title) || blank(host.division) || blank(host.org)
+      ? '신청 담당자의 성함 · 직책 · 담당(실) · 조직명을 입력해 주세요.'
       : blank(host.phone)
         ? '신청 담당자 연락처를 입력해 주세요.'
         : !EMAIL.test(host.email.trim())
@@ -433,6 +481,7 @@ export function missingFields(draft: VisitDraft): Set<string> {
   mark('slot', !draft.slot)
   mark('host.name', blank(draft.host.name))
   mark('host.title', blank(draft.host.title))
+  mark('host.division', blank(draft.host.division))
   mark('host.org', blank(draft.host.org))
   mark('host.phone', blank(draft.host.phone))
   mark('host.email', !EMAIL.test(draft.host.email.trim()))

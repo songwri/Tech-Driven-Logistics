@@ -14,6 +14,8 @@ import {
   type VisitRequest,
   type VisitStatus,
   validateVisitDraft,
+  divisionGroup,
+  OTHER_DIVISION,
 } from '@/lib/visit'
 import { StatusBadge, TourTag } from './status'
 import { ManualVisitModal, OpsFields } from './ManualVisitModal'
@@ -75,7 +77,12 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
   }
 
   const save = async () => {
-    const problem = validateVisitDraft({ ...draft, consent: true })
+    // 담당(실) 항목이 생기기 전 기록도 고칠 수 있도록, 관리자 수정에서는 담당(실)을 필수로 보지 않는다.
+    const problem = validateVisitDraft({
+      ...draft,
+      consent: true,
+      host: { ...draft.host, division: draft.host.division || '-' },
+    })
     if (problem) {
       setError(problem)
       return
@@ -222,6 +229,12 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
             <>
               <Row label="성함 · 직책">
                 {request.host.name} {request.host.title}
+              </Row>
+              <Row label="담당(실)">
+                {request.host.division}
+                {request.host.division && divisionGroup(request.host.division) === OTHER_DIVISION && (
+                  <span className="ml-1.5 text-[12px] text-warm-600">· 통계는 기타</span>
+                )}
               </Row>
               <Row label="조직">{request.host.org}</Row>
               <Row label="연락처">{request.host.phone}</Row>
