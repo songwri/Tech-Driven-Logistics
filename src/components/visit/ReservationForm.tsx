@@ -6,6 +6,7 @@ import { Textarea } from '../ui/Field'
 import { SchedulePicker } from './SchedulePicker'
 import { CompanyFields, HostFields, PrivacyConsent, PurposeFields, SectionTitle, VisitorsFields } from './VisitFields'
 import { submitReservation, isLiveBackend } from '@/lib/labApi'
+import { GUESTBOOK_URL } from '@/lib/routes'
 import {
   FORM_SECTIONS,
   TOUR_BY_ID,
@@ -224,10 +225,10 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
             다른 일정 추가 신청
           </Button>
           <a
-            href={import.meta.env.BASE_URL}
+            href={GUESTBOOK_URL}
             className="inline-flex flex-1 items-center justify-center rounded-full bg-brand px-6 py-2.5 text-sm font-semibold text-white transition hover:brightness-110"
           >
-            소개 페이지로
+            방명록 보기
           </a>
         </div>
       </div>

@@ -296,6 +296,8 @@ export function useAdminData() {
   return {
     mode,
     authenticated: mode === 'demo' || Boolean(key),
+    /** 관리자 키 (방명록 관리 등 별도 화면이 같은 키로 서버에 요청한다) */
+    adminKey: key,
     requests,
     loading,
     error,

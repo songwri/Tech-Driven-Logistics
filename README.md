@@ -1,15 +1,38 @@
 # TDL · Tech Driven Logistics
 
-Tech Innovation Team의 기술 방향성과 TDL 전략을, 직접 제작한 3D 와이어프레임 모델과
-스크롤 스토리텔링으로 보여주는 인터랙티브 소개 사이트입니다.
+Tech Innovation Team의 TDL Lab 방문 예약 · 방명록 · 관리자 사이트입니다.
+
+## 운영 중인 페이지
+
+| 주소 | 내용 |
+| --- | --- |
+| `/reserve/` | 방문 예약 신청 |
+| `/guestbook/` | 방명록 (방문 기록 보기 · 남기기) |
+| `/admin/` | 관리자 (예약 대시보드 · 방문 통계 · 방명록 관리) |
+| `/` | 안내 페이지. 소개 사이트(랜딩)는 운영하지 않습니다 |
+
+소개 사이트(3D 와이어프레임 · 스크롤 스토리텔링 · 영상 히어로)는 **운영하지 않기로 해서 빌드에서 뺐습니다.**
+소스(`src/App.tsx`, `src/main.tsx`, `src/components/*`, `src/three/*`)는 지우지 않고 남겨 두었습니다.
+아래 '개발 · 구조' 설명 중 3D · 스크롤 관련 항목은 이 소개 사이트에 대한 것입니다.
+
+### 소개 사이트 다시 열기
+
+1. `index.html`을 아래 내용으로 바꿉니다 (`git log -- index.html`의 이전 버전을 복원해도 됩니다).
+   ```html
+   <div id="root"></div>
+   <script type="module" src="/src/main.tsx"></script>
+   ```
+   (meta · 폰트 · 파비콘 링크는 `reserve/index.html`을 참고해 `<head>`에 넣습니다)
+2. 이 파일은 이미 `vite.config.ts`의 `notice` 입력으로 잡혀 있어 그대로 빌드됩니다.
+3. 예약 · 방명록 페이지에서 소개 사이트로 가는 링크는 지금 없으므로, 필요하면 `src/lib/routes.ts`에 주소를 추가합니다.
 
 ## 스택
 
 - React + TypeScript + Vite
 - Tailwind CSS v4 (`@tailwindcss/vite`)
-- Three.js + React Three Fiber / drei — 3D 와이어프레임 모델
+- Three.js + React Three Fiber / drei — 3D 와이어프레임 모델 (소개 사이트, 현재 미운영)
 - Framer Motion — 스크롤 리빌 애니메이션
-- Noto Sans / Noto Sans KR (Google Fonts)
+- Pretendard(한글) + Geist / Geist Mono(영문 · 숫자). 외부 CDN 없이 번들에 포함
 
 ## 개발
 
@@ -27,6 +50,8 @@ npm run lint
 
 ## 구조
 
+- `src/guestbook/` — 방명록 페이지 (`guestbook/index.html`). 평점 요약 · 대표 기록 · 전체 기록 목록
+- `src/admin/GuestbookAdmin.tsx`, `useAdminGuestbook.ts`, `guestbookData.ts` — 관리자 방명록 관리 (조회 · 숨김 · 삭제 · 엑셀)
 - `src/data/techData.ts` — 로봇팔, AMR/AGV, 자율주행, 자동화 설비, 신기술 PoC 기술 항목 데이터
   (라벨 순서가 각 3D 모델의 동작 페이즈 순서와 1:1로 매칭됩니다)
 - `src/three/models/*` — 기술별 3D 와이어프레임 모델 (Three.js 프리미티브로 직접 제작한 아웃라인 모델).
@@ -55,10 +80,10 @@ npm run lint
 
 ## TDL Lab 예약 · 방명록
 
-첫 화면은 TDL 방문 예약과 방명록으로 진입하는 전체화면 영상 히어로입니다
-(`src/components/LabGate.tsx`). 상단 내비게이션은 이 화면을 지나야 나타납니다.
+> 아래 '배경 영상 · 영상 히어로' 설명은 운영하지 않는 소개 사이트(`src/components/LabGate.tsx`)에 대한 것입니다.
+> 방명록 페이지는 `public/media/tdl-lab-hero.jpg` 사진 한 장만 씁니다.
 
-배경 영상은 `public/media/tdl-lab-hero.{webm,mp4}`이며 포스터 이미지가 함께 있습니다.
+소개 사이트의 첫 화면은 전체화면 영상 히어로입니다. 배경 영상은 `public/media/tdl-lab-hero.{webm,mp4}`이며 포스터 이미지가 함께 있습니다.
 원본(720p·11Mbps·14MB)을 웹용으로 재인코딩해 WebM 2.2MB / MP4 2.6MB로 줄였고,
 WebM을 먼저 시도한 뒤 MP4로 폴백합니다. 영상 자체가 밝아 CSS 필터로 밝기를 낮추고
 좌측에 짙은 스크림을 깔아 흰 글씨 대비를 확보했습니다. 영상을 교체할 때는 같은
@@ -70,7 +95,10 @@ WebM을 먼저 시도한 뒤 MP4로 폴백합니다. 영상 자체가 밝아 CSS
 
 - 방명록 표시는 마스킹된 값만 사용합니다 (`홍길동 → 홍**`, `David Kim → D** K**`,
   `LX판토스 → L**`). 실명·연락처는 시트와 팀 메일에만 남습니다.
-- 방문자 기록 섹션은 페이지 최하단(협업 문의 아래)에 있습니다.
+- 방명록은 `/guestbook/` 에서 읽고 남깁니다. 숨긴 글은 이 페이지에 나오지 않습니다.
+- 관리자 `/admin/` 의 **방명록** 탭에서 실명 · 실제 소속을 보고, 부적절한 글은 **숨기기**(시트에는 남음) 또는
+  **삭제**(시트에서도 삭제, 되돌릴 수 없음)합니다. 관리자 방명록 관리는 Apps Script 기능 수준 4 이상이 필요합니다
+  (`apps-script/Code.gs`를 붙여넣고 기존 배포를 새 버전으로 재배포).
 
 ### 방문 예약 / 관리자 대시보드
 
@@ -79,9 +107,8 @@ WebM을 먼저 시도한 뒤 MP4로 폴백합니다. 영상 자체가 밝아 CSS
   개인정보 수집·이용 동의 순으로 입력합니다.
 - 투어 시간대와 겹침 판정 규칙은 `src/lib/visit.ts` 한곳에 있습니다
   (백엔드 `apps-script/Code.gs` 의 `TOURS` 와 값이 같아야 합니다).
-- 예약 신청 전용 페이지 `/reserve/` (`reserve/index.html` → `src/reserve/`)는 소개 사이트(영상·3D)를 거치지 않고
-  바로 열립니다. 링크·QR·메일 서명 공유용이며, 소개 사이트의 '방문 예약' 버튼(첫 화면 · 상단 메뉴 · TDL Lab 섹션)도
-  모두 이 페이지로 연결됩니다. 폼은 `src/components/visit/ReservationForm.tsx` 입니다.
+- 예약 신청 전용 페이지 `/reserve/` (`reserve/index.html` → `src/reserve/`)는 링크 · QR · 메일 서명 공유용입니다.
+  폼은 `src/components/visit/ReservationForm.tsx` 입니다.
 - 관리자 대시보드는 별도 페이지 `/admin/` (`admin/index.html` → `src/admin/`)로 빌드됩니다.
   달력 · 예약 요청 관리 · 월별/연도별 통계를 제공하며, 설정 방법은 `apps-script/README.md`를
   참고하세요.

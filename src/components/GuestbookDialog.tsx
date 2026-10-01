@@ -90,7 +90,7 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
           <div className="sm:col-span-2 border border-warm-300/50 bg-cream px-4 py-3">
             <p className="font-mono text-[11px] uppercase tracking-wider text-warm-600">공개 표시 미리보기</p>
             <p className="mt-1.5 text-sm text-warm-800">
-              {maskName(name) || '—'}
+              {maskName(name) || '-'}
               {role && <span className="ml-2 text-warm-600">{role}</span>}
               <span className="ml-2 font-mono text-[11px] text-warm-600">{maskCompany(company)}</span>
             </p>

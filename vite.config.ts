@@ -15,11 +15,14 @@ export default defineConfig({
   base: '/Tech-Driven-Logistics/',
   build: {
     rolldownOptions: {
-      // 방문자 사이트(/), 예약 전용 페이지(/reserve/), 관리자 대시보드(/admin/)를 각각의 페이지로 빌드한다.
+      // 운영 중인 페이지: 예약(/reserve/), 방명록(/guestbook/), 관리자(/admin/).
+      // 소개 사이트(랜딩)는 운영하지 않아 빌드하지 않는다. 루트(/)는 안내 페이지(index.html)만 내보낸다.
+      // 소스(src/App.tsx, src/main.tsx 등)는 남겨 두었다. 다시 열려면 README 의 '소개 사이트 다시 열기'를 따른다.
       input: {
-        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        notice: fileURLToPath(new URL('./index.html', import.meta.url)),
         admin: fileURLToPath(new URL('./admin/index.html', import.meta.url)),
         reserve: fileURLToPath(new URL('./reserve/index.html', import.meta.url)),
+        guestbook: fileURLToPath(new URL('./guestbook/index.html', import.meta.url)),
       },
       output: {
         // Keep the rarely-changing runtimes in their own cacheable chunks.

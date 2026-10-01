@@ -4,7 +4,7 @@ import { LabContext } from '@/lib/labContext'
 
 const GuestbookDialog = lazy(() => import('./GuestbookDialog'))
 
-/** 방명록 데이터와 방명록 작성창을 소개 사이트 전체에 제공한다. (방문 예약은 /reserve/ 별도 페이지) */
+/** 방명록 데이터와 방명록 작성창을 제공한다. (방명록 페이지 /guestbook/ 과 소개 사이트가 함께 쓴다) */
 export default function LabProvider({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<GuestbookEntry[]>([])
   const [loading, setLoading] = useState(true)
