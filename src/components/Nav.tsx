@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { RESERVE_URL } from '@/lib/routes'
+import { cn } from '@/lib/utils'
 import { Logo } from './ui/Logo'
 
 const navLinks = [
@@ -11,8 +12,32 @@ const navLinks = [
   { href: '#contact', label: 'Contact' },
 ]
 
+/** 화면 가운데를 지나고 있는 섹션의 링크를 현재 위치로 표시한다. */
+function useActiveSection() {
+  const [active, setActive] = useState<string | null>(null)
+  useEffect(() => {
+    // #strategy는 높이 없는 앵커라, 전략이 들어 있는 고정 스크롤 영역(#top) 전체를 대신 본다.
+    const sectionOf = (href: string) => document.getElementById(href === '#strategy' ? 'top' : href.slice(1))
+    const hrefById = new Map<Element, string>()
+    for (const link of navLinks) {
+      const element = sectionOf(link.href)
+      if (element) hrefById.set(element, link.href)
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) if (entry.isIntersecting) setActive(hrefById.get(entry.target) ?? null)
+      },
+      { rootMargin: '-45% 0px -50% 0px' },
+    )
+    hrefById.forEach((_, element) => observer.observe(element))
+    return () => observer.disconnect()
+  }, [])
+  return active
+}
+
 export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const active = useActiveSection()
 
   // The hero is a full-bleed 3D stage — the bar only appears once it's scrolled past.
   const [revealed, setRevealed] = useState(() => window.scrollY > window.innerHeight * 0.85)
@@ -45,7 +70,15 @@ export default function Nav() {
         <ul className="hidden gap-8 font-mono text-xs uppercase tracking-wide text-warm-600 md:flex">
           {navLinks.map((link) => (
             <li key={link.href}>
-              <a href={link.href} className="transition hover:text-brand">
+              <a
+                href={link.href}
+                aria-current={active === link.href ? 'location' : undefined}
+                className={cn(
+                  'relative py-1 transition hover:text-brand',
+                  active === link.href &&
+                    'text-ink after:absolute after:inset-x-0 after:-bottom-[17px] after:h-0.5 after:bg-brand',
+                )}
+              >
                 {link.label}
               </a>
             </li>
@@ -83,7 +116,11 @@ export default function Nav() {
               <a
                 href={link.href}
                 onClick={() => setMenuOpen(false)}
-                className="block rounded-lg px-2 py-2 transition hover:bg-cream hover:text-brand"
+                aria-current={active === link.href ? 'location' : undefined}
+                className={cn(
+                  'block rounded-lg px-2 py-2 transition hover:bg-cream hover:text-brand',
+                  active === link.href && 'bg-cream font-semibold text-ink',
+                )}
               >
                 {link.label}
               </a>

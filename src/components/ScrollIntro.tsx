@@ -1,6 +1,5 @@
 import { lazy, Suspense, useRef } from 'react'
 import { useScrollProgress, clampMap } from '../hooks/useScrollProgress'
-import BlueprintFrame from './BlueprintFrame'
 import { Logo } from './ui/Logo'
 
 const HeroBackground = lazy(() => import('../three/HeroBackground'))
@@ -18,6 +17,13 @@ const pillars = [
     title: '사업 경쟁력 강화',
     description: '기술 기반 사업경쟁력 확보로 지속가능한 성장을 만듭니다.',
   },
+]
+
+const executions = [
+  '기술기반 운영체계 구축',
+  '고객맞춤형 물류서비스 제공',
+  '자동화와 로봇 기반의 생산성 혁신',
+  '자율주행과 신기술 PoC를 통한 미래 물류 선도',
 ]
 
 export default function ScrollIntro() {
@@ -100,27 +106,31 @@ export default function ScrollIntro() {
                 <p className="mb-3 font-mono text-xs uppercase tracking-[0.3em] text-brand">
                   TDL Strategy
                 </p>
-                <h2 className="text-3xl font-bold text-warm-800 md:text-4xl">
+                <h2 className="text-3xl font-bold leading-tight text-ink md:text-[2.75rem]">
                   전략이 현장의 구조가 되기까지
                 </h2>
-                <p className="mt-6 text-warm-600">
+                <p className="mt-6 max-w-md text-[17px] leading-relaxed text-warm-600">
                   TDL은 네 가지 축의 실행으로 &ldquo;기술이 물류 운영의 기본 구조가 되는&rdquo; 회사를 완성합니다.
                 </p>
               </div>
-              <ul className="space-y-3 text-warm-800">
-                <li>· 기술기반 운영체계 구축</li>
-                <li>· 고객맞춤형 물류서비스 제공</li>
-                <li>· 자동화와 로봇 기반의 생산성 혁신</li>
-                <li>· 자율주행과 신기술 PoC를 통한 미래 물류 선도</li>
-              </ul>
+              <ol className="divide-y divide-warm-300/40 border-y border-warm-300/40 text-warm-800">
+                {executions.map((item, i) => (
+                  <li key={item} className="flex items-baseline gap-4 py-3">
+                    <span className="font-mono text-[11px] tabular-nums text-brand">{String.fromCharCode(65 + i)}</span>
+                    <span className="text-[15px] font-medium">{item}</span>
+                  </li>
+                ))}
+              </ol>
             </div>
-            <div className="mt-10 grid gap-6 md:grid-cols-3">
+            {/* 세 가지 목표: 상자 대신 굵은 상단 선과 큰 번호로 나열 (아래 섹션의 카드들과 구분) */}
+            <div className="mt-14 grid gap-8 md:grid-cols-3 md:gap-10">
               {pillars.map((pillar, i) => (
-                <div key={pillar.title} className="relative border border-warm-300/50 bg-white/80 p-6">
-                  <BlueprintFrame size={12} />
-                  <span className="font-mono text-xs text-warm-300">0{i + 1}</span>
-                  <h3 className="mt-1 text-lg font-semibold text-brand">{pillar.title}</h3>
-                  <p className="mt-3 text-sm text-warm-600">{pillar.description}</p>
+                <div key={pillar.title} className="border-t-2 border-ink pt-5">
+                  <div className="flex items-baseline justify-between">
+                    <h3 className="text-xl font-bold text-ink">{pillar.title}</h3>
+                    <span className="font-mono text-[13px] tabular-nums text-warm-300">0{i + 1}</span>
+                  </div>
+                  <p className="mt-3 max-w-xs text-[15px] leading-relaxed text-warm-600">{pillar.description}</p>
                 </div>
               ))}
             </div>

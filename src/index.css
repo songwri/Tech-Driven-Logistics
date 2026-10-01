@@ -7,6 +7,8 @@
   --color-warm-600: #736662;
   --color-warm-300: #aca8a7;
   --color-cream: #f3f2f1;
+  /* 큰 제목용 진한 잉크색 (warm-800과 같은 계열) */
+  --color-ink: #2b2522;
 
   /* 영문 · 숫자는 Geist, 한글은 Pretendard로 떨어지도록 순서를 둔다.
      고정폭도 한글은 Pretendard로 받아 OS 기본 폰트가 섞이지 않게 한다. */

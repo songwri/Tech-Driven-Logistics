@@ -39,13 +39,19 @@ export default function TeamIntro() {
   const hintOpacity = clampMap(progress, [0, 0.12], [1, 0])
 
   return (
-    <section id="team" ref={containerRef} className="relative bg-cream" style={{ height: '240vh' }}>
+    <section
+      id="team"
+      ref={containerRef}
+      className="relative bg-cream"
+      // 카드가 실제로 움직이는 거리만큼만 스크롤하게 한다 (넓은 화면에서 빈 스크롤 구간 제거).
+      style={{ height: `calc(100vh + ${Math.max(Math.round(maxScrollX * 1.2), 320)}px)` }}
+    >
       <div className="sticky top-0 flex h-screen flex-col justify-center overflow-hidden">
         <div className="px-6 md:px-16">
           <p className="mb-3 font-mono text-xs uppercase tracking-[0.3em] text-brand">
             Tech Innovation Team
           </p>
-          <h2 className="max-w-xl text-2xl font-bold text-warm-800 md:text-4xl">
+          <h2 className="max-w-2xl text-2xl font-bold leading-tight text-ink md:text-[2.75rem]">
             우리는 기술을 검토하는 팀이 아니라,
             <br />
             기술을 현장에 구현하는 팀입니다
