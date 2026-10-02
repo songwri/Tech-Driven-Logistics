@@ -64,7 +64,7 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-09.import-key';
+var CODE_VERSION = '2026-10-10.admin-fast';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -577,9 +577,10 @@ function readVisits_() {
 }
 
 function publicRequest_(request) {
-  var copy = JSON.parse(JSON.stringify(request));
-  delete copy._row;
-  delete copy._token;
+  var copy = {};
+  for (var key in request) {
+    if (key !== '_row' && key !== '_token') copy[key] = request[key];
+  }
   return copy;
 }
 
@@ -1083,10 +1084,12 @@ function admin_(payload) {
   }
 
   if (payload.action === 'list') {
-    return { requests: readVisits_().map(publicRequest_), blocks: adminBlocks_() };
+    // 버전 정보도 함께 돌려줘 관리자 화면이 따로 health 를 부르지 않아도 된다.
+    return { requests: readVisits_().map(publicRequest_), blocks: adminBlocks_(), version: CODE_VERSION, apiLevel: API_LEVEL };
   }
 
-  if (payload.action === 'health') return health_();
+  // light: 버전 확인만 (시트를 읽지 않는다)
+  if (payload.action === 'health') return payload.light === true ? { version: CODE_VERSION, apiLevel: API_LEVEL } : health_();
   if (payload.action === 'blockAdd') return addBlocks_(payload);
   if (payload.action === 'blockRemove') return removeBlocks_(payload);
   if (payload.action === 'create') return createManual_(payload.request);

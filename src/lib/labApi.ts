@@ -189,7 +189,7 @@ function levelOf(version: string) {
  */
 export async function fetchServerVersion(key: string): Promise<ServerVersion> {
   try {
-    const data = await adminRequest<{ version?: string; apiLevel?: number }>(key, 'health')
+    const data = await adminRequest<{ version?: string; apiLevel?: number }>(key, 'health', { light: true })
     const version = String(data.version ?? '알 수 없음')
     return { version, apiLevel: Number(data.apiLevel ?? levelOf(version)) }
   } catch (healthError) {
