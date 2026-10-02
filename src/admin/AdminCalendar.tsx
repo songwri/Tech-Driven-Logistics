@@ -9,8 +9,6 @@ interface AdminCalendarProps {
   month: Date
   onMonthChange: (month: Date) => void
   requests: VisitRequest[]
-  selectedDate: string | null
-  onSelectDate: (date: string | null) => void
   onOpen: (id: string) => void
   /** 막힌 일정 (센터 · Lab 담당자 사정) */
   blocks: TourBlock[]
@@ -33,8 +31,6 @@ export function AdminCalendar({
   month,
   onMonthChange,
   requests: allRequests,
-  selectedDate,
-  onSelectDate,
   onOpen,
   blocks: allBlocks,
   onBlock,
@@ -138,10 +134,9 @@ export function AdminCalendar({
             type="button"
             onClick={() => {
               const today = toDateKey(new Date())
-              const day = selectedDate ?? today
-              onBlock(day, day)
+              onBlock(today, today)
             }}
-            title="날짜를 선택한 뒤 누르거나, 달력에서 날짜를 끌어 기간을 고를 수 있습니다"
+            title="날짜 칸을 누르면 그 날만, 끌면 기간으로 일정 막기 창이 열립니다"
             className="inline-flex items-center gap-1 border border-warm-800 bg-warm-800 px-2.5 py-1 text-[12px] font-semibold text-white transition hover:brightness-125"
           >
             <Lock width={12} height={12} aria-hidden /> 일정 막기
@@ -208,7 +203,6 @@ export function AdminCalendar({
             const blockList = blocksByDate.get(key) ?? []
             const inDrag = dragRange !== null && key >= dragRange[0] && key <= dragRange[1]
             const pending = list.filter((request) => request.status === 'pending').length
-            const selected = selectedDate === key
             return (
               <div
                 key={key}
@@ -223,21 +217,19 @@ export function AdminCalendar({
                     justDragged.current = false
                     return
                   }
-                  onSelectDate(selected ? null : key)
+                  onBlock(key, key)
                 }}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault()
-                    onSelectDate(selected ? null : key)
+                    onBlock(key, key)
                   }
                 }}
-                aria-pressed={selected}
                 aria-label={`${monthIndex + 1}월 ${day}일 예약 ${list.length}건${blockList.length > 0 ? `, 막힌 일정 ${blockList.length}건` : ''}`}
                 className={cn(
                   'group min-h-14 cursor-pointer border-b border-r border-warm-300/30 p-1 text-left transition sm:min-h-28 sm:p-1.5',
                   open ? 'bg-white hover:bg-cream/60' : 'bg-cream/50 hover:bg-cream',
                   inDrag && 'bg-brand/10 hover:bg-brand/10',
-                  selected && 'relative z-10 outline outline-2 -outline-offset-2 outline-brand',
                 )}
               >
                 <div className="mb-1 flex items-center justify-between">

@@ -391,8 +391,6 @@ export default function AdminApp() {
                   setSelectedDate(null)
                 }}
                 requests={requests}
-                selectedDate={selectedDate}
-                onSelectDate={setSelectedDate}
                 onOpen={setOpenId}
                 blocks={data.blocks}
                 onBlock={(start, end) => setBlockRange({ start, end })}
