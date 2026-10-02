@@ -1235,26 +1235,19 @@ var VISIT_GUIDE = {
   /** 주차 · 미팅 위치 지도 (사이트 public/media/visit-map.jpg) */
   mapImage: SITE_URL + 'media/visit-map.jpg',
   arriveBefore: 10,
-  /** TDL Lab 투어 */
-  lab: {
-    parking: '입구(IN)로 들어와 우회전 후 직진하시면 오른쪽에 승용차 주차장(TDL Lab 투어 주차장)이 있습니다.',
-    meeting: '주차 후 진행 방향 끝의 건물 입구 앞에서 만나 뵙겠습니다.',
-  },
-  /** 종합 · 센터 투어 */
-  center: {
-    parking: '입구(IN)로 들어와 왼쪽의 센터투어 주차장에 주차해 주세요.',
-    meeting: '',
-  },
+  /** 모든 투어 공통: 입구(IN) 왼쪽 투어 주차장 */
+  parking: '입구(IN)로 들어와 왼쪽의 투어 주차장에 주차해 주세요.',
+  /** TDL Lab 투어는 주차장에서 담당자가 Lab 으로 안내 */
+  labMeeting: '주차 후 투어 주차장에서 담당자가 TDL Lab 까지 안내해 드립니다.',
 };
 
 function visitGuideHtml_(r) {
-  var spot = r.tour === 'lab' ? VISIT_GUIDE.lab : VISIT_GUIDE.center;
   var pairs = [
     ['위치', escapeHtml_(VISIT_GUIDE.address) + '<br><a href="' + VISIT_GUIDE.mapUrl
       + '" style="color:' + BRAND + ';font-size:13px;font-weight:700;">네이버 지도에서 보기 →</a>'],
-    ['주차', escapeHtml_(spot.parking)],
+    ['주차', escapeHtml_(VISIT_GUIDE.parking)],
   ];
-  if (spot.meeting) pairs.push(['미팅 장소', escapeHtml_(spot.meeting)]);
+  if (r.tour === 'lab') pairs.push(['미팅 장소', escapeHtml_(VISIT_GUIDE.labMeeting)]);
   return [
     '<div style="margin-top:26px;font-size:15px;font-weight:700;color:#3d3532;">오시는 길</div>',
     rows_(pairs),
