@@ -1,7 +1,7 @@
-import { useState } from 'react'
-import { ChevronLeft, ChevronRight, Globe } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { ChevronLeft, ChevronRight, Globe, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { languageSummary, hasLanguageNote, OPEN_WEEKDAYS, TOURS, TOUR_BY_ID, formatSlot, isCounted, toDateKey, type TourType, type VisitRequest } from '@/lib/visit'
+import { blockTargetLabel, languageSummary, hasLanguageNote, OPEN_WEEKDAYS, TOURS, TOUR_BY_ID, formatSlot, isCounted, toDateKey, type TourBlock, type TourType, type VisitRequest } from '@/lib/visit'
 import { STATUS_TONE } from './statusTone'
 import { StatusBadge } from './status'
 
@@ -12,14 +12,71 @@ interface AdminCalendarProps {
   selectedDate: string | null
   onSelectDate: (date: string | null) => void
   onOpen: (id: string) => void
+  /** 막힌 일정 (센터 · Lab 담당자 사정) */
+  blocks: TourBlock[]
+  /** 일정 막기 창을 연다. 달력을 끌어 기간을 고르거나, 막힌 칩 · 버튼을 눌렀을 때. */
+  onBlock: (start: string, end: string) => void
 }
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 const MAX_CHIPS = 3
 
-export function AdminCalendar({ month, onMonthChange, requests: allRequests, selectedDate, onSelectDate, onOpen }: AdminCalendarProps) {
+const BLOCK_STRIPES = 'repeating-linear-gradient(135deg, rgba(0,0,0,0.05) 0 6px, transparent 6px 12px)'
+
+const blockVisibleFor = (block: TourBlock, tour: TourType | null) =>
+  tour === null ||
+  block.resource === 'all' ||
+  tour === 'combined' ||
+  (tour !== 'other' && block.resource === tour)
+
+export function AdminCalendar({
+  month,
+  onMonthChange,
+  requests: allRequests,
+  selectedDate,
+  onSelectDate,
+  onOpen,
+  blocks: allBlocks,
+  onBlock,
+}: AdminCalendarProps) {
   const [tourFilter, setTourFilter] = useState<TourType | null>(null)
   const requests = tourFilter ? allRequests.filter((request) => request.tour === tourFilter) : allRequests
+  const blocks = allBlocks.filter((block) => blockVisibleFor(block, tourFilter))
+
+  // 날짜 칸을 끌어서 기간 선택 → 일정 막기 창
+  const [drag, setDrag] = useState<{ anchor: string; current: string } | null>(null)
+  const dragRef = useRef(drag)
+  dragRef.current = drag
+  const justDragged = useRef(false)
+  const onBlockRef = useRef(onBlock)
+  onBlockRef.current = onBlock
+  useEffect(() => {
+    const finish = () => {
+      const state = dragRef.current
+      if (!state) return
+      setDrag(null)
+      if (state.anchor !== state.current) {
+        justDragged.current = true
+        const [start, end] = [state.anchor, state.current].sort()
+        onBlockRef.current(start, end)
+      }
+    }
+    const cancel = () => setDrag(null)
+    window.addEventListener('pointerup', finish)
+    window.addEventListener('pointercancel', cancel)
+    return () => {
+      window.removeEventListener('pointerup', finish)
+      window.removeEventListener('pointercancel', cancel)
+    }
+  }, [])
+  const dragRange = drag ? [drag.anchor, drag.current].sort() : null
+
+  const blocksByDate = new Map<string, TourBlock[]>()
+  for (const block of blocks) {
+    const list = blocksByDate.get(block.date) ?? []
+    list.push(block)
+    blocksByDate.set(block.date, list)
+  }
   const year = month.getFullYear()
   const monthIndex = month.getMonth()
   const firstWeekday = new Date(year, monthIndex, 1).getDay()
@@ -77,6 +134,18 @@ export function AdminCalendar({ month, onMonthChange, requests: allRequests, sel
           </button>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-warm-600">
+          <button
+            type="button"
+            onClick={() => {
+              const today = toDateKey(new Date())
+              const day = selectedDate ?? today
+              onBlock(day, day)
+            }}
+            title="날짜를 선택한 뒤 누르거나, 달력에서 날짜를 끌어 기간을 고를 수 있습니다"
+            className="inline-flex items-center gap-1 border border-warm-800 bg-warm-800 px-2.5 py-1 text-[12px] font-semibold text-white transition hover:brightness-125"
+          >
+            <Lock width={12} height={12} aria-hidden /> 일정 막기
+          </button>
           {TOURS.map((tour) => {
             const active = tourFilter === tour.id
             return (
@@ -115,7 +184,7 @@ export function AdminCalendar({ month, onMonthChange, requests: allRequests, sel
       </div>
 
       <div className="sm:overflow-x-auto">
-        <div className="grid grid-cols-7 sm:min-w-[720px]">
+        <div className="grid select-none grid-cols-7 sm:min-w-[720px]">
           {WEEKDAYS.map((name, index) => (
             <div
               key={name}
@@ -136,6 +205,8 @@ export function AdminCalendar({ month, onMonthChange, requests: allRequests, sel
             const weekday = index % 7
             const open = OPEN_WEEKDAYS.includes(weekday)
             const list = byDate.get(key) ?? []
+            const blockList = blocksByDate.get(key) ?? []
+            const inDrag = dragRange !== null && key >= dragRange[0] && key <= dragRange[1]
             const pending = list.filter((request) => request.status === 'pending').length
             const selected = selectedDate === key
             return (
@@ -143,7 +214,17 @@ export function AdminCalendar({ month, onMonthChange, requests: allRequests, sel
                 key={key}
                 role="button"
                 tabIndex={0}
-                onClick={() => onSelectDate(selected ? null : key)}
+                onPointerDown={(event) => {
+                  if (event.button === 0 && event.pointerType === 'mouse') setDrag({ anchor: key, current: key })
+                }}
+                onPointerEnter={() => setDrag((current) => (current ? { ...current, current: key } : current))}
+                onClick={() => {
+                  if (justDragged.current) {
+                    justDragged.current = false
+                    return
+                  }
+                  onSelectDate(selected ? null : key)
+                }}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault()
@@ -151,10 +232,11 @@ export function AdminCalendar({ month, onMonthChange, requests: allRequests, sel
                   }
                 }}
                 aria-pressed={selected}
-                aria-label={`${monthIndex + 1}월 ${day}일 예약 ${list.length}건`}
+                aria-label={`${monthIndex + 1}월 ${day}일 예약 ${list.length}건${blockList.length > 0 ? `, 막힌 일정 ${blockList.length}건` : ''}`}
                 className={cn(
                   'group min-h-14 cursor-pointer border-b border-r border-warm-300/30 p-1 text-left transition sm:min-h-28 sm:p-1.5',
                   open ? 'bg-white hover:bg-cream/60' : 'bg-cream/50 hover:bg-cream',
+                  inDrag && 'bg-brand/10 hover:bg-brand/10',
                   selected && 'relative z-10 outline outline-2 -outline-offset-2 outline-brand',
                 )}
               >
@@ -175,8 +257,11 @@ export function AdminCalendar({ month, onMonthChange, requests: allRequests, sel
                   )}
                 </div>
                 {/* 모바일: 날짜 칸이 좁아 예약을 점으로만 표시 (투어 색 · 상태 모양) — 누르면 아래 목록에 그날 예약 */}
-                {list.length > 0 && (
+                {(list.length > 0 || blockList.length > 0) && (
                   <div className="flex flex-wrap gap-0.5 sm:hidden" aria-hidden>
+                    {blockList.map((block) => (
+                      <span key={block.id} className="h-2 w-2 rounded-sm bg-warm-600" />
+                    ))}
                     {list.map((request) => (
                       <span
                         key={request.id}
@@ -191,10 +276,30 @@ export function AdminCalendar({ month, onMonthChange, requests: allRequests, sel
                   </div>
                 )}
                 <div className="hidden space-y-1 sm:block">
+                  {blockList.map((block) => (
+                    <button
+                      key={block.id}
+                      type="button"
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onBlock(block.date, block.date)
+                      }}
+                      title={`${blockTargetLabel(block.resource)} 일정 막힘${block.slot ? ` · ${block.slot}` : ' · 종일'}${block.reason ? ` · ${block.reason}` : ''} (눌러서 해제)`}
+                      className="flex w-full items-center gap-1 overflow-hidden border border-warm-600/40 bg-warm-300/30 px-1 py-0.5 text-left text-[11px] leading-tight text-warm-800 transition hover:brightness-95"
+                      style={{ backgroundImage: BLOCK_STRIPES }}
+                    >
+                      <Lock width={10} height={10} className="shrink-0" aria-hidden />
+                      <span className="truncate font-semibold">
+                        {blockTargetLabel(block.resource)} 불가{block.slot ? ` ${block.slot.slice(0, 5)}~` : ''}
+                      </span>
+                    </button>
+                  ))}
                   {list.slice(0, MAX_CHIPS).map((request) => (
                     <button
                       key={request.id}
                       type="button"
+                      onPointerDown={(event) => event.stopPropagation()}
                       onClick={(event) => {
                         event.stopPropagation()
                         onOpen(request.id)

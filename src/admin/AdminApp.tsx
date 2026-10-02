@@ -18,6 +18,7 @@ import {
 import { SERVER_URL } from '@/lib/labApi'
 import { useAdminData } from './useAdminData'
 import { AdminCalendar } from './AdminCalendar'
+import { BlockDialog } from './BlockDialog'
 import { ActionPanel, UpcomingPanel } from './ActionPanel'
 import { RequestTable, type StatusFilter } from './RequestTable'
 import { RequestModal } from './RequestModal'
@@ -107,6 +108,7 @@ export default function AdminApp() {
   const [scope, setScope] = useState<'month' | 'upcoming' | 'all'>('upcoming')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [dialog, setDialog] = useState<'manual' | 'import' | null>(null)
+  const [blockRange, setBlockRange] = useState<{ start: string; end: string } | null>(null)
 
   /** 요약 카드를 누르면 해당 조건으로 아래 목록을 바로 보여준다. */
   const focusList = (nextScope: 'month' | 'upcoming' | 'all', nextStatus: StatusFilter) => {
@@ -392,6 +394,8 @@ export default function AdminApp() {
                 selectedDate={selectedDate}
                 onSelectDate={setSelectedDate}
                 onOpen={setOpenId}
+                blocks={data.blocks}
+                onBlock={(start, end) => setBlockRange({ start, end })}
               />
 
               <section id="request-list" className="scroll-mt-4">
@@ -493,6 +497,22 @@ export default function AdminApp() {
           onSubmit={async (input) => {
             const created = await data.create(input)
             setNotice(`${formatDateShort(created.date)} ${created.company} 방문을 등록했습니다.`)
+          }}
+        />
+      )}
+      {blockRange && (
+        <BlockDialog
+          start={blockRange.start}
+          end={blockRange.end}
+          blocks={data.blocks}
+          onClose={() => setBlockRange(null)}
+          onAdd={async (input) => {
+            await data.addBlocks(input)
+            setNotice(`${input.dates.length}일 일정을 막았습니다.`)
+          }}
+          onRemove={async (ids) => {
+            await data.removeBlocks(ids)
+            setNotice(`막힌 일정 ${ids.length}건을 해제했습니다.`)
           }}
         />
       )}

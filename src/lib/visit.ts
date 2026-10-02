@@ -284,6 +284,32 @@ export interface BusySegment {
   to: string
 }
 
+/** 관리자가 미리 막아 둔 일정 (센터 · Lab 담당자 사정 등). slot 이 비면 종일. */
+export type BlockTarget = Resource | 'all'
+
+export interface TourBlock {
+  id: string
+  date: string
+  /** 'HH:mm-HH:mm', 비우면 종일 */
+  slot: string
+  resource: BlockTarget
+  reason: string
+}
+
+export const BLOCK_TARGETS: { id: BlockTarget; label: string; hint: string }[] = [
+  { id: 'center', label: '센터', hint: '센터 · 종합 투어 불가' },
+  { id: 'lab', label: 'TDL Lab', hint: 'TDL Lab · 종합 투어 불가' },
+  { id: 'all', label: '전체', hint: '모든 투어 불가' },
+]
+
+export const blockTargetLabel = (target: BlockTarget) => BLOCK_TARGETS.find((item) => item.id === target)?.label ?? '전체'
+
+/** 막힌 일정이 점유하는 구간 (종일은 00:00–24:00). 신청 화면의 busy 와 같은 형태. */
+export function blockSegment(block: TourBlock): BusySegment {
+  const [from, to] = block.slot ? block.slot.split('-') : ['00:00', '24:00']
+  return { date: block.date, resource: block.resource, from, to }
+}
+
 export const emptyHost = (): VisitHost => ({ name: '', title: '', division: '', org: '', phone: '', email: '' })
 
 /**
