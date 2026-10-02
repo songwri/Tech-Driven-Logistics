@@ -505,6 +505,7 @@ export default function AdminApp() {
           start={blockRange.start}
           end={blockRange.end}
           blocks={data.blocks}
+          requests={allRequests}
           onClose={() => setBlockRange(null)}
           onAdd={async (input) => {
             await data.addBlocks(input)
