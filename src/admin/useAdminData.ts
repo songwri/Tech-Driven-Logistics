@@ -147,28 +147,14 @@ export function useAdminData() {
   const [error, setError] = useState<string | null>(null)
   const [server, setServer] = useState<ServerVersion | null>(null)
 
-  useEffect(() => {
-    // 배포된 서버 버전을 확인해, 이전 버전이면 관리자 화면에 재배포 안내를 띄운다.
-    if (!isLiveBackend || !key) return
-    let cancelled = false
-    fetchServerVersion(key)
-      .then((info) => {
-        if (!cancelled) setServer(info)
-      })
-      .catch(() => {
-        /* 버전 확인 실패는 무시 (기능 사용 시 다시 확인) */
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [key])
-
   /**
    * 새 관리자 기능을 쓰기 전에 서버가 지원하는지 확인한다 (재배포 직후에도 맞도록 매번 새로 확인).
    * 확인 자체가 실패하면 막지 않는다 — 실제 요청이 원인을 담은 오류를 낸다.
    */
   const requireServer = useCallback(async () => {
     if (!isLiveBackend) return
+    // 이미 최신 서버로 확인된 뒤에는 다시 묻지 않는다. 이전 버전으로 보일 때만 (재배포 직후일 수 있어) 새로 확인한다.
+    if (server && server.apiLevel >= REQUIRED_API_LEVEL) return
     let info: ServerVersion
     try {
       info = await fetchServerVersion(key)
@@ -177,16 +163,33 @@ export function useAdminData() {
     }
     setServer(info)
     if (info.apiLevel < REQUIRED_API_LEVEL) throw new Error(outdatedServerMessage(info))
-  }, [key])
+  }, [key, server])
+
+  /** 목록 응답에 담긴 서버 버전을 반영한다. 버전이 없는 이전 서버는 따로 확인한다. */
+  const applyServerInfo = useCallback((data: { version?: string; apiLevel?: number }, adminKey: string) => {
+    if (typeof data.apiLevel === 'number') {
+      setServer({ version: String(data.version ?? '알 수 없음'), apiLevel: data.apiLevel })
+      return
+    }
+    fetchServerVersion(adminKey)
+      .then(setServer)
+      .catch(() => {
+        /* 버전 확인 실패는 무시 (기능 사용 시 다시 확인) */
+      })
+  }, [])
 
   const load = useCallback(async (adminKey: string) => {
     if (!isLiveBackend) return true
     setLoading(true)
     setError(null)
     try {
-      const data = await adminRequest<{ requests: VisitRequest[]; blocks?: unknown }>(adminKey, 'list')
+      const data = await adminRequest<{ requests: VisitRequest[]; blocks?: unknown; version?: string; apiLevel?: number }>(
+        adminKey,
+        'list',
+      )
       setRequests(normalizeRequests(data.requests))
       setBlocks(normalizeBlocks(data.blocks))
+      applyServerInfo(data, adminKey)
       saveKey(adminKey)
       setKey(adminKey)
       return true
@@ -198,18 +201,19 @@ export function useAdminData() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [applyServerInfo])
 
   useEffect(() => {
     // 저장된 키가 있으면 첫 진입 시 목록을 바로 불러온다.
     const savedKey = readSavedKey()
     if (!isLiveBackend || !savedKey) return
     let cancelled = false
-    adminRequest<{ requests: VisitRequest[]; blocks?: unknown }>(savedKey, 'list')
+    adminRequest<{ requests: VisitRequest[]; blocks?: unknown; version?: string; apiLevel?: number }>(savedKey, 'list')
       .then((data) => {
         if (cancelled) return
         setRequests(normalizeRequests(data.requests))
         setBlocks(normalizeBlocks(data.blocks))
+        applyServerInfo(data, savedKey)
       })
       .catch((loadError: unknown) => {
         if (cancelled) return
@@ -223,7 +227,7 @@ export function useAdminData() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [applyServerInfo])
 
   const replace = useCallback((next: VisitRequest) => {
     setRequests((current) => {
