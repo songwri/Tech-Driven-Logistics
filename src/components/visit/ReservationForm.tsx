@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Check, CircleAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '../ui/Button'
@@ -150,11 +150,22 @@ function ProgressSteps({
 interface ReservationFormProps {
   busy: BusySegment[]
   closedDays: string[]
+  /** 신청 불가 일정을 아직 받는 중 (그동안 날짜 · 시간 선택을 막는다) */
+  scheduleLoading?: boolean
 }
 
 /** 예약 신청 폼. 데스크톱은 우측 고정 요약 패널, 모바일은 하단 고정 바로 신청 버튼을 항상 보여준다. */
-export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
+export function ReservationForm({ busy, closedDays, scheduleLoading }: ReservationFormProps) {
   const [draft, setDraft] = useState<VisitDraft>(initialDraft)
+
+  // 새 일정을 받았는데 이미 고른 날짜 · 시간이 막혔으면 선택을 비운다.
+  useEffect(() => {
+    setDraft((current) => {
+      if (current.date && closedDays.includes(current.date)) return { ...current, date: '', slot: '' }
+      if (current.slot && isSlotBusy(current.tour, current.date, current.slot, busy)) return { ...current, slot: '' }
+      return current
+    })
+  }, [busy, closedDays])
   const [status, setStatus] = useState<'idle' | 'sending' | 'done'>('idle')
   const [error, setError] = useState<string | null>(null)
   // 한 번 신청을 눌러 본 뒤부터 칸마다 오류를 표시한다 (처음부터 빨간 칸이 가득하지 않게).
@@ -335,6 +346,7 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
           slot={draft.slot}
           busy={busy}
           closedDays={closedDays}
+          loading={scheduleLoading}
           onChange={patch}
           errors={errors}
           wide

@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react'
 import { BookOpen, CalendarCheck, MailCheck, Send } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { ReservationForm } from '@/components/visit/ReservationForm'
-import { fetchLab } from '@/lib/labApi'
+import { fetchSchedule, isLiveBackend, readCachedSchedule, type Schedule } from '@/lib/labApi'
 import { GUESTBOOK_URL, RESERVE_URL } from '@/lib/routes'
-import type { BusySegment } from '@/lib/visit'
 
 const STEPS = [
   { icon: Send, title: '예약 신청', text: '투어 · 일정 · 방문자 정보를 입력합니다.' },
@@ -12,26 +11,31 @@ const STEPS = [
   { icon: MailCheck, title: '확정 안내', text: '신청 담당자 이메일로 결과를 보내드립니다.' },
 ]
 
+// 화면을 그리기 전에 바로 일정 요청을 시작한다 (모듈을 불러오는 순간).
+const scheduleRequest: Promise<{ schedule: Schedule } | { error: true }> = fetchSchedule().then(
+  (schedule) => ({ schedule }),
+  () => ({ error: true }),
+)
+
 /**
  * 예약 신청 전용 페이지 (/reserve/).
  * 링크 · QR 로 바로 열어 쓰는 예약 신청 페이지.
  */
 export default function ReservePage() {
-  const [busy, setBusy] = useState<BusySegment[]>([])
-  const [closedDays, setClosedDays] = useState<string[]>([])
+  // 최근에 받아 둔 일정이 있으면 바로 쓰고, 없으면 받을 때까지 달력을 '확인 중'으로 막아
+  // 가능한 것처럼 보였다가 나중에 막히는 일이 없게 한다.
+  const [schedule, setSchedule] = useState<Schedule | null>(() => (isLiveBackend ? readCachedSchedule() : { busy: [], closedDays: [] }))
+  const [loading, setLoading] = useState(() => isLiveBackend && schedule === null)
   const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    fetchLab()
-      .then((snapshot) => {
-        if (cancelled) return
-        setBusy(snapshot.busy)
-        setClosedDays(snapshot.closedDays)
-      })
-      .catch(() => {
-        if (!cancelled) setLoadError('예약 현황을 불러오지 못했습니다. 신청 시 서버에서 일정 중복을 다시 확인합니다.')
-      })
+    void scheduleRequest.then((result) => {
+      if (cancelled) return
+      if ('schedule' in result) setSchedule(result.schedule)
+      else setLoadError('예약 현황을 불러오지 못했습니다. 신청 시 서버에서 일정 중복을 다시 확인합니다.')
+      setLoading(false)
+    })
     return () => {
       cancelled = true
     }
@@ -84,7 +88,7 @@ export default function ReservePage() {
         )}
 
         <div className="border border-warm-300/50 bg-white p-4 md:p-8">
-          <ReservationForm busy={busy} closedDays={closedDays} />
+          <ReservationForm busy={schedule?.busy ?? []} closedDays={schedule?.closedDays ?? []} scheduleLoading={loading} />
         </div>
       </main>
 

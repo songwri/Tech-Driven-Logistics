@@ -64,7 +64,7 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-11.single-purpose';
+var CODE_VERSION = '2026-10-12.schedule-cache';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -144,8 +144,15 @@ function guestbookTour_(value) {
 
 /* ------------------------------------------------------------------ 공통 */
 
+/** 같은 실행 안에서 스프레드시트를 한 번만 연다. */
+var bookCache_ = null;
+function book_() {
+  if (!bookCache_) bookCache_ = SpreadsheetApp.getActiveSpreadsheet();
+  return bookCache_;
+}
+
 function sheet_(name, headers) {
-  var book = SpreadsheetApp.getActiveSpreadsheet();
+  var book = book_();
   var target = book.getSheetByName(name);
   if (!target) {
     target = book.insertSheet(name);
@@ -200,8 +207,61 @@ function withLock_(task) {
     return task();
   } finally {
     lockDepth_--;
+    // 쓰기가 끝나면 공개 일정 캐시를 지워, 다음 조회가 바뀐 일정을 바로 반영하게 한다.
+    clearScheduleCache_();
     lock.releaseLock();
   }
+}
+
+/* ------------------------------------------------- 예약 화면 일정 캐시 */
+
+var SCHEDULE_CACHE_KEY = 'schedule-v1';
+/** 시트를 직접 고친 경우를 대비한 최대 보관 시간(초). warmUp 트리거가 있으면 5분마다 새로 만든다. */
+var SCHEDULE_CACHE_SECONDS = 600;
+
+function clearScheduleCache_() {
+  try {
+    CacheService.getScriptCache().remove(SCHEDULE_CACHE_KEY);
+  } catch (error) {
+    /* 캐시 실패는 무시 (다음 조회가 시트에서 다시 읽는다) */
+  }
+}
+
+/** 예약 화면용 '신청 불가' 일정. 개인정보 없이 날짜 · 공간 · 시간만 담기므로 캐시해도 된다. */
+function cachedSchedule_() {
+  var cache = CacheService.getScriptCache();
+  var hit = cache.get(SCHEDULE_CACHE_KEY);
+  if (hit) {
+    try {
+      return JSON.parse(hit);
+    } catch (error) {
+      /* 손상된 캐시 → 새로 만든다 */
+    }
+  }
+  var fresh = busy_();
+  try {
+    cache.put(SCHEDULE_CACHE_KEY, JSON.stringify(fresh), SCHEDULE_CACHE_SECONDS);
+  } catch (error) {
+    /* 캐시 용량 초과 등은 무시 */
+  }
+  return fresh;
+}
+
+/**
+ * 시간 기반 트리거로 5분마다 실행: 일정 캐시를 미리 만들고 웹앱을 깨워 둔다 (첫 응답 지연 감소).
+ * 설치: 편집기에서 installWarmUp 을 한 번 실행.
+ */
+function warmUp() {
+  clearScheduleCache_();
+  cachedSchedule_();
+}
+
+function installWarmUp() {
+  ScriptApp.getProjectTriggers().forEach(function (trigger) {
+    if (trigger.getHandlerFunction() === 'warmUp') ScriptApp.deleteTrigger(trigger);
+  });
+  ScriptApp.newTrigger('warmUp').timeBased().everyMinutes(5).create();
+  warmUp();
 }
 
 /**
@@ -563,7 +623,12 @@ function normalizeSlot_(value) {
 }
 
 function readVisits_() {
-  var values = visitSheet_().getDataRange().getValues();
+  // 빠른 경로: 시트를 한 번만 읽고, 제목 행이 정상이 아닐 때만 복구 경로(visitSheet_)를 탄다.
+  var target = book_().getSheetByName(VISIT_SHEET);
+  var values = target ? target.getDataRange().getValues() : null;
+  if (!values || String(values[0][0]).trim() !== VISIT_HEADERS[0]) {
+    values = visitSheet_().getDataRange().getValues();
+  }
   var col = columns_(values);
   var list = [];
   for (var row = 1; row < values.length; row++) {
@@ -646,7 +711,9 @@ function fillVisitRow_(values, col, request, extra) {
 
 /** blocked 시트의 막힌 일정. 대상 열이 비어 있는 이전 행은 전체(all)로 본다. */
 function readBlocks_() {
-  var values = sheet_(BLOCKED_SHEET, BLOCKED_HEADERS).getDataRange().getValues();
+  var target = book_().getSheetByName(BLOCKED_SHEET);
+  if (!target) return [];
+  var values = target.getDataRange().getValues();
   var list = [];
   for (var row = 1; row < values.length; row++) {
     var date = normalizeDateKey_(values[row][0]);
@@ -1469,6 +1536,12 @@ function doGet(e) {
 
     if (action === 'version') return jsonOutput_({ version: CODE_VERSION, apiLevel: API_LEVEL });
 
+    // 예약 화면: 방명록 없이 일정만 (캐시)
+    if (action === 'schedule') {
+      var schedule = cachedSchedule_();
+      return jsonOutput_({ busy: schedule.busy, closedDays: schedule.closedDays });
+    }
+
     if (action === 'confirm' || action === 'cancel') {
       // 예전 메일의 승인/거절 링크. 링크만으로 상태를 바꾸지 않고(자동 승인 방지) 관리자 페이지로 안내한다.
       var token = String(e.parameter.token || '').trim();
@@ -1483,7 +1556,7 @@ function doGet(e) {
         + button_(target, found ? '이 예약 열기' : '관리자 페이지 열기', true));
     }
 
-    var blocked = busy_();
+    var blocked = cachedSchedule_();
     return jsonOutput_({
       entries: readGuestbook_(),
       busy: blocked.busy,
