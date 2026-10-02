@@ -131,10 +131,10 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
     ...datum,
     requests: scoped.filter((request) => request.purposes.some((item) => baseOption(item) === datum.label)),
   }))
-  const segments = SEGMENTS.map((segment) => ({
-    ...segment,
-    value: scoped.filter((request) => clientSegment(request) === segment.label).length,
-  }))
+  const segments = SEGMENTS.map((segment) => {
+    const list = scoped.filter((request) => clientSegment(request) === segment.label)
+    return { ...segment, value: list.length, requests: list }
+  })
   const withList = (label: string, list: VisitRequest[], extra: Partial<Datum> = {}): Datum => ({
     label,
     value: list.length,
@@ -340,7 +340,7 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
       <div className="grid gap-5 lg:grid-cols-3">
         <Card title="방문 유형" subtitle={periodLabel}>
           <div className="flex min-h-[188px] items-center justify-center">
-            <DonutChart data={segments} />
+            <DonutChart data={segments} onSelect={select('방문 유형')} />
           </div>
         </Card>
         <Card title="방문 목적" subtitle="복수 선택 포함">
