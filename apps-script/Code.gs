@@ -64,7 +64,7 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-15.prep-time';
+var CODE_VERSION = '2026-10-16.single-industry';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -855,12 +855,13 @@ function sanitizeVisit_(payload, requireConsent) {
   if (language === 'foreign' && (!foreignLanguage || foreignLanguage === '기타')) {
     throw new Error('투어 진행 언어를 선택해 주세요.');
   }
+  // 업종도 하나만 받는다 (통계 중복 집계 방지).
   var industries = (payload.industries || []).map(function (item) { return optionalText_(item, 50).replace(/,/g, ' '); })
-    .filter(function (item) { return item; });
+    .filter(function (item) { return item; }).slice(0, 1);
   // 방문 목적은 하나만 받는다 (통계 중복 집계 방지). 이전 화면이 여러 개를 보내도 첫 번째만 저장한다.
   var purposes = (payload.purposes || []).map(function (item) { return optionalText_(item, 50).replace(/,/g, ' '); })
     .filter(function (item) { return item; }).slice(0, 1);
-  if (category === 'external' && industries.length === 0) throw new Error('업종을 하나 이상 선택해 주세요.');
+  if (category === 'external' && industries.length === 0) throw new Error('업종을 선택해 주세요.');
   if (purposes.length === 0) throw new Error('방문 목적을 하나 이상 선택해 주세요.');
 
   var host = payload.host || {};

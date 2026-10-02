@@ -115,10 +115,6 @@ export function Chip({
   )
 }
 
-function toggle(list: string[], value: string) {
-  return list.includes(value) ? list.filter((item) => item !== value) : [...list, value]
-}
-
 /** '기타' 체크 + 직접 입력. 값은 '기타' 또는 '기타: 입력값' 으로 저장됩니다. */
 function OtherOption({
   values,
@@ -412,7 +408,6 @@ function LanguageFields({ draft, onChange }: { draft: VisitDraft; onChange: Patc
 
 /* ------------------------------------------------ 방문 구분 · 고객사 */
 
-const MAX_INDUSTRIES = 3
 
 /** 방문 유형 · 고객 유형 · 업체명 · 업종 */
 export function CompanyFields({
@@ -428,7 +423,6 @@ export function CompanyFields({
   hideInternalCompany?: boolean
 }) {
   const external = draft.category === 'external'
-  const industryFull = draft.industries.length >= MAX_INDUSTRIES
   return (
     <div className="space-y-6">
       <div>
@@ -511,21 +505,18 @@ export function CompanyFields({
         <div>
           <div className="flex items-baseline justify-between gap-2">
             <FieldLabel required>업종</FieldLabel>
-            <span className="text-[12px] text-warm-600">
-              주 업종부터 최대 {MAX_INDUSTRIES}개 · <b className="font-semibold text-warm-800">{draft.industries.length}</b>개
-              선택
-            </span>
+            <span className="text-[12px] text-warm-600">주 업종 한 가지만 선택</span>
           </div>
-          <div className="mt-2 space-y-2.5">
+          <div className="mt-2 space-y-2.5" role="radiogroup" aria-label="업종">
             {INDUSTRY_GROUPS.map((group) => (
               <div key={group.label} className="flex flex-wrap items-center gap-2">
                 <span className="w-full shrink-0 text-[12px] text-warm-600 sm:w-24">{group.label}</span>
                 {group.items.map((item) => (
                   <Chip
                     key={item}
+                    multi={false}
                     selected={draft.industries.includes(item)}
-                    disabled={industryFull && !draft.industries.includes(item)}
-                    onClick={() => onChange({ industries: toggle(draft.industries, item) })}
+                    onClick={() => onChange({ industries: draft.industries.includes(item) ? [] : [item] })}
                   >
                     {item}
                   </Chip>
@@ -536,14 +527,19 @@ export function CompanyFields({
               <span className="w-full shrink-0 text-[12px] text-warm-600 sm:w-24">그 외</span>
               <OtherOption
                 values={draft.industries}
-                onChange={(industries) => onChange({ industries })}
+                // 업종은 하나만: 기타를 고르면 다른 선택은 해제된다.
+                onChange={(industries) =>
+                  onChange({
+                    industries: industries.some((v) => v.startsWith(OTHER)) ? industries.filter((v) => v.startsWith(OTHER)) : industries,
+                  })
+                }
                 placeholder="업종 직접 입력"
-                disabled={industryFull}
+                single
               />
             </div>
           </div>
           <GroupError show={Boolean(errors?.has('industries'))}>
-            {draft.industries.includes(OTHER) ? '기타 업종을 입력해 주세요.' : '업종을 하나 이상 선택해 주세요.'}
+            {draft.industries.includes(OTHER) ? '기타 업종을 입력해 주세요.' : '업종을 선택해 주세요.'}
           </GroupError>
         </div>
       )}

@@ -142,7 +142,7 @@ export function ManualVisitModal({
       interpreter,
       interpreterLanguage: interpreter ? interpreterLanguage.trim() : '',
       company: company.trim(),
-      industries: category === 'external' ? splitComma(industries) : [],
+      industries: category === 'external' ? splitComma(industries).slice(0, 1) : [],
       purposes: splitComma(purposes).slice(0, 1),
       host: {
         name: hostName.trim(),
@@ -296,7 +296,7 @@ export function ManualVisitModal({
               <Input value={purposes} onChange={(e) => setPurposes(e.target.value)} />
             </Field>
             {category === 'external' && (
-              <Field label="업종" hint="쉼표로 구분">
+              <Field label="업종" hint="한 가지만 입력. 여러 개를 쓰면 첫 번째만 저장됩니다">
                 <Input value={industries} onChange={(e) => setIndustries(e.target.value)} />
               </Field>
             )}
