@@ -64,7 +64,7 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-12.schedule-cache';
+var CODE_VERSION = '2026-10-13.pending-blocks';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -238,7 +238,7 @@ function cachedSchedule_() {
       /* 손상된 캐시 → 새로 만든다 */
     }
   }
-  var fresh = busy_();
+  var fresh = busy_(null, true);
   try {
     cache.put(SCHEDULE_CACHE_KEY, JSON.stringify(fresh), SCHEDULE_CACHE_SECONDS);
   } catch (error) {
@@ -788,12 +788,17 @@ function removeBlocks_(payload) {
 }
 
 /** 승인된 예약과 blocked 시트에서 '신청 불가' 구간을 만든다. */
-function busy_(excludeId) {
+/**
+ * includePending: 예약 화면 · 새 신청 검사용. 승인 대기 중인 신청도 시간대를 점유해 다른 사람이 같은 시간에
+ * 중복 신청하지 못하게 한다. 관리자 승인 · 수정 검사는 확정(승인 · 완료) 건끼리만 비교한다.
+ */
+function busy_(excludeId, includePending) {
   // 지난 날짜는 신청·승인 판단에 쓰이지 않으므로 빼서 응답을 가볍게 유지한다.
   var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
   var busy = [];
   readVisits_().forEach(function (request) {
-    if (!isConfirmed_(request.status) || request.id === excludeId || request.date < today) return;
+    var occupies = isConfirmed_(request.status) || (includePending && request.status === 'pending');
+    if (!occupies || request.id === excludeId || request.date < today) return;
     busy = busy.concat(segmentsOf_(request.tour, request.date, request.slot));
   });
 
@@ -898,12 +903,6 @@ function addReservation_(payload) {
     throw new Error('당일 · 익일 방문은 신청할 수 없습니다. ' + formatDateKo_(earliestKey) + ' 이후 날짜를 선택해 주세요.');
   }
 
-  // 승인된 일정과 겹치지 않는지 서버에서 한 번 더 확인한다.
-  var blocked = busy_();
-  if (blocked.closedDays.indexOf(request.date) !== -1 || isBusy_(request.tour, request.date, request.slot, blocked.busy)) {
-    throw new Error('이미 확정된 일정과 겹쳐 신청할 수 없습니다. 다른 날짜나 시간을 선택해 주세요.');
-  }
-
   request.id = Utilities.getUuid();
   request.status = 'pending';
   request.adminMemo = '';
@@ -912,6 +911,13 @@ function addReservation_(payload) {
 
   var target = visitSheet_();
   withLock_(function () {
+    // 승인 · 대기 중인 일정과 겹치지 않는지 잠금 안에서 확인한다.
+    // (잠금 밖에서 확인하면 같은 시간에 동시에 들어온 두 신청이 모두 통과할 수 있다)
+    var blocked = busy_(null, true);
+    if (blocked.closedDays.indexOf(request.date) !== -1 || isBusy_(request.tour, request.date, request.slot, blocked.busy)) {
+      throw new Error('이미 신청되었거나 확정된 일정과 겹쳐 신청할 수 없습니다. 다른 날짜나 시간을 선택해 주세요.');
+    }
+
     // 내용 없는 행은 appendRow 로 추가되지 않으므로, 쓸 행 번호를 직접 계산한다.
     // 잠금 안에서 계산해야 동시에 들어온 예약끼리 같은 행을 덮어쓰지 않는다.
     var rowNumber = target.getLastRow() + 1;

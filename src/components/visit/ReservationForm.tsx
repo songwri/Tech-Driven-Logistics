@@ -224,7 +224,7 @@ export function ReservationForm({ busy, closedDays, scheduleLoading }: Reservati
     }
     // A slot that gets confirmed while the form is open would otherwise slip through.
     if (isSlotBusy(effective.tour, effective.date, effective.slot, busy)) {
-      setError('이미 확정된 일정과 겹치는 시간대입니다. 다른 날짜나 시간을 선택해 주세요.')
+      setError('이미 신청되었거나 확정된 일정과 겹치는 시간대입니다. 다른 날짜나 시간을 선택해 주세요.')
       scrollToSection('schedule')
       return
     }
