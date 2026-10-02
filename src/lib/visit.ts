@@ -74,6 +74,36 @@ export const TOURS: TourDefinition[] = [
   },
 ]
 
+/**
+ * 관리자 보기 범위. 센터 담당자와 TDL Lab 담당자가 각자 관련된 실적만 볼 수 있게 한다.
+ * - center: 센터 관리자용 = 종합 + 센터 투어
+ * - lab: Lab 관리자용 = 종합 + Lab 투어 (+ 투어 종류가 없는 수기 · 기존 이력은 일단 여기에 포함)
+ */
+export type AdminScope = 'all' | 'center' | 'lab'
+
+export const ADMIN_SCOPES: { id: AdminScope; label: string; hint: string }[] = [
+  { id: 'all', label: '전체', hint: '모든 투어' },
+  { id: 'center', label: '센터 관리자용', hint: '종합 + 센터 투어' },
+  { id: 'lab', label: 'Lab 관리자용', hint: '종합 + Lab 투어 · 기타 방문' },
+]
+
+const SCOPE_TOURS: Record<AdminScope, TourType[] | null> = {
+  all: null,
+  center: ['combined', 'center'],
+  lab: ['combined', 'lab', 'other'],
+}
+
+export const inAdminScope = (tour: TourType, scope: AdminScope) => {
+  const tours = SCOPE_TOURS[scope]
+  return !tours || tours.includes(tour)
+}
+
+/** 방명록에서 방문자가 고르는 투어 (기타 방문 제외) */
+export type GuestbookTour = 'combined' | 'lab' | 'center'
+export const GUESTBOOK_TOURS: GuestbookTour[] = ['combined', 'lab', 'center']
+export const isGuestbookTour = (value: unknown): value is GuestbookTour =>
+  value === 'combined' || value === 'lab' || value === 'center'
+
 /** 예약 페이지에서 고를 수 있는 투어 (기타 방문 제외) */
 export const BOOKABLE_TOURS = TOURS.filter((tour) => tour.id !== 'other')
 

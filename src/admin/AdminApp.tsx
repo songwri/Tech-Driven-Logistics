@@ -4,7 +4,17 @@ import { cn } from '@/lib/utils'
 import { Logo } from '@/components/ui/Logo'
 import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Field'
-import { formatDateShort, headcountOf, isConfirmed, isCounted, toDateKey, type VisitStatus } from '@/lib/visit'
+import {
+  ADMIN_SCOPES,
+  formatDateShort,
+  headcountOf,
+  inAdminScope,
+  isConfirmed,
+  isCounted,
+  toDateKey,
+  type AdminScope,
+  type VisitStatus,
+} from '@/lib/visit'
 import { SERVER_URL } from '@/lib/labApi'
 import { useAdminData } from './useAdminData'
 import { AdminCalendar } from './AdminCalendar'
@@ -106,7 +116,13 @@ export default function AdminApp() {
     document.getElementById('request-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  const { requests } = data
+  // 센터 · Lab 담당 관리자가 각자 관련 투어만 볼 수 있게 한다. 기본은 전체.
+  const [adminScope, setAdminScope] = useState<AdminScope>('all')
+  const allRequests = data.requests
+  const requests = useMemo(
+    () => (adminScope === 'all' ? allRequests : allRequests.filter((request) => inAdminScope(request.tour, adminScope))),
+    [allRequests, adminScope],
+  )
   const today = toDateKey(new Date())
   const monthPrefix = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}-`
 
@@ -179,7 +195,7 @@ export default function AdminApp() {
     }
   }
 
-  const openRequest = requests.find((request) => request.id === openId)
+  const openRequest = allRequests.find((request) => request.id === openId)
   const reviewMissing =
     Boolean(reviewId) && openId === reviewId && data.authenticated && !data.loading && !openRequest
   const closeModal = () => {
@@ -298,6 +314,37 @@ export default function AdminApp() {
             </p>
           )}
 
+          {tab !== 'guestbook' && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2" role="radiogroup" aria-label="보기 범위">
+              <span className="text-[13px] font-semibold text-warm-600">보기 범위</span>
+              <div className="inline-flex border border-warm-300/60 bg-white">
+                {ADMIN_SCOPES.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={adminScope === item.id}
+                    onClick={() => {
+                      setAdminScope(item.id)
+                      setSelectedDate(null)
+                    }}
+                    title={item.hint}
+                    className={cn(
+                      'px-3 py-1.5 text-[13px] font-semibold transition',
+                      adminScope === item.id ? 'bg-warm-800 text-white' : 'text-warm-600 hover:text-warm-800',
+                    )}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <span className="text-[12px] text-warm-600">
+                {ADMIN_SCOPES.find((item) => item.id === adminScope)?.hint}
+                {adminScope !== 'all' && ` · ${requests.length}건 (요약 · 달력 · 목록 · 통계에 모두 적용)`}
+              </span>
+            </div>
+          )}
+
           {tab === 'dashboard' ? (
             <>
               <div className="grid grid-cols-2 border border-warm-300/50 bg-white lg:grid-cols-4">
@@ -368,8 +415,8 @@ export default function AdminApp() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => downloadVisitRequests(requests)}
-                        disabled={requests.length === 0}
+                        onClick={() => downloadVisitRequests(allRequests)}
+                        disabled={allRequests.length === 0}
                         title="전체 기록을 구글 시트 visit_requests 탭과 같은 양식의 엑셀로 내려받습니다"
                         className="inline-flex items-center gap-1 border border-warm-300/60 bg-white px-2.5 py-1.5 text-[12px] font-semibold text-warm-600 transition hover:border-warm-800 hover:text-warm-800 disabled:opacity-50"
                       >
@@ -450,14 +497,14 @@ export default function AdminApp() {
         />
       )}
       {dialog === 'import' && (
-        <ImportModal requests={requests} onClose={() => setDialog(null)} onImport={data.importMany} />
+        <ImportModal requests={allRequests} onClose={() => setDialog(null)} onImport={data.importMany} />
       )}
 
       {openRequest && (
         <RequestModal
           key={openRequest.id}
           request={openRequest}
-          requests={requests}
+          requests={allRequests}
           onClose={closeModal}
           onSetStatus={data.setStatus}
           onUpdate={data.update}
