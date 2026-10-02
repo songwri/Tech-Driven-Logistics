@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
+import type { VisitRequest } from '@/lib/visit'
 import { rampColor } from './ramp'
 
 export interface Datum {
@@ -8,6 +9,8 @@ export interface Datum {
   color?: string
   /** 월별 보기에서 선택된 달처럼 강조할 막대 */
   dim?: boolean
+  /** 이 막대에 포함된 방문 건 (있으면 막대를 눌러 목록을 볼 수 있다) */
+  requests?: VisitRequest[]
 }
 
 function niceMax(value: number) {
@@ -30,6 +33,7 @@ export function ColumnChart({
   unit = '건',
   color,
   total,
+  onSelect,
 }: {
   data: Datum[]
   height?: number
@@ -37,6 +41,8 @@ export function ColumnChart({
   color?: string
   /** 비율 계산 기준 (없으면 합계) */
   total?: number
+  /** 막대를 눌렀을 때 (requests 가 있는 막대만 눌린다) */
+  onSelect?: (datum: Datum) => void
 }) {
   const [hover, setHover] = useState<number | null>(null)
   const peak = Math.max(0, ...data.map((datum) => datum.value))
@@ -74,10 +80,28 @@ export function ColumnChart({
             {data.map((datum, index) => {
               const pct = sum > 0 ? Math.round((datum.value / sum) * 100) : 0
               const barHeight = (datum.value / max) * 100
+              const clickable = Boolean(onSelect && datum.requests && datum.value > 0)
               return (
                 <div
                   key={datum.label}
-                  className="relative flex h-full min-w-0 flex-1 flex-col items-center justify-end"
+                  className={cn(
+                    'relative flex h-full min-w-0 flex-1 flex-col items-center justify-end',
+                    clickable && 'cursor-pointer',
+                  )}
+                  role={clickable ? 'button' : undefined}
+                  tabIndex={clickable ? 0 : undefined}
+                  aria-label={clickable ? `${datum.label} ${datum.value}${unit} 방문 목록 보기` : undefined}
+                  onClick={clickable ? () => onSelect?.(datum) : undefined}
+                  onKeyDown={
+                    clickable
+                      ? (event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            onSelect?.(datum)
+                          }
+                        }
+                      : undefined
+                  }
                   onMouseEnter={() => setHover(index)}
                   onMouseLeave={() => setHover(null)}
                 >
@@ -88,6 +112,7 @@ export function ColumnChart({
                         {datum.value}
                         {unit} · {pct}%
                       </span>
+                      {clickable && <span className="ml-1.5 text-brand">눌러서 목록 보기</span>}
                     </div>
                   )}
                   <span
@@ -133,7 +158,16 @@ export function ColumnChart({
 }
 
 /** 도넛 차트 + 범례(색 · 라벨 · 건수 · 비율). */
-export function DonutChart({ data, unit = '건' }: { data: Required<Pick<Datum, 'label' | 'value' | 'color'>>[]; unit?: string }) {
+export function DonutChart({
+  data,
+  unit = '건',
+  onSelect,
+}: {
+  data: (Required<Pick<Datum, 'label' | 'value' | 'color'>> & Pick<Datum, 'requests'>)[]
+  unit?: string
+  /** 조각이나 범례를 눌렀을 때 (requests 가 있는 항목만 눌린다) */
+  onSelect?: (datum: Datum) => void
+}) {
   const [hover, setHover] = useState<number | null>(null)
   const total = data.reduce((acc, datum) => acc + datum.value, 0)
   const radius = 60
@@ -150,6 +184,7 @@ export function DonutChart({ data, unit = '건' }: { data: Required<Pick<Datum, 
   }))
 
   const focus = hover !== null ? data[hover] : null
+  const clickable = (datum: Datum) => Boolean(onSelect && datum.requests && datum.value > 0)
 
   return (
     <div className="flex flex-wrap items-center justify-center gap-6">
@@ -170,7 +205,8 @@ export function DonutChart({ data, unit = '건' }: { data: Required<Pick<Datum, 
               transform="rotate(-90 80 80)"
               onMouseEnter={() => setHover(arc.index)}
               onMouseLeave={() => setHover(null)}
-              className="cursor-default transition-[stroke-width]"
+              className={cn('transition-[stroke-width]', onSelect && arc.requests ? 'cursor-pointer' : 'cursor-default')}
+              onClick={() => onSelect && arc.requests && onSelect(arc)}
             />
           ) : null,
         )}
@@ -189,7 +225,25 @@ export function DonutChart({ data, unit = '건' }: { data: Required<Pick<Datum, 
               key={datum.label}
               onMouseEnter={() => setHover(index)}
               onMouseLeave={() => setHover(null)}
-              className={cn('flex items-center gap-2 text-sm', hover !== null && hover !== index && 'opacity-50')}
+              onClick={clickable(datum) ? () => onSelect?.(datum) : undefined}
+              onKeyDown={
+                clickable(datum)
+                  ? (event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        onSelect?.(datum)
+                      }
+                    }
+                  : undefined
+              }
+              role={clickable(datum) ? 'button' : undefined}
+              tabIndex={clickable(datum) ? 0 : undefined}
+              aria-label={clickable(datum) ? `${datum.label} ${datum.value}${unit} 방문 목록 보기` : undefined}
+              className={cn(
+                'flex items-center gap-2 text-sm',
+                hover !== null && hover !== index && 'opacity-50',
+                clickable(datum) && 'cursor-pointer',
+              )}
             >
               <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: datum.color }} aria-hidden />
               <span className="flex-1 text-warm-800">{datum.label}</span>
