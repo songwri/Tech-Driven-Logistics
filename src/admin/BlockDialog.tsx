@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Lock, X } from 'lucide-react'
+import { AlertTriangle, Lock, X } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Field'
@@ -7,12 +7,18 @@ import { cn } from '@/lib/utils'
 import {
   BLOCK_TARGETS,
   OPEN_WEEKDAYS,
+  STATUS_LABEL,
+  TOUR_BY_ID,
+  blockSegment,
   blockTargetLabel,
   formatDateShort,
+  formatSlot,
+  isSlotBusy,
   parseDateKey,
   toDateKey,
   type BlockTarget,
   type TourBlock,
+  type VisitRequest,
 } from '@/lib/visit'
 import type { BlockInput } from './useAdminData'
 
@@ -21,6 +27,8 @@ interface BlockDialogProps {
   start: string
   end: string
   blocks: TourBlock[]
+  /** 이미 들어온 예약: 막으려는 일정과 겹치는 승인 · 대기 건을 경고한다. */
+  requests: VisitRequest[]
   onAdd: (input: BlockInput) => Promise<void>
   onRemove: (ids: string[]) => Promise<void>
   onClose: () => void
@@ -43,7 +51,7 @@ export function bookableDatesBetween(start: string, end: string) {
   return dates
 }
 
-export function BlockDialog({ start: initialStart, end: initialEnd, blocks, onAdd, onRemove, onClose }: BlockDialogProps) {
+export function BlockDialog({ start: initialStart, end: initialEnd, blocks, requests, onAdd, onRemove, onClose }: BlockDialogProps) {
   const [start, setStart] = useState(initialStart)
   const [end, setEnd] = useState(initialEnd)
   const [target, setTarget] = useState<BlockTarget>('center')
@@ -62,6 +70,24 @@ export function BlockDialog({ start: initialStart, end: initialEnd, blocks, onAd
         .sort((a, b) => a.date.localeCompare(b.date) || a.slot.localeCompare(b.slot)),
     [blocks, start, end],
   )
+  const affected = useMemo(() => {
+    if (allDay === false && (!from || !to || from >= to)) return []
+    const wanted = new Set(dates)
+    const slot = allDay ? '' : `${from}-${to}`
+    return requests
+      .filter(
+        (request) =>
+          wanted.has(request.date) &&
+          (request.status === 'pending' || request.status === 'approved') &&
+          isSlotBusy(
+            request.tour,
+            request.date,
+            request.slot,
+            [blockSegment({ id: '', date: request.date, slot, resource: target, reason: '' })],
+          ),
+      )
+      .sort((a, b) => a.date.localeCompare(b.date) || a.slot.localeCompare(b.slot))
+  }, [requests, dates, target, allDay, from, to])
   const timeInvalid = !allDay && (!from || !to || from >= to)
   const canSubmit = dates.length > 0 && !timeInvalid && !pending
 
@@ -190,6 +216,28 @@ export function BlockDialog({ start: initialStart, end: initialEnd, blocks, onAd
           )}
         </p>
 
+        {affected.length > 0 && (
+          <div role="alert" className="border border-[#f59f00] bg-[#fff4e6] px-3 py-2.5 text-[13px] text-[#8a3b00]">
+            <p className="flex items-center gap-1.5 font-bold">
+              <AlertTriangle width={14} height={14} aria-hidden /> 이미 들어온 예약 {affected.length}건과 겹칩니다
+            </p>
+            <p className="mt-0.5 text-[12px]">
+              막아도 이 예약들은 자동으로 바뀌지 않습니다. 필요하면 예약자와 조율하고 거절 · 일정 변경을 직접 처리해 주세요.
+            </p>
+            <ul className="mt-1.5 max-h-32 space-y-0.5 overflow-y-auto text-[12px]">
+              {affected.map((request) => (
+                <li key={request.id} className="flex flex-wrap items-center gap-x-2">
+                  <span className="font-mono">{formatDateShort(request.date)}</span>
+                  <span className="font-mono">{formatSlot(request.slot)}</span>
+                  <span>{TOUR_BY_ID[request.tour].short}</span>
+                  <span className="font-semibold">{request.company}</span>
+                  <span className="rounded-sm bg-white/70 px-1 text-[11px] font-bold">{STATUS_LABEL[request.status]}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {existing.length > 0 && (
           <div>
             <p className="mb-1.5 text-[13px] font-semibold text-warm-800">이 기간에 이미 막힌 일정 ({existing.length}건)</p>
@@ -237,7 +285,7 @@ export function BlockDialog({ start: initialStart, end: initialEnd, blocks, onAd
             닫기
           </Button>
           <Button type="submit" size="sm" disabled={!canSubmit}>
-            {pending ? '저장 중…' : `${dates.length}일 막기`}
+            {pending ? '저장 중…' : `${affected.length > 0 ? '확인하고 ' : ''}${dates.length}일 막기`}
           </Button>
         </div>
       </form>
