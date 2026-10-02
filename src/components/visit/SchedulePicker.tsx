@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { CalendarDays, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { isHoliday } from '@/lib/holidays'
 import { Calendar } from '../ui/Calendar'
 import { FieldLabel, GroupError } from './VisitFields'
 import {
@@ -131,7 +132,7 @@ export function SchedulePicker({
               }}
               startMonth={earliest}
               defaultMonth={selectedDate ?? earliest}
-              disabled={[{ before: earliest }, { dayOfWeek: CLOSED_WEEKDAYS }, ...closed, ...fullyBookedDays]}
+              disabled={[{ before: earliest }, { dayOfWeek: CLOSED_WEEKDAYS }, isHoliday, ...closed, ...fullyBookedDays]}
             />
             <p className="mt-2 flex items-center gap-2 border-t border-warm-300/40 pt-2 text-[12px] text-warm-600">
               <CalendarDays width={14} height={14} />

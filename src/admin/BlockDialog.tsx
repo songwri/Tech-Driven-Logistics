@@ -4,6 +4,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Field'
 import { cn } from '@/lib/utils'
+import { isHoliday } from '@/lib/holidays'
 import {
   BLOCK_TARGETS,
   OPEN_WEEKDAYS,
@@ -45,7 +46,7 @@ export function bookableDatesBetween(start: string, end: string) {
   const last = parseDateKey(end)
   while (cursor <= last && dates.length < 366) {
     const key = toDateKey(cursor)
-    if (key >= today && OPEN_WEEKDAYS.includes(cursor.getDay())) dates.push(key)
+    if (key >= today && OPEN_WEEKDAYS.includes(cursor.getDay()) && !isHoliday(cursor)) dates.push(key)
     cursor.setDate(cursor.getDate() + 1)
   }
   return dates
@@ -205,7 +206,7 @@ export function BlockDialog({ start: initialStart, end: initialEnd, blocks, requ
         <p className="border border-warm-300/50 bg-cream/50 px-3 py-2 text-[13px] text-warm-800">
           {dates.length > 0 ? (
             <>
-              운영일(월 · 수 · 금) <b className="text-brand">{dates.length}일</b>이 막힙니다.
+              운영일(공휴일 제외 월 · 수 · 금) <b className="text-brand">{dates.length}일</b>이 막힙니다.
               <span className="ml-1 text-warm-600">
                 {formatDateShort(dates[0])}
                 {dates.length > 1 ? ` ~ ${formatDateShort(dates[dates.length - 1])}` : ''}

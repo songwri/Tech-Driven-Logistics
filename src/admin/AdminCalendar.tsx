@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Globe, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { holidayName } from '@/lib/holidays'
 import { blockTargetLabel, languageSummary, hasLanguageNote, OPEN_WEEKDAYS, TOURS, TOUR_BY_ID, formatSlot, isCounted, toDateKey, type TourBlock, type TourType, type VisitRequest } from '@/lib/visit'
 import { STATUS_TONE } from './statusTone'
 import { StatusBadge } from './status'
@@ -198,7 +199,8 @@ export function AdminCalendar({
             }
             const key = toDateKey(new Date(year, monthIndex, day))
             const weekday = index % 7
-            const open = OPEN_WEEKDAYS.includes(weekday)
+            const holiday = holidayName(key)
+            const open = OPEN_WEEKDAYS.includes(weekday) && !holiday
             const list = byDate.get(key) ?? []
             const blockList = blocksByDate.get(key) ?? []
             const inDrag = dragRange !== null && key >= dragRange[0] && key <= dragRange[1]
@@ -237,11 +239,16 @@ export function AdminCalendar({
                     className={cn(
                       'flex h-6 min-w-6 items-center justify-center px-1 text-[12px] font-semibold',
                       key === today ? 'rounded-full bg-brand text-white' : open ? 'text-warm-800' : 'text-warm-300',
-                      weekday === 0 && key !== today && 'text-brand/70',
+                      (weekday === 0 || holiday) && key !== today && 'text-brand/70',
                     )}
                   >
                     {day}
                   </span>
+                  {holiday && (
+                    <span className="ml-1 hidden min-w-0 flex-1 truncate text-[10px] font-medium text-brand/70 sm:inline" title={holiday}>
+                      {holiday}
+                    </span>
+                  )}
                   {pending > 0 && (
                     <span className="hidden rounded-full sm:inline bg-[#fff4e6] px-1.5 font-mono text-[10px] font-bold text-[#c2410c]">
                       대기 {pending}
