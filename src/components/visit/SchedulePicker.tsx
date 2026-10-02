@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { CalendarDays, Clock } from 'lucide-react'
+import { CalendarDays, Clock, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { isHoliday } from '@/lib/holidays'
 import { Calendar } from '../ui/Calendar'
@@ -32,6 +32,8 @@ interface SchedulePickerProps {
   errors?: Set<string>
   /** 넓은 화면에서 투어 종류(왼쪽)와 달력 · 시간(오른쪽)을 나란히 놓는다. */
   wide?: boolean
+  /** 신청 불가 일정을 받는 중: 달력 · 시간을 가리고 고를 수 없게 한다. */
+  loading?: boolean
 }
 
 /** 좌측 패널: 투어 종류 → 달력 날짜 → 시간대 순으로 고릅니다. */
@@ -45,6 +47,7 @@ export function SchedulePicker({
   leadDays = MIN_LEAD_DAYS,
   errors,
   wide,
+  loading,
 }: SchedulePickerProps) {
   const earliest = useMemo(() => earliestBookableDate(leadDays), [leadDays])
   const definition = TOUR_BY_ID[tour]
@@ -118,7 +121,14 @@ export function SchedulePicker({
         )}
       </div>
 
-      <div className="space-y-4">
+      <div className="relative space-y-4" aria-busy={loading || undefined}>
+        {loading && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-white/85 text-center backdrop-blur-[1px]">
+            <Loader2 width={22} height={22} className="animate-spin text-brand" aria-hidden />
+            <p className="text-[13px] font-semibold text-warm-800">예약 가능한 일정을 확인하고 있습니다…</p>
+            <p className="text-[12px] text-warm-600">확정된 일정과 겹치지 않는 날짜 · 시간만 보여드립니다.</p>
+          </div>
+        )}
         <div>
           <FieldLabel required>방문 날짜</FieldLabel>
           <div className={cn('mt-2 border p-3', errors?.has('date') ? 'border-brand/70' : 'border-warm-300/70')}>

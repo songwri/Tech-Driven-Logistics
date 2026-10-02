@@ -129,6 +129,47 @@ export async function fetchLab(): Promise<LabSnapshot> {
   }
 }
 
+export interface Schedule {
+  busy: BusySegment[]
+  closedDays: string[]
+}
+
+const SCHEDULE_CACHE_KEY = 'tdl-schedule-v1'
+/** 이 시간 안에 받아 둔 일정은 예약 화면을 열자마자 바로 보여준다 (그동안 새 일정을 받아 교체). */
+const SCHEDULE_CACHE_MS = 10 * 60 * 1000
+
+/** 마지막으로 받은 '신청 불가' 일정 (개인정보 없음: 날짜 · 공간 · 시간만). 오래됐으면 null. */
+export function readCachedSchedule(): Schedule | null {
+  try {
+    const raw = localStorage.getItem(SCHEDULE_CACHE_KEY)
+    if (!raw) return null
+    const saved = JSON.parse(raw) as Schedule & { savedAt: number }
+    if (!(Date.now() - saved.savedAt < SCHEDULE_CACHE_MS)) return null
+    return { busy: saved.busy ?? [], closedDays: saved.closedDays ?? [] }
+  } catch {
+    return null
+  }
+}
+
+/** 예약 화면용: 방명록 없이 일정만 받는다 (서버 캐시). 이전 서버는 action 을 몰라 전체 응답을 주지만 busy 는 같다. */
+export async function fetchSchedule(): Promise<Schedule> {
+  if (!API_BASE) return { busy: [], closedDays: [] }
+  const data = await callServer<Partial<Schedule>>(`${API_BASE}?action=schedule`, { method: 'GET' })
+  const schedule = { busy: data.busy ?? [], closedDays: data.closedDays ?? [] }
+  try {
+    localStorage.setItem(SCHEDULE_CACHE_KEY, JSON.stringify({ ...schedule, savedAt: Date.now() }))
+  } catch {
+    /* 저장 불가 — 다음에 다시 받을 뿐 */
+  }
+  return schedule
+}
+
+/** 서버(Apps Script)를 미리 깨운다. 첫 요청의 시동 지연을 사용자가 기다리지 않게 하기 위함. 결과는 버린다. */
+export function wakeServer() {
+  if (!API_BASE) return
+  void fetch(`${API_BASE}?action=version`, { method: 'GET', redirect: 'follow' }).catch(() => {})
+}
+
 export async function submitGuestbook(draft: GuestbookDraft): Promise<GuestbookEntry> {
   if (!API_BASE) {
     const entry: GuestbookEntry = {

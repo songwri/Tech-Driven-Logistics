@@ -5,6 +5,7 @@ import {
   fetchServerVersion,
   isLiveBackend,
   outdatedServerMessage,
+  wakeServer,
   type ServerVersion,
 } from '@/lib/labApi'
 import {
@@ -206,7 +207,12 @@ export function useAdminData() {
   useEffect(() => {
     // 저장된 키가 있으면 첫 진입 시 목록을 바로 불러온다.
     const savedKey = readSavedKey()
-    if (!isLiveBackend || !savedKey) return
+    if (!isLiveBackend) return
+    if (!savedKey) {
+      // 로그인 화면: 키를 입력하는 동안 서버를 미리 깨워 둔다.
+      wakeServer()
+      return
+    }
     let cancelled = false
     adminRequest<{ requests: VisitRequest[]; blocks?: unknown; version?: string; apiLevel?: number }>(savedKey, 'list')
       .then((data) => {
