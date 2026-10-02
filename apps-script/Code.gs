@@ -64,7 +64,7 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-08.schedule-block';
+var CODE_VERSION = '2026-10-09.import-key';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -73,9 +73,10 @@ var CODE_VERSION = '2026-10-08.schedule-block';
  *   4: 관리자 방명록 관리 (guestbookList · guestbookSetHidden · guestbookDelete)
  *   5: 방명록 투어 구분 (투어 열 · guestbookSetTour)
  *   6: 일정 막기 (blocked 시트 대상 · id 열, list 응답의 blocks, blockAdd · blockRemove)
+ *   7: 기존 이력 가져오기(import)에 별도 암호키(IMPORT_KEY 스크립트 속성) 필요
  *   (방명록 팀 열 · 0.5점 단위 평가는 공개 방명록 쓰기 변경이라 수준을 올리지 않는다)
  */
-var API_LEVEL = 6;
+var API_LEVEL = 7;
 var ADMIN_ACTIONS = [
   'list', 'health', 'delete', 'setStatus', 'update', 'create', 'import',
   'guestbookList', 'guestbookSetHidden', 'guestbookDelete', 'guestbookSetTour',
@@ -1017,7 +1018,21 @@ function createManual_(payload) {
 }
 
 /** 기존 방문 이력 일괄 가져오기. 이미 있는 방문(날짜+업체+시간)은 건너뛴다. */
-function importManual_(items) {
+/**
+ * 기존 이력 가져오기는 시트에 대량으로 행을 쌓는 작업이라 관리자 키와 별도의 암호키(IMPORT_KEY)를 한 번 더 요구한다.
+ * 기존 행은 지우거나 덮어쓰지 않고, 시트 마지막 행 아래에 이어서 추가한다.
+ */
+function checkImportKey_(given) {
+  var expected = PropertiesService.getScriptProperties().getProperty('IMPORT_KEY');
+  if (!expected) throw new Error('가져오기 암호키(IMPORT_KEY)가 설정되지 않았습니다. Apps Script 프로젝트 설정 → 스크립트 속성에 IMPORT_KEY 를 추가해 주세요.');
+  if (String(given || '') !== expected) {
+    Utilities.sleep(1500); // 무차별 대입을 늦춘다.
+    throw new Error('가져오기 암호키가 올바르지 않습니다.');
+  }
+}
+
+function importManual_(items, importKey) {
+  checkImportKey_(importKey);
   if (!Array.isArray(items) || items.length === 0) throw new Error('가져올 방문 기록이 없습니다.');
   if (items.length > MAX_IMPORT) throw new Error('한 번에 ' + MAX_IMPORT + '건까지 가져올 수 있습니다.');
   return withLock_(function () {
@@ -1075,7 +1090,7 @@ function admin_(payload) {
   if (payload.action === 'blockAdd') return addBlocks_(payload);
   if (payload.action === 'blockRemove') return removeBlocks_(payload);
   if (payload.action === 'create') return createManual_(payload.request);
-  if (payload.action === 'import') return importManual_(payload.requests);
+  if (payload.action === 'import') return importManual_(payload.requests, payload.importKey);
 
   if (payload.action === 'guestbookList') return { entries: readGuestbookAdmin_() };
   if (payload.action === 'guestbookSetHidden') return setGuestbookHidden_(String(payload.id), payload.hidden === true);

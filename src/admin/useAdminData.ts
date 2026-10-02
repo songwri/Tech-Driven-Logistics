@@ -301,12 +301,13 @@ export function useAdminData() {
 
   /** 기존 방문 이력 일괄 가져오기. 이미 있는 방문(날짜 + 업체 + 시간)은 건너뛴다. */
   const importMany = useCallback(
-    async (inputs: ManualInput[]): Promise<ImportResult> => {
+    async (inputs: ManualInput[], importKey = ''): Promise<ImportResult> => {
       let result: ImportResult
       if (isLiveBackend) {
         await requireServer()
         const data = await adminRequest<{ created?: unknown; skipped?: ImportResult['skipped'] }>(key, 'import', {
           requests: inputs,
+          importKey,
         })
         result = { created: normalizeRequests(data.created), skipped: Array.isArray(data.skipped) ? data.skipped : [] }
       } else {

@@ -2,7 +2,8 @@ import { useMemo, useRef, useState } from 'react'
 import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, Upload, X } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
-import { Textarea } from '@/components/ui/Field'
+import { Field, Input, Textarea } from '@/components/ui/Field'
+import { isLiveBackend } from '@/lib/labApi'
 import { cn } from '@/lib/utils'
 import { languageSummary, hasLanguageNote, formatDateShort, formatSlot, type VisitRequest } from '@/lib/visit'
 import { readXlsx } from '@/lib/xlsxRead'
@@ -54,8 +55,9 @@ export function ImportModal({
 }: {
   requests: VisitRequest[]
   onClose: () => void
-  onImport: (inputs: ManualInput[]) => Promise<ImportResult>
+  onImport: (inputs: ManualInput[], importKey: string) => Promise<ImportResult>
 }) {
+  const [importKey, setImportKey] = useState('')
   const [text, setText] = useState('')
   const [file, setFile] = useState<{ name: string; table: string[][] } | null>(null)
   const [dragging, setDragging] = useState(false)
@@ -89,7 +91,7 @@ export function ImportModal({
     setPending(true)
     setError(null)
     try {
-      const response = await onImport(fresh.map((row) => row.input))
+      const response = await onImport(fresh.map((row) => row.input), importKey)
       setResult({
         created: response.created.length,
         skipped: response.skipped.map((item) => ({ line: fresh[item.index]?.line ?? 0, reason: item.reason })),
@@ -276,11 +278,24 @@ export function ImportModal({
       )}
 
       {error && <p className="mt-4 border border-brand/40 bg-brand/5 px-3 py-2 text-sm text-brand">{error}</p>}
+      {isLiveBackend && (
+        <div className="mt-5 max-w-sm">
+          <Field label="가져오기 암호키" required hint="Apps Script 스크립트 속성 IMPORT_KEY 값. 기존 데이터는 지우지 않고 시트 마지막 행 아래에 이어서 추가됩니다.">
+            <Input
+              type="password"
+              autoComplete="off"
+              value={importKey}
+              onChange={(e) => setImportKey(e.target.value)}
+              aria-label="가져오기 암호키"
+            />
+          </Field>
+        </div>
+      )}
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="outline" onClick={onClose}>
           닫기
         </Button>
-        <Button onClick={() => void submit()} disabled={pending || fresh.length === 0}>
+        <Button onClick={() => void submit()} disabled={pending || fresh.length === 0 || (isLiveBackend && !importKey.trim())}>
           {pending ? '가져오는 중…' : `${fresh.length}건 가져오기`}
         </Button>
       </div>
