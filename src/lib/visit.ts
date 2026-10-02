@@ -29,22 +29,13 @@ export interface TourDefinition {
 }
 
 /**
- * 화면 표시 순서: 종합 → TDL Lab → 센터
+ * 화면 표시 순서: TDL Lab → 종합 → 센터
  * - TDL Lab 투어: 10:30–11:30, 14:00–15:00
  * - 센터 투어: 오전 09:30–10:30 · 10:30–11:30, 오후 13:00–16:00 사이 1시간 단위 (점심 11:30–13:00 제외)
  * - 종합 투어: 센터 1시간 → TDL Lab 1시간. Lab 시간대 앞에 한 시간을 붙여
  *   09:30–11:30, 13:00–15:00
  */
 export const TOURS: TourDefinition[] = [
-  {
-    id: 'combined',
-    label: '종합 투어',
-    short: '종합',
-    description: '물류센터 + TDL Lab',
-    duration: '약 2시간',
-    slots: ['09:30-11:30', '13:00-15:00'],
-    color: '#3b4a6b',
-  },
   {
     id: 'lab',
     label: 'TDL Lab 투어',
@@ -53,6 +44,15 @@ export const TOURS: TourDefinition[] = [
     duration: '약 1시간',
     slots: ['10:30-11:30', '14:00-15:00'],
     color: '#7c5cc4',
+  },
+  {
+    id: 'combined',
+    label: '종합 투어',
+    short: '종합',
+    description: '물류센터 + TDL Lab',
+    duration: '약 2시간',
+    slots: ['09:30-11:30', '13:00-15:00'],
+    color: '#3b4a6b',
   },
   {
     id: 'center',

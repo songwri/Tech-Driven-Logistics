@@ -96,11 +96,6 @@ export function SchedulePicker({
                 <span className="min-w-0 flex-1">
                   <span className={cn('block text-[15px] font-bold', active ? 'text-brand' : 'text-ink')}>
                     {item.label}
-                    {item.id === 'combined' && (
-                      <span className="ml-1.5 rounded-sm bg-brand/10 px-1 py-px align-middle text-[10px] font-bold text-brand">
-                        추천
-                      </span>
-                    )}
                   </span>
                   {/* 어디를 보는 투어인지: 투어 이름 바로 아래에 진하게 */}
                   <span className={cn('mt-0.5 block text-[13px] font-medium', active ? 'text-brand/90' : 'text-warm-800')}>
@@ -115,6 +110,11 @@ export function SchedulePicker({
             )
           })}
         </div>
+        {tour === 'combined' && (
+          <div className="mt-3 rounded border border-brand/40 bg-brand/5 p-2.5">
+            <p className="text-[13px] font-medium text-brand">센터 투어는 센터담당자와 별도 협의</p>
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">
