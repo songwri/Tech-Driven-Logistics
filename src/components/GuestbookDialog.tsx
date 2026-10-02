@@ -307,7 +307,7 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
                             )}
                           >
                             <span className="block text-[13px] font-semibold">{TOUR_BY_ID[id].label}</span>
-                            <span className="mt-0.5 block text-[11px] text-warm-600">{TOUR_BY_ID[id].description}</span>
+                            <span className="mt-0.5 block text-[12px] font-medium text-warm-800">{TOUR_BY_ID[id].description}</span>
                           </button>
                         ))}
                       </div>

@@ -94,16 +94,19 @@ export function SchedulePicker({
                   {index + 1}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className={cn('block text-sm font-semibold', active ? 'text-brand' : 'text-warm-800')}>
+                  <span className={cn('block text-[15px] font-bold', active ? 'text-brand' : 'text-ink')}>
                     {item.label}
                     {item.id === 'combined' && (
                       <span className="ml-1.5 rounded-sm bg-brand/10 px-1 py-px align-middle text-[10px] font-bold text-brand">
                         추천
                       </span>
                     )}
-                    <span className="ml-1.5 font-normal text-warm-600">· {item.description}</span>
                   </span>
-                  <span className="block text-[12px] tabular-nums text-warm-600">
+                  {/* 어디를 보는 투어인지: 투어 이름 바로 아래에 진하게 */}
+                  <span className={cn('mt-0.5 block text-[13px] font-medium', active ? 'text-brand/90' : 'text-warm-800')}>
+                    {item.description}
+                  </span>
+                  <span className="mt-0.5 block text-[12px] tabular-nums text-warm-600">
                     {item.duration} ·{' '}
                     {item.slots.map((slot) => slot.slice(0, 5)).join(' / ')} 시작
                   </span>
