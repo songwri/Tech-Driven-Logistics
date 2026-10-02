@@ -126,7 +126,7 @@ export function SchedulePicker({
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-white/85 text-center backdrop-blur-[1px]">
             <Loader2 width={22} height={22} className="animate-spin text-brand" aria-hidden />
             <p className="text-[13px] font-semibold text-warm-800">예약 가능한 일정을 확인하고 있습니다…</p>
-            <p className="text-[12px] text-warm-600">확정된 일정과 겹치지 않는 날짜 · 시간만 보여드립니다.</p>
+            <p className="text-[12px] text-warm-600">이미 신청 · 확정된 일정과 겹치지 않는 날짜 · 시간만 보여드립니다.</p>
           </div>
         )}
         <div>
@@ -169,7 +169,7 @@ export function SchedulePicker({
                   onClick={() => onChange({ slot: candidate })}
                   disabled={!date || taken}
                   aria-pressed={active}
-                  title={taken ? '이미 확정된 일정과 겹치는 시간대입니다' : undefined}
+                  title={taken ? '이미 신청되었거나 확정된 일정과 겹치는 시간대입니다' : undefined}
                   className={cn(
                     'flex items-center justify-center gap-1.5 border px-2 py-2.5 font-mono text-[13px] tabular-nums transition',
                     taken
@@ -192,7 +192,7 @@ export function SchedulePicker({
             {!date
               ? '날짜를 먼저 선택해 주세요.'
               : busySlots.length > 0
-                ? '취소선이 그어진 시간대는 이미 확정된 방문과 겹칩니다.'
+                ? '취소선이 그어진 시간대는 이미 신청되었거나 확정된 방문과 겹칩니다.'
                 : tour === 'combined'
                   ? '센터 투어 1시간 후 TDL Lab 투어가 이어집니다.'
                   : ' '}
