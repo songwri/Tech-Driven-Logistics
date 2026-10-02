@@ -29,7 +29,7 @@ import { hasLanguageNote,
 } from '@/lib/visit'
 
 const initialDraft = (): VisitDraft => ({
-  tour: 'combined',
+  tour: 'lab',
   date: '',
   slot: '',
   category: 'external',
