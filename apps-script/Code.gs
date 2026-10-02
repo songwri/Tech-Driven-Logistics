@@ -64,7 +64,7 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-13.pending-blocks';
+var CODE_VERSION = '2026-10-14.schedule-cache-race';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -216,12 +216,16 @@ function withLock_(task) {
 /* ------------------------------------------------- 예약 화면 일정 캐시 */
 
 var SCHEDULE_CACHE_KEY = 'schedule-v1';
+/** 쓰기마다 바뀌는 값. 읽는 도중 쓰기가 끼어들면 그 결과(이전 일정)는 캐시에 넣지 않는다. */
+var SCHEDULE_GEN_KEY = 'schedule-gen';
 /** 시트를 직접 고친 경우를 대비한 최대 보관 시간(초). warmUp 트리거가 있으면 5분마다 새로 만든다. */
 var SCHEDULE_CACHE_SECONDS = 600;
 
 function clearScheduleCache_() {
   try {
-    CacheService.getScriptCache().remove(SCHEDULE_CACHE_KEY);
+    var cache = CacheService.getScriptCache();
+    cache.put(SCHEDULE_GEN_KEY, Utilities.getUuid(), 21600);
+    cache.remove(SCHEDULE_CACHE_KEY);
   } catch (error) {
     /* 캐시 실패는 무시 (다음 조회가 시트에서 다시 읽는다) */
   }
@@ -238,9 +242,13 @@ function cachedSchedule_() {
       /* 손상된 캐시 → 새로 만든다 */
     }
   }
+  var generation = cache.get(SCHEDULE_GEN_KEY);
   var fresh = busy_(null, true);
   try {
-    cache.put(SCHEDULE_CACHE_KEY, JSON.stringify(fresh), SCHEDULE_CACHE_SECONDS);
+    // 시트를 읽는 동안 다른 요청이 일정을 바꿨으면 (세대 값이 달라짐) 이 결과는 오래된 것일 수 있어 저장하지 않는다.
+    if (cache.get(SCHEDULE_GEN_KEY) === generation) {
+      cache.put(SCHEDULE_CACHE_KEY, JSON.stringify(fresh), SCHEDULE_CACHE_SECONDS);
+    }
   } catch (error) {
     /* 캐시 용량 초과 등은 무시 */
   }
