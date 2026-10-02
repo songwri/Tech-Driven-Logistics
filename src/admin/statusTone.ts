@@ -7,7 +7,7 @@ import type { VisitStatus } from '@/lib/visit'
 export const STATUS_TONE: Record<VisitStatus, { row: string; chip: string; badge: string }> = {
   pending: {
     row: 'bg-white hover:bg-[#fffaf3]',
-    chip: 'border-[#f59f00]/60 bg-white text-warm-800',
+    chip: 'border-[#f59f00]/60 bg-[#fff4e6] text-warm-800',
     badge: 'border-[#ffc078] bg-[#fff4e6] text-[#c2410c]',
   },
   approved: {
