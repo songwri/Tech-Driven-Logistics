@@ -1134,13 +1134,18 @@ function textOrNone_(value) {
   return value ? escapeHtml_(value) : '<span style="color:#aca8a7;">없음</span>';
 }
 
+/** 투어 색 (src/lib/visit.ts 의 TOURS color 와 같다) */
+var TOUR_MAIL_COLOR = { combined: '#3b4a6b', lab: '#7c5cc4', center: '#1a8fa0', other: '#8a8f98' };
+
 function scheduleBox_(r) {
   return [
     '<div style="border:1px solid #e3e0de;border-left:3px solid ', BRAND, ';',
     'background:#faf9f8;padding:16px 18px;margin-bottom:24px;">',
-    '<div style="font-size:11px;letter-spacing:2px;color:#aca8a7;">',
-    escapeHtml_(TOURS[r.tour].label), '</div>',
-    '<div style="font-size:17px;font-weight:700;color:#3d3532;margin-top:6px;">',
+    // 투어 종류는 관리자 화면과 같은 투어 색 배지로 눈에 띄게 표시한다.
+    '<span style="display:inline-block;padding:4px 12px;font-size:14px;font-weight:700;color:#ffffff;',
+    'background:', TOUR_MAIL_COLOR[r.tour] || TOUR_MAIL_COLOR.other, ';border-radius:3px;">',
+    escapeHtml_(TOURS[r.tour].label), '</span>',
+    '<div style="font-size:17px;font-weight:700;color:#3d3532;margin-top:10px;">',
     escapeHtml_(formatDateKo_(r.date)), ' &nbsp;', escapeHtml_(r.slot.replace('-', ' – ')),
     '</div></div>',
   ].join('');
