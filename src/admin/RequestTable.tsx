@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Check, CheckCheck, Globe, Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import {
+import { hasLanguageNote,
   STATUS_LABEL,
   TOURS,
   clientSegment,
@@ -176,7 +176,7 @@ export function RequestTable({
               <TourTag tour={request.tour} />
               <span>{clientSegment(request)}</span>
               <span>{headcountLabel(request)}</span>
-              {request.language === 'foreign' && (
+              {hasLanguageNote(request) && (
                 <span className="inline-flex items-center gap-1 font-semibold">
                   <Globe width={12} height={12} /> {languageSummary(request)}
                 </span>
@@ -248,7 +248,7 @@ export function RequestTable({
                 </td>
                 <td className="whitespace-nowrap px-2 py-2.5">{clientSegment(request)}</td>
                 <td className="whitespace-nowrap px-2 py-2.5 text-[12px]">
-                  {request.language === 'foreign' ? (
+                  {hasLanguageNote(request) ? (
                     <span className="inline-flex items-center gap-1 font-semibold">
                       <Globe width={12} height={12} className="shrink-0" />
                       {languageSummary(request)}

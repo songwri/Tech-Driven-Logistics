@@ -177,7 +177,7 @@ export const VISIT_SHEET_HEADERS = [
   '방문인원', '방문자명단', '요청사항', '개인정보동의', '관리자메모', '토큰', '수정일시', '방문자JSON',
   '투어언어', '외국어', '통역동반', '출처', '주요인원', '가이드', '유관부서', '후속진행',
   // 새 열은 기존 시트와 맞도록 맨 뒤에 붙인다.
-  '담당(실)',
+  '담당(실)', '통역언어',
 ] as const
 
 /** 가져올 때 쓰지 않는 열 (시스템이 채움) */
@@ -282,7 +282,8 @@ function parseVisitSheet(table: string[][], headerAt: number): ParsedRow[] {
             : undefined,
         language: foreign ? 'foreign' : 'ko',
         foreignLanguage: foreign ? foreignName || '영어' : '',
-        interpreter: foreign && get('통역동반') === '동반',
+        interpreter: get('통역동반') === '동반',
+        interpreterLanguage: get('통역동반') === '동반' ? get('통역언어') : '',
         company,
         industries: category === 'external' ? splitComma(get('업종')) : [],
         purposes: splitComma(get('방문목적')),

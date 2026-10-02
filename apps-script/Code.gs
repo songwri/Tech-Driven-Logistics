@@ -64,7 +64,7 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-05.guestbook-tour';
+var CODE_VERSION = '2026-10-06.language-zh';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -126,7 +126,7 @@ var VISIT_HEADERS = [
   '방문인원', '방문자명단', '요청사항', '개인정보동의', '관리자메모', '토큰', '수정일시', '방문자JSON',
   '투어언어', '외국어', '통역동반', '출처', '주요인원', '가이드', '유관부서', '후속진행',
   // 새 열은 기존 시트와 맞도록 맨 뒤에 붙인다 (시트를 열면 제목이 자동으로 추가된다).
-  '담당(실)',
+  '담당(실)', '통역언어',
 ];
 var BLOCKED_HEADERS = ['날짜', '시간대(비우면 종일)', '사유'];
 
@@ -519,7 +519,9 @@ function rowToRequest_(row, col) {
       ? (clientText.indexOf('신규') !== -1 ? 'new' : 'existing') : undefined,
     language: foreign ? 'foreign' : 'ko',
     foreignLanguage: foreign ? String(get('외국어')) : '',
-    interpreter: foreign && String(get('통역동반')).trim() === '동반',
+    // 통역 동반은 모든 진행 언어에서 받는다 (이전에는 외국어 투어만).
+    interpreter: String(get('통역동반')).trim() === '동반',
+    interpreterLanguage: String(get('통역언어') || ''),
     company: String(get('업체명')),
     industries: splitList_(get('업종')),
     purposes: splitList_(get('방문목적')),
@@ -612,7 +614,8 @@ function fillVisitRow_(values, col, request, extra) {
     : (request.clientType === 'new' ? '신규 고객사' : '기존 고객사'));
   set('투어언어', request.language === 'foreign' ? '외국어' : '한국어');
   set('외국어', request.language === 'foreign' ? request.foreignLanguage : '');
-  set('통역동반', request.language === 'foreign' ? (request.interpreter ? '동반' : '없음') : '');
+  set('통역동반', request.interpreter ? '동반' : '없음');
+  set('통역언어', request.interpreter ? (request.interpreterLanguage || '') : '');
   set('업체명', request.company);
   set('업종', request.industries.join(', '));
   set('방문목적', request.purposes.join(', '));
@@ -707,7 +710,8 @@ function sanitizeVisit_(payload, requireConsent) {
     clientType: clientType,
     language: language,
     foreignLanguage: foreignLanguage,
-    interpreter: language === 'foreign' && payload.interpreter === true,
+    interpreter: payload.interpreter === true,
+    interpreterLanguage: payload.interpreter === true ? optionalText_(payload.interpreterLanguage, 40) : '',
     company: requireText_(payload.company, category === 'external' ? '업체명' : '방문 조직명', 60),
     industries: category === 'external' ? industries : [],
     purposes: purposes,
@@ -861,7 +865,8 @@ function sanitizeManual_(payload) {
       ? payload.clientType : undefined,
     language: language,
     foreignLanguage: language === 'foreign' ? optionalText_(payload.foreignLanguage, 40).replace(/,/g, ' ') : '',
-    interpreter: language === 'foreign' && payload.interpreter === true,
+    interpreter: payload.interpreter === true,
+    interpreterLanguage: payload.interpreter === true ? optionalText_(payload.interpreterLanguage, 40) : '',
     company: requireText_(payload.company, '업체(기관)명', 80),
     industries: category === 'external' ? list(payload.industries, 50) : [],
     purposes: list(payload.purposes, 80),
@@ -1098,10 +1103,13 @@ function button_(href, label, filled) {
 
 /** '한국어' 또는 '<b>영어</b> · 고객사 통역 동반' */
 function languageText_(r) {
-  if (r.language !== 'foreign') return '한국어';
-  var name = String(r.foreignLanguage).replace(/^기타:\s*/, '') || '외국어';
-  return '<b style="color:' + BRAND + ';">' + escapeHtml_(name) + '</b> · '
-    + (r.interpreter ? '고객사 통역 동반' : '통역 없음 (해당 언어 안내 인력 필요)');
+  var foreign = r.language === 'foreign';
+  var name = foreign ? (String(r.foreignLanguage).replace(/^기타:\s*/, '') || '외국어') : '한국어';
+  var interpreter = r.interpreter
+    ? '고객사 통역 동반' + (r.interpreterLanguage ? ' (' + escapeHtml_(r.interpreterLanguage) + ')' : '')
+    : (foreign ? '통역 없음 (' + escapeHtml_(name) + ' 안내 인력 필요)' : '');
+  if (!foreign && !r.interpreter) return '한국어';
+  return (foreign ? '<b style="color:' + BRAND + ';">' + escapeHtml_(name) + '</b>' : '한국어') + ' · ' + interpreter;
 }
 
 function listOrNone_(items) {

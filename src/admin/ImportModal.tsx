@@ -4,7 +4,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Field'
 import { cn } from '@/lib/utils'
-import { formatDateShort, formatSlot, type VisitRequest } from '@/lib/visit'
+import { languageSummary, hasLanguageNote, formatDateShort, formatSlot, type VisitRequest } from '@/lib/visit'
 import { readXlsx } from '@/lib/xlsxRead'
 import { parseDelimited, parseTable, visitKey, type ManualInput } from './importLegacy'
 import { downloadImportTemplate } from './importTemplate'
@@ -254,7 +254,7 @@ export function ImportModal({
                       <td className="whitespace-nowrap border-b border-warm-300/30 px-2 py-1.5">{formatSlot(input.slot)}</td>
                       <td className="whitespace-nowrap border-b border-warm-300/30 px-2 py-1.5">
                         {input.category === 'internal' ? '내부' : '외부'}
-                        {input.language === 'foreign' && <span className="ml-1 font-semibold text-brand">EN</span>}
+                        {hasLanguageNote(input) && <span className="ml-1 font-semibold text-brand">{languageSummary(input)}</span>}
                       </td>
                       <td className="border-b border-warm-300/30 px-2 py-1.5 font-semibold">{input.company}</td>
                       <td className="border-b border-warm-300/30 px-2 py-1.5">{input.purposes.join(', ')}</td>

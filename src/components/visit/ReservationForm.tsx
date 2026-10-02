@@ -7,7 +7,7 @@ import { SchedulePicker } from './SchedulePicker'
 import { CompanyFields, HostFields, PrivacyConsent, PurposeFields, SectionTitle, VisitorsFields } from './VisitFields'
 import { submitReservation, isLiveBackend } from '@/lib/labApi'
 import { GUESTBOOK_URL } from '@/lib/routes'
-import {
+import { hasLanguageNote,
   FORM_SECTIONS,
   TOUR_BY_ID,
   emptyHost,
@@ -37,6 +37,7 @@ const initialDraft = (): VisitDraft => ({
   language: 'ko',
   foreignLanguage: '',
   interpreter: false,
+  interpreterLanguage: '',
   company: '',
   industries: [],
   purposes: [],
@@ -54,6 +55,7 @@ function trimDraft(draft: VisitDraft): VisitDraft {
     company: text(draft.company),
     hostComment: text(draft.hostComment),
     note: text(draft.note),
+    interpreterLanguage: draft.interpreter ? text(draft.interpreterLanguage ?? '') : '',
     host: {
       name: text(draft.host.name),
       title: text(draft.host.title),
@@ -278,7 +280,7 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
     ['투어', tour.label],
     ['날짜', draft.date ? formatDateLong(draft.date) : null],
     ['시간', draft.slot ? formatSlot(draft.slot) : null],
-    ['인원', `${draft.visitors.length}명${draft.language === 'foreign' ? ` · ${languageSummary(draft)}` : ''}`],
+    ['인원', `${draft.visitors.length}명${hasLanguageNote(draft) ? ` · ${languageSummary(draft)}` : ''}`],
   ]
 
   const summaryList = (
@@ -303,7 +305,7 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
         {' · '}
         {draft.slot ? formatSlot(draft.slot) : '시간 미선택'}
         {' · '}방문자 {draft.visitors.length}명
-        {draft.language === 'foreign' && ` · ${languageSummary(draft)}`}
+        {hasLanguageNote(draft) && ` · ${languageSummary(draft)}`}
       </span>
     </p>
   )
