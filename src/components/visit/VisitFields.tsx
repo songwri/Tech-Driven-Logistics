@@ -125,11 +125,14 @@ function OtherOption({
   onChange,
   placeholder,
   disabled,
+  single,
 }: {
   values: string[]
   onChange: (values: string[]) => void
   placeholder: string
   disabled?: boolean
+  /** 하나만 고르는 항목 (라디오 형태) */
+  single?: boolean
 }) {
   const current = values.find((value) => value.startsWith(OTHER))
   const text = current ? current.replace(/^기타:?\s*/, '') : ''
@@ -137,6 +140,7 @@ function OtherOption({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Chip
+        multi={!single}
         selected={Boolean(current)}
         disabled={disabled && !current}
         onClick={() => onChange(current ? rest : [...rest, OTHER])}
@@ -554,26 +558,29 @@ export function PurposeFields({ draft, onChange, errors }: { draft: VisitDraft; 
       <div>
         <div className="flex items-baseline justify-between gap-2">
           <FieldLabel required>방문 목적</FieldLabel>
-          <span className="text-[12px] text-warm-600">해당하는 항목 모두 선택</span>
+          <span className="text-[12px] text-warm-600">가장 가까운 한 가지만 선택</span>
         </div>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
+        <div className="mt-2 flex flex-wrap items-center gap-2" role="radiogroup" aria-label="방문 목적">
           {PURPOSES.map((purpose) => (
             <Chip
               key={purpose}
+              multi={false}
               selected={draft.purposes.includes(purpose)}
-              onClick={() => onChange({ purposes: toggle(draft.purposes, purpose) })}
+              onClick={() => onChange({ purposes: draft.purposes.includes(purpose) ? [] : [purpose] })}
             >
               {purpose}
             </Chip>
           ))}
           <OtherOption
             values={draft.purposes}
-            onChange={(purposes) => onChange({ purposes })}
+            // 방문 목적은 하나만: 기타를 고르면 다른 선택은 해제된다.
+            onChange={(purposes) => onChange({ purposes: purposes.some((v) => v.startsWith(OTHER)) ? purposes.filter((v) => v.startsWith(OTHER)) : purposes })}
             placeholder="방문 목적 직접 입력"
+            single
           />
         </div>
         <GroupError show={Boolean(errors?.has('purposes'))}>
-          {draft.purposes.includes(OTHER) ? '기타 방문 목적을 입력해 주세요.' : '방문 목적을 하나 이상 선택해 주세요.'}
+          {draft.purposes.includes(OTHER) ? '기타 방문 목적을 입력해 주세요.' : '방문 목적을 선택해 주세요.'}
         </GroupError>
       </div>
 
