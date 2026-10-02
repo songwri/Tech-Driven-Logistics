@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { ChevronLeft, ChevronRight, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { languageSummary, hasLanguageNote, OPEN_WEEKDAYS, TOURS, TOUR_BY_ID, formatSlot, isCounted, toDateKey, type VisitRequest } from '@/lib/visit'
+import { languageSummary, hasLanguageNote, OPEN_WEEKDAYS, TOURS, TOUR_BY_ID, formatSlot, isCounted, toDateKey, type TourType, type VisitRequest } from '@/lib/visit'
 import { STATUS_TONE } from './statusTone'
 import { StatusBadge } from './status'
 
@@ -16,7 +17,9 @@ interface AdminCalendarProps {
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 const MAX_CHIPS = 3
 
-export function AdminCalendar({ month, onMonthChange, requests, selectedDate, onSelectDate, onOpen }: AdminCalendarProps) {
+export function AdminCalendar({ month, onMonthChange, requests: allRequests, selectedDate, onSelectDate, onOpen }: AdminCalendarProps) {
+  const [tourFilter, setTourFilter] = useState<TourType | null>(null)
+  const requests = tourFilter ? allRequests.filter((request) => request.tour === tourFilter) : allRequests
   const year = month.getFullYear()
   const monthIndex = month.getMonth()
   const firstWeekday = new Date(year, monthIndex, 1).getDay()
@@ -74,12 +77,32 @@ export function AdminCalendar({ month, onMonthChange, requests, selectedDate, on
           </button>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-warm-600">
-          {TOURS.map((tour) => (
-            <span key={tour.id} className="inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm" style={{ background: tour.color }} aria-hidden />
-              {tour.label}
-            </span>
-          ))}
+          {TOURS.map((tour) => {
+            const active = tourFilter === tour.id
+            return (
+              <button
+                key={tour.id}
+                type="button"
+                aria-pressed={active}
+                title={active ? '필터 해제' : `${tour.label}만 보기`}
+                onClick={() => setTourFilter(active ? null : tour.id)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 border px-2 py-1 transition',
+                  active ? 'font-bold text-white' : 'border-warm-300/60 hover:border-warm-800 hover:text-warm-800',
+                  tourFilter && !active && 'opacity-50',
+                )}
+                style={active ? { background: tour.color, borderColor: tour.color } : undefined}
+              >
+                <span
+                  className="h-2.5 w-2.5 rounded-sm"
+                  style={{ background: tour.color, outline: active ? '1px solid #fff' : undefined }}
+                  aria-hidden
+                />
+                {tour.label}
+                {active ? '만' : ''}
+              </button>
+            )
+          })}
           <span className="hidden h-3 w-px bg-warm-300/60 sm:block" />
           <StatusBadge status="pending" />
           <StatusBadge status="approved" />
