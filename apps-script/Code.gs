@@ -64,7 +64,7 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-07.mail-brand';
+var CODE_VERSION = '2026-10-08.schedule-block';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -72,12 +72,14 @@ var CODE_VERSION = '2026-10-07.mail-brand';
  *   3: 신청 담당자의 담당(실) 열
  *   4: 관리자 방명록 관리 (guestbookList · guestbookSetHidden · guestbookDelete)
  *   5: 방명록 투어 구분 (투어 열 · guestbookSetTour)
+ *   6: 일정 막기 (blocked 시트 대상 · id 열, list 응답의 blocks, blockAdd · blockRemove)
  *   (방명록 팀 열 · 0.5점 단위 평가는 공개 방명록 쓰기 변경이라 수준을 올리지 않는다)
  */
-var API_LEVEL = 5;
+var API_LEVEL = 6;
 var ADMIN_ACTIONS = [
   'list', 'health', 'delete', 'setStatus', 'update', 'create', 'import',
   'guestbookList', 'guestbookSetHidden', 'guestbookDelete', 'guestbookSetTour',
+  'blockAdd', 'blockRemove',
 ];
 
 var GUESTBOOK_SHEET = 'guestbook';
@@ -128,7 +130,7 @@ var VISIT_HEADERS = [
   // 새 열은 기존 시트와 맞도록 맨 뒤에 붙인다 (시트를 열면 제목이 자동으로 추가된다).
   '담당(실)', '통역언어',
 ];
-var BLOCKED_HEADERS = ['날짜', '시간대(비우면 종일)', '사유'];
+var BLOCKED_HEADERS = ['날짜', '시간대(비우면 종일)', '사유', '대상(all/center/lab)', 'id'];
 
 var GUESTBOOK_HIDDEN_COL = 10; // 1-based
 var GUESTBOOK_TEAM_COL = 11; // 1-based
@@ -640,6 +642,82 @@ function fillVisitRow_(values, col, request, extra) {
   for (var key in (extra || {})) set(key, extra[key]);
 }
 
+/** blocked 시트의 막힌 일정. 대상 열이 비어 있는 이전 행은 전체(all)로 본다. */
+function readBlocks_() {
+  var values = sheet_(BLOCKED_SHEET, BLOCKED_HEADERS).getDataRange().getValues();
+  var list = [];
+  for (var row = 1; row < values.length; row++) {
+    var date = normalizeDateKey_(values[row][0]);
+    if (!date) continue;
+    var target = String(values[row][3] || '').trim();
+    list.push({
+      id: String(values[row][4] || ''),
+      date: date,
+      slot: normalizeSlot_(values[row][1]),
+      reason: String(values[row][2] || ''),
+      resource: target === 'center' || target === 'lab' ? target : 'all',
+      _row: row + 1,
+    });
+  }
+  return list;
+}
+
+/** 관리자 화면용: id 가 없는 이전 행에 id 를 채워 돌려준다. */
+function adminBlocks_() {
+  var sheet = sheet_(BLOCKED_SHEET, BLOCKED_HEADERS);
+  var list = readBlocks_();
+  list.forEach(function (block) {
+    if (!block.id) {
+      block.id = Utilities.getUuid();
+      sheet.getRange(block._row, 5).setValue(block.id);
+    }
+  });
+  return list.map(function (block) {
+    return { id: block.id, date: block.date, slot: block.slot, reason: block.reason, resource: block.resource };
+  });
+}
+
+function addBlocks_(payload) {
+  var resource = String(payload.resource || '');
+  if (['all', 'center', 'lab'].indexOf(resource) === -1) throw new Error('막을 대상을 선택해 주세요.');
+  var dates = Array.isArray(payload.dates) ? payload.dates : [];
+  if (dates.length === 0 || dates.length > 120) throw new Error('막을 날짜는 1~120일 사이여야 합니다.');
+  var slot = normalizeSlot_(payload.slot);
+  if (slot && !/^\d{2}:\d{2}-\d{2}:\d{2}$/.test(slot)) throw new Error('시간대 형식이 올바르지 않습니다.');
+  if (slot && toMinutes_(slot.split('-')[0]) >= toMinutes_(slot.split('-')[1])) throw new Error('끝 시간은 시작 시간보다 늦어야 합니다.');
+  var reason = optionalText_(payload.reason, 200);
+  var rows = dates.map(function (value) {
+    var date = String(value);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('날짜 형식이 올바르지 않습니다.');
+    return [date, slot, reason, resource, Utilities.getUuid()];
+  });
+  return withLock_(function () {
+    var sheet = sheet_(BLOCKED_SHEET, BLOCKED_HEADERS);
+    var start = sheet.getLastRow() + 1;
+    sheet.getRange(start, 1, rows.length, 1).setNumberFormat('@');
+    sheet.getRange(start, 1, rows.length, 5).setValues(rows);
+    SpreadsheetApp.flush();
+    return {
+      blocks: rows.map(function (row) {
+        return { id: row[4], date: row[0], slot: row[1], reason: row[2], resource: row[3] };
+      }),
+    };
+  });
+}
+
+function removeBlocks_(payload) {
+  var ids = (Array.isArray(payload.ids) ? payload.ids : [payload.id]).map(String);
+  return withLock_(function () {
+    var sheet = sheet_(BLOCKED_SHEET, BLOCKED_HEADERS);
+    var rows = readBlocks_().filter(function (block) { return ids.indexOf(block.id) !== -1; })
+      .map(function (block) { return block._row; })
+      .sort(function (a, b) { return b - a; });
+    rows.forEach(function (row) { sheet.deleteRow(row); });
+    SpreadsheetApp.flush();
+    return { removed: ids };
+  });
+}
+
 /** 승인된 예약과 blocked 시트에서 '신청 불가' 구간을 만든다. */
 function busy_(excludeId) {
   // 지난 날짜는 신청·승인 판단에 쓰이지 않으므로 빼서 응답을 가볍게 유지한다.
@@ -651,19 +729,17 @@ function busy_(excludeId) {
   });
 
   var closedDays = {};
-  var blocked = sheet_(BLOCKED_SHEET, BLOCKED_HEADERS).getDataRange().getValues();
-  for (var b = 1; b < blocked.length; b++) {
-    var date = normalizeDateKey_(blocked[b][0]);
-    if (!date || date < today) continue;
-    var time = normalizeSlot_(blocked[b][1]);
-    if (!time) {
-      closedDays[date] = true;
-      continue;
+  readBlocks_().forEach(function (block) {
+    if (block.date < today) return;
+    if (!block.slot) {
+      if (block.resource === 'all') closedDays[block.date] = true;
+      else busy.push({ date: block.date, resource: block.resource, from: '00:00', to: '24:00' });
+      return;
     }
-    var range = time.split('-');
+    var range = block.slot.split('-');
     var to = range[1] || fromMinutes_(toMinutes_(range[0]) + 60);
-    busy.push({ date: date, resource: 'all', from: range[0], to: to });
-  }
+    busy.push({ date: block.date, resource: block.resource, from: range[0], to: to });
+  });
   return { busy: busy, closedDays: Object.keys(closedDays) };
 }
 
@@ -992,10 +1068,12 @@ function admin_(payload) {
   }
 
   if (payload.action === 'list') {
-    return { requests: readVisits_().map(publicRequest_) };
+    return { requests: readVisits_().map(publicRequest_), blocks: adminBlocks_() };
   }
 
   if (payload.action === 'health') return health_();
+  if (payload.action === 'blockAdd') return addBlocks_(payload);
+  if (payload.action === 'blockRemove') return removeBlocks_(payload);
   if (payload.action === 'create') return createManual_(payload.request);
   if (payload.action === 'import') return importManual_(payload.requests);
 

@@ -7,7 +7,16 @@ import {
   outdatedServerMessage,
   type ServerVersion,
 } from '@/lib/labApi'
-import { busyFromRequests, isConfirmed, isSlotBusy, toDateKey, type VisitRequest, type VisitStatus } from '@/lib/visit'
+import {
+  busyFromRequests,
+  isConfirmed,
+  isSlotBusy,
+  toDateKey,
+  type BlockTarget,
+  type TourBlock,
+  type VisitRequest,
+  type VisitStatus,
+} from '@/lib/visit'
 import { buildSampleRequests } from './sampleData'
 import { visitKey, type ManualInput } from './importLegacy'
 import { normalizeRequest, normalizeRequests } from './normalize'
@@ -28,6 +37,47 @@ export interface ServerHealth {
 
 const DEMO_KEY = 'tdl-lab-admin-demo-v4'
 const SESSION_KEY = 'tdl-lab-admin-key'
+const DEMO_BLOCKS_KEY = 'tdl-lab-admin-blocks-v1'
+
+function readDemoBlocks(): TourBlock[] {
+  try {
+    const raw = localStorage.getItem(DEMO_BLOCKS_KEY)
+    if (raw) return normalizeBlocks(JSON.parse(raw))
+  } catch {
+    /* storage disabled */
+  }
+  return []
+}
+
+function writeDemoBlocks(blocks: TourBlock[]) {
+  try {
+    localStorage.setItem(DEMO_BLOCKS_KEY, JSON.stringify(blocks))
+  } catch {
+    /* 저장 불가 — 새로고침 시 초기화될 뿐 */
+  }
+}
+
+function normalizeBlocks(value: unknown): TourBlock[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+    .map((item): TourBlock => ({
+      id: String(item.id ?? ''),
+      date: String(item.date ?? ''),
+      slot: String(item.slot ?? ''),
+      reason: String(item.reason ?? ''),
+      resource: item.resource === 'center' ? 'center' : item.resource === 'lab' ? 'lab' : 'all',
+    }))
+    .filter((block) => block.id && block.date)
+}
+
+export interface BlockInput {
+  dates: string[]
+  resource: BlockTarget
+  /** 'HH:mm-HH:mm', 비우면 종일 */
+  slot: string
+  reason: string
+}
 
 function readDemo(): VisitRequest[] {
   try {
@@ -93,6 +143,7 @@ export function useAdminData() {
   const [key, setKey] = useState(readSavedKey)
   const [requests, setRequests] = useState<VisitRequest[]>(() => (isLiveBackend ? [] : readDemo()))
   const [loading, setLoading] = useState(isLiveBackend && Boolean(key))
+  const [blocks, setBlocks] = useState<TourBlock[]>(() => (isLiveBackend ? [] : readDemoBlocks()))
   const [error, setError] = useState<string | null>(null)
   const [server, setServer] = useState<ServerVersion | null>(null)
 
@@ -133,8 +184,9 @@ export function useAdminData() {
     setLoading(true)
     setError(null)
     try {
-      const data = await adminRequest<{ requests: VisitRequest[] }>(adminKey, 'list')
+      const data = await adminRequest<{ requests: VisitRequest[]; blocks?: unknown }>(adminKey, 'list')
       setRequests(normalizeRequests(data.requests))
+      setBlocks(normalizeBlocks(data.blocks))
       saveKey(adminKey)
       setKey(adminKey)
       return true
@@ -153,9 +205,11 @@ export function useAdminData() {
     const savedKey = readSavedKey()
     if (!isLiveBackend || !savedKey) return
     let cancelled = false
-    adminRequest<{ requests: VisitRequest[] }>(savedKey, 'list')
+    adminRequest<{ requests: VisitRequest[]; blocks?: unknown }>(savedKey, 'list')
       .then((data) => {
-        if (!cancelled) setRequests(normalizeRequests(data.requests))
+        if (cancelled) return
+        setRequests(normalizeRequests(data.requests))
+        setBlocks(normalizeBlocks(data.blocks))
       })
       .catch((loadError: unknown) => {
         if (cancelled) return
@@ -278,6 +332,46 @@ export function useAdminData() {
     [key, requests, requireServer],
   )
 
+  /** 일정 막기: 날짜마다 한 건씩 저장한다 (구글 시트 blocked 탭). */
+  const addBlocks = useCallback(
+    async (input: BlockInput) => {
+      if (isLiveBackend) {
+        await requireServer()
+        const data = await adminRequest<{ blocks?: unknown }>(key, 'blockAdd', { ...input })
+        setBlocks((current) => [...current, ...normalizeBlocks(data.blocks)])
+        return
+      }
+      const created = input.dates.map((date) => ({
+        id: newId(),
+        date,
+        slot: input.slot,
+        resource: input.resource,
+        reason: input.reason,
+      }))
+      setBlocks((current) => {
+        const next = [...current, ...created]
+        writeDemoBlocks(next)
+        return next
+      })
+    },
+    [key, requireServer],
+  )
+
+  const removeBlocks = useCallback(
+    async (ids: string[]) => {
+      if (isLiveBackend) {
+        await requireServer()
+        await adminRequest<{ removed: string[] }>(key, 'blockRemove', { ids })
+      }
+      setBlocks((current) => {
+        const next = current.filter((block) => !ids.includes(block.id))
+        if (!isLiveBackend) writeDemoBlocks(next)
+        return next
+      })
+    },
+    [key, requireServer],
+  )
+
   const resetDemo = useCallback(() => {
     const fresh = buildSampleRequests()
     writeDemo(fresh)
@@ -291,6 +385,7 @@ export function useAdminData() {
     saveKey('')
     setKey('')
     setRequests([])
+    setBlocks([])
   }, [])
 
   return {
@@ -299,6 +394,9 @@ export function useAdminData() {
     /** 관리자 키 (방명록 관리 등 별도 화면이 같은 키로 서버에 요청한다) */
     adminKey: key,
     requests,
+    blocks,
+    addBlocks,
+    removeBlocks,
     loading,
     error,
     login: load,
