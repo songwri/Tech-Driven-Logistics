@@ -64,7 +64,7 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-06.language-zh';
+var CODE_VERSION = '2026-10-07.mail-brand';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -784,7 +784,7 @@ function addReservation_(payload) {
     to: mailTo_(request.tour),
     name: MAIL_SENDER_NAME,
     replyTo: request.host.email,
-    subject: '[TDL Lab] 방문 예약 신청 · ' + TOURS[request.tour].label + ' · ' + request.company + ' · '
+    subject: mailBrand_(request.tour).tag + ' 방문 예약 신청 · ' + TOURS[request.tour].label + ' · ' + request.company + ' · '
       + request.date + ' ' + request.slot,
     htmlBody: reservationMailHtml_(request),
   });
@@ -1053,14 +1053,28 @@ function admin_(payload) {
 
 /* ----------------------------------------------------------- 메일 서식 */
 
-function mailShell_(title, lead, bodyHtml) {
+/**
+ * 메일 머리 표기: 투어에 따라 장소 이름을 나눈다.
+ * 'TDL Lab' 은 TDL Lab 만 가리키고, 건물(센터)은 '메가와이즈 청라' 로 부른다 (한글 표기만 쓴다).
+ */
+function mailBrand_(tour) {
+  if (tour === 'center') return { tag: '[메가와이즈 청라]', label: '메가와이즈 청라', manager: '센터 투어 담당자님' };
+  if (tour === 'combined') {
+    return { tag: '[메가와이즈 청라 · TDL Lab]', label: '메가와이즈 청라 · TDL Lab', manager: '센터 · TDL Lab 투어 담당자님' };
+  }
+  return { tag: '[TDL Lab]', label: 'TDL LAB', manager: 'TDL Lab 담당자님' };
+}
+
+function mailShell_(title, lead, bodyHtml, brand) {
   return [
     '<div style="margin:0;padding:24px 12px;background:#f3f2f1;',
     'font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',Helvetica,Arial,sans-serif;">',
     '<div style="max-width:560px;margin:0 auto;background:#ffffff;',
     'border:1px solid #e3e0de;">',
     '<div style="background:', BRAND, ';padding:20px 28px;">',
-    '<div style="color:#ffffff;font-size:11px;letter-spacing:3px;">TDL LAB</div>',
+    // 영문 'TDL LAB' 만 자간을 넓히고, 한글 이름은 자간 없이 읽기 좋게 둔다.
+    '<div style="color:#ffffff;font-size:12px;letter-spacing:', /^[\x00-\x7f]+$/.test((brand || mailBrand_('lab')).label) ? '3px' : '0.5px',
+    ';">', escapeHtml_((brand || mailBrand_('lab')).label), '</div>',
     '<div style="color:#ffffff;font-size:19px;font-weight:700;margin-top:6px;">',
     escapeHtml_(title), '</div></div>',
     '<div style="padding:28px;">',
@@ -1120,13 +1134,18 @@ function textOrNone_(value) {
   return value ? escapeHtml_(value) : '<span style="color:#aca8a7;">없음</span>';
 }
 
+/** 투어 색 (src/lib/visit.ts 의 TOURS color 와 같다) */
+var TOUR_MAIL_COLOR = { combined: '#3b4a6b', lab: '#7c5cc4', center: '#1a8fa0', other: '#8a8f98' };
+
 function scheduleBox_(r) {
   return [
     '<div style="border:1px solid #e3e0de;border-left:3px solid ', BRAND, ';',
     'background:#faf9f8;padding:16px 18px;margin-bottom:24px;">',
-    '<div style="font-size:11px;letter-spacing:2px;color:#aca8a7;">',
-    escapeHtml_(TOURS[r.tour].label), '</div>',
-    '<div style="font-size:17px;font-weight:700;color:#3d3532;margin-top:6px;">',
+    // 투어 종류는 관리자 화면과 같은 투어 색 배지로 눈에 띄게 표시한다.
+    '<span style="display:inline-block;padding:4px 12px;font-size:14px;font-weight:700;color:#ffffff;',
+    'background:', TOUR_MAIL_COLOR[r.tour] || TOUR_MAIL_COLOR.other, ';border-radius:3px;">',
+    escapeHtml_(TOURS[r.tour].label), '</span>',
+    '<div style="font-size:17px;font-weight:700;color:#3d3532;margin-top:10px;">',
     escapeHtml_(formatDateKo_(r.date)), ' &nbsp;', escapeHtml_(r.slot.replace('-', ' – ')),
     '</div></div>',
   ].join('');
@@ -1162,7 +1181,7 @@ function reservationMailHtml_(r) {
   var review = reviewUrl_(r.id);
 
   var lead = [
-    '안녕하세요, TDL Lab 담당자님.<br>',
+    '안녕하세요, ', mailBrand_(r.tour).manager, '.<br>',
     '<b style="color:#3d3532;">', escapeHtml_([r.host.division, r.host.org].filter(Boolean).join(' ')), ' ',
     escapeHtml_(r.host.name), ' ',
     escapeHtml_(r.host.title), '</b> 님으로부터 방문 예약이 도착하였습니다.<br>',
@@ -1204,7 +1223,50 @@ function reservationMailHtml_(r) {
     + '</a> · ' + VISIT_SHEET + ' 탭 · 예약번호 ' + escapeHtml_(String(r.id).slice(0, 8)) + '</p>';
   return mailShell_('방문 예약 신청', lead, scheduleBox_(r) + detail + stored
     + '<div style="margin-top:20px;font-size:12px;color:#aca8a7;">방문자 명단</div>'
-    + visitorsTable_(r.visitors) + actions);
+    + visitorsTable_(r.visitors) + actions, mailBrand_(r.tour));
+}
+
+/* ---------------------------------------------------- 방문 안내 (확정 메일) */
+
+/** 확정 메일에 들어가는 오시는 길 · 주차 · 미팅 장소. 문구를 바꿀 때는 여기만 고친다. */
+var VISIT_GUIDE = {
+  address: '인천 서해구 북항단지로 151 (LX판토스 메가와이즈 청라)',
+  mapUrl: 'https://naver.me/FNtXUogd',
+  /** 주차 · 미팅 위치 지도 (사이트 public/media/visit-map.jpg) */
+  mapImage: SITE_URL + 'media/visit-map.jpg',
+  arriveBefore: 10,
+  /** TDL Lab 투어 */
+  lab: {
+    parking: '입구(IN)로 들어와 우회전 후 직진하시면 오른쪽에 승용차 주차장(TDL Lab 투어 주차장)이 있습니다.',
+    meeting: '주차 후 진행 방향 끝의 건물 입구 앞에서 만나 뵙겠습니다.',
+  },
+  /** 종합 · 센터 투어 */
+  center: {
+    parking: '입구(IN)로 들어와 왼쪽의 센터투어 주차장에 주차해 주세요.',
+    meeting: '',
+  },
+};
+
+function visitGuideHtml_(r) {
+  var spot = r.tour === 'lab' ? VISIT_GUIDE.lab : VISIT_GUIDE.center;
+  var pairs = [
+    ['위치', escapeHtml_(VISIT_GUIDE.address) + '<br><a href="' + VISIT_GUIDE.mapUrl
+      + '" style="color:' + BRAND + ';font-size:13px;font-weight:700;">네이버 지도에서 보기 →</a>'],
+    ['주차', escapeHtml_(spot.parking)],
+  ];
+  if (spot.meeting) pairs.push(['미팅 장소', escapeHtml_(spot.meeting)]);
+  return [
+    '<div style="margin-top:26px;font-size:15px;font-weight:700;color:#3d3532;">오시는 길</div>',
+    rows_(pairs),
+    '<a href="', VISIT_GUIDE.mapUrl, '" style="display:block;margin-top:14px;">',
+    '<img src="', VISIT_GUIDE.mapImage, '" alt="주차 · 미팅 장소 안내 지도" width="504" ',
+    'style="display:block;width:100%;max-width:504px;height:auto;border:1px solid #e3e0de;"></a>',
+    '<div style="margin-top:22px;background:#faf9f8;border:1px solid #eeecea;padding:14px 16px;',
+    'font-size:13px;color:#534a47;line-height:1.8;">',
+    '· 원활한 진행을 위해 투어 시작 <b>', VISIT_GUIDE.arriveBefore, '분 전</b>까지 도착해 주시기 바랍니다.<br>',
+    '· 일정이 변경되거나 취소되는 경우 <b>최소 1일 전</b>까지 이 메일에 회신해 알려 주시기 바랍니다.',
+    '</div>',
+  ].join('');
 }
 
 /** 승인/거절 결과를 신청 담당자에게 알린다. */
@@ -1212,20 +1274,20 @@ function notifyHost_(r) {
   if (!r.host.email) return;
   var approved = r.status === 'approved';
   var lead = approved
-    ? escapeHtml_(r.host.name) + ' 님, 신청하신 TDL 방문 일정이 <b style="color:' + BRAND + ';">확정</b>되었습니다.<br>'
-      + '방문 당일 안내 데스크에서 담당자를 찾아 주세요.'
+    ? escapeHtml_(r.host.name) + ' 님, 신청하신 투어 방문 일정이 <b style="color:' + BRAND + ';">확정</b>되었습니다.<br>'
+      + '아래 오시는 길과 주차 안내를 확인해 주세요.'
     : escapeHtml_(r.host.name) + ' 님, 아쉽지만 신청하신 일정으로는 방문이 어렵습니다.<br>'
       + '다른 날짜로 다시 신청해 주시거나, 이 메일에 회신해 일정을 조율해 주세요.';
   MailApp.sendEmail({
     to: r.host.email,
     name: MAIL_SENDER_NAME,
     replyTo: mailTo_(r.tour),
-    subject: '[TDL Lab] 방문 예약 ' + (approved ? '확정' : '불가') + ' 안내 · ' + r.date + ' ' + r.slot,
+    subject: mailBrand_(r.tour).tag + ' 방문 예약 ' + (approved ? '확정' : '불가') + ' 안내 · ' + r.date + ' ' + r.slot,
     htmlBody: mailShell_(approved ? '방문 일정 확정' : '방문 예약 결과 안내', lead, scheduleBox_(r) + rows_([
       [r.category === 'internal' ? '방문 조직' : '업체명', escapeHtml_(r.company)],
       ['투어 언어', languageText_(r)],
       ['방문 인원', r.visitors.length + '명'],
-    ])),
+    ]) + (approved ? visitGuideHtml_(r) : ''), mailBrand_(r.tour)),
   });
 }
 
