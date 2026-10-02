@@ -1255,7 +1255,7 @@ function notifyHost_(r) {
   if (!r.host.email) return;
   var approved = r.status === 'approved';
   var lead = approved
-    ? escapeHtml_(r.host.name) + ' 님, 신청하신 TDL 방문 일정이 <b style="color:' + BRAND + ';">확정</b>되었습니다.<br>'
+    ? escapeHtml_(r.host.name) + ' 님, 신청하신 투어 방문 일정이 <b style="color:' + BRAND + ';">확정</b>되었습니다.<br>'
       + '아래 오시는 길과 주차 안내를 확인해 주세요.'
     : escapeHtml_(r.host.name) + ' 님, 아쉽지만 신청하신 일정으로는 방문이 어렵습니다.<br>'
       + '다른 날짜로 다시 신청해 주시거나, 이 메일에 회신해 일정을 조율해 주세요.';
