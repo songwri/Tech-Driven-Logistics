@@ -143,7 +143,7 @@ export function ManualVisitModal({
       interpreterLanguage: interpreter ? interpreterLanguage.trim() : '',
       company: company.trim(),
       industries: category === 'external' ? splitComma(industries) : [],
-      purposes: splitComma(purposes),
+      purposes: splitComma(purposes).slice(0, 1),
       host: {
         name: hostName.trim(),
         title: initial?.host.title ?? '',
@@ -292,7 +292,7 @@ export function ManualVisitModal({
             <Field label="방문 인원수" hint="비우면 미정">
               <Input inputMode="numeric" value={headcount} onChange={(e) => setHeadcount(e.target.value.replace(/[^\d]/g, ''))} placeholder="6" />
             </Field>
-            <Field label="방문 목적" hint="쉼표로 구분 (예: 투어, 비즈니스 미팅)">
+            <Field label="방문 목적" hint="한 가지만 입력 (예: 투어). 여러 개를 쓰면 첫 번째만 저장됩니다">
               <Input value={purposes} onChange={(e) => setPurposes(e.target.value)} />
             </Field>
             {category === 'external' && (
