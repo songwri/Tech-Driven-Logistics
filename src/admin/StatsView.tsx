@@ -13,10 +13,12 @@ import {
   headcountOf,
   isConfirmed,
   isCounted,
+  divisionGroup,
   type VisitRequest,
 } from '@/lib/visit'
 import { ColumnChart, DonutChart, type Datum } from './charts'
 import { StatsGrid } from './StatsGrid'
+import { VisitListModal } from './VisitListModal'
 import { buildStatsSheets, divisionStats, monthlyRows, yearlyRows } from './statsData'
 
 /** 방문 유형 색: 차트와 같은 슬레이트 계열 + 신규 고객만 브랜드 색으로 강조 */
@@ -94,6 +96,7 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
   const [period, setPeriod] = useState<Period>('year')
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [basis, setBasis] = useState<Basis>('all')
+  const [detail, setDetail] = useState<{ title: string; requests: VisitRequest[] } | null>(null)
   const [gridView, setGridView] = useState<'month' | 'year'>('month')
 
   // 거절된 예약은 모든 통계에서 제외한다. (승인률 계산에만 거절 건수를 쓴다)
@@ -124,52 +127,62 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
   const visitors = scoped.reduce((sum, request) => sum + headcountOf(request), 0)
   const previousVisitors = previous.reduce((sum, request) => sum + headcountOf(request), 0)
 
-  const purposes = countBy(scoped, (request) => request.purposes.map(baseOption), [...PURPOSES, OTHER])
+  const purposes = countBy(scoped, (request) => request.purposes.map(baseOption), [...PURPOSES, OTHER]).map((datum) => ({
+    ...datum,
+    requests: scoped.filter((request) => request.purposes.some((item) => baseOption(item) === datum.label)),
+  }))
   const segments = SEGMENTS.map((segment) => ({
     ...segment,
     value: scoped.filter((request) => clientSegment(request) === segment.label).length,
   }))
-  const tours: Datum[] = TOURS.map((tour) => ({
-    label: tour.label,
-    value: scoped.filter((request) => request.tour === tour.id).length,
-    color: tour.color,
-  }))
+  const withList = (label: string, list: VisitRequest[], extra: Partial<Datum> = {}): Datum => ({
+    label,
+    value: list.length,
+    requests: list,
+    ...extra,
+  })
+  const tours: Datum[] = TOURS.map((tour) =>
+    withList(tour.label, scoped.filter((request) => request.tour === tour.id), { color: tour.color }),
+  )
   const external = scoped.filter((request) => request.category === 'external')
   const industries = countBy(external, (request) => request.industries.map(baseOption), [...INDUSTRIES, OTHER])
+    .map((datum) => ({
+      ...datum,
+      requests: external.filter((request) => request.industries.some((item) => baseOption(item) === datum.label)),
+    }))
     .filter((datum) => datum.value > 0)
     .sort((a, b) => b.value - a.value)
   const languages: Datum[] = [
-    { label: '한국어', value: scoped.filter((request) => request.language !== 'foreign').length },
-    {
-      label: '외국어 · 통역 동반',
-      value: scoped.filter((request) => request.language === 'foreign' && request.interpreter).length,
-    },
-    {
-      label: '외국어 · 통역 없음',
-      value: scoped.filter((request) => request.language === 'foreign' && !request.interpreter).length,
-    },
+    withList('한국어', scoped.filter((request) => request.language !== 'foreign')),
+    withList('외국어 · 통역 동반', scoped.filter((request) => request.language === 'foreign' && request.interpreter)),
+    withList('외국어 · 통역 없음', scoped.filter((request) => request.language === 'foreign' && !request.interpreter)),
   ]
-  const jobs = JOBS.map((job) => ({
+  // 직무는 방문자 수 기준이라 값(명)은 그대로 두고, 눌렀을 때는 해당 직무 방문자가 있는 방문 건을 보여준다.
+  const jobs: Datum[] = JOBS.map((job) => ({
     label: job,
     value: scoped.reduce((sum, request) => sum + request.visitors.filter((visitor) => visitor.jobs.includes(job)).length, 0),
+    requests: scoped.filter((request) => request.visitors.some((visitor) => visitor.jobs.includes(job))),
   }))
 
   const divisions = divisionStats(scoped)
-  const divisionCounts: Datum[] = divisions.map((row) => ({ label: row.label, value: row.count }))
+  const divisionCounts: Datum[] = divisions.map((row) =>
+    withList(row.label, scoped.filter((request) => divisionGroup(request.host.division) === row.label)),
+  )
 
   const monthly: Datum[] = Array.from({ length: 12 }, (_, index) => {
     const key = `${year}-${String(index + 1).padStart(2, '0')}-`
+    const list = basisRequests.filter((request) => request.date.startsWith(key))
     return {
       label: `${index + 1}월`,
-      value: basisRequests.filter((request) => request.date.startsWith(key)).length,
+      value: list.length,
+      requests: list,
       dim: period === 'month' && index + 1 !== month,
     }
   })
-  const yearly: Datum[] = years.map((item) => ({
-    label: `${item}년`,
-    value: basisRequests.filter((request) => request.date.startsWith(`${item}-`)).length,
-    dim: item !== year,
-  }))
+  const yearly: Datum[] = years.map((item) => {
+    const list = basisRequests.filter((request) => request.date.startsWith(`${item}-`))
+    return { label: `${item}년`, value: list.length, requests: list, dim: item !== year }
+  })
 
   const gridRows = gridView === 'month' ? monthlyRows(requests, year) : yearlyRows(requests, years)
 
@@ -186,6 +199,11 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
         periodLabel,
       }),
     )
+  }
+
+  /** 막대를 누르면 그 막대에 포함된 방문 건 요약을 팝업으로 보여준다. */
+  const select = (group: string) => (datum: Datum) => {
+    if (datum.requests) setDetail({ title: `${group} · ${datum.label}`, requests: datum.requests })
   }
 
   const kpis = [
@@ -308,15 +326,15 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
       {/* 핵심: 추이를 가장 크게, 세부 분석은 아래로 작게 */}
       <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <Card title="월별 추이" subtitle={`${year}년 · 월별 ${basis === 'approved' ? '승인' : '신청'} 건수`}>
-          <ColumnChart data={monthly} height={220} />
+          <ColumnChart data={monthly} height={220} onSelect={select(`${year}년 월별`)} />
         </Card>
         <Card title="연도별 추이" subtitle="연도별 합계">
-          <ColumnChart data={yearly} height={220} />
+          <ColumnChart data={yearly} height={220} onSelect={select('연도별')} />
         </Card>
       </div>
 
       <Card title="담당(실)별 방문 건수" subtitle={`${periodLabel} · 방문 횟수 기준 · 주요 6개 담당 + 기타`}>
-        <ColumnChart data={divisionCounts} height={170} unit="건" />
+        <ColumnChart data={divisionCounts} height={170} unit="건" onSelect={select('담당(실)')} />
       </Card>
 
       <div className="grid gap-5 lg:grid-cols-3">
@@ -326,24 +344,24 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
           </div>
         </Card>
         <Card title="방문 목적" subtitle="복수 선택 포함">
-          <ColumnChart data={purposes} total={scoped.length} height={150} />
+          <ColumnChart data={purposes} total={scoped.length} height={150} onSelect={select('방문 목적')} />
         </Card>
         <Card title="투어 종류" subtitle={periodLabel}>
-          <ColumnChart data={tours} height={150} />
+          <ColumnChart data={tours} height={150} onSelect={select('투어 종류')} />
         </Card>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <Card title="업종 (고객 방문)" subtitle={`${periodLabel} · 많은 순`}>
-          <ColumnChart data={industries} height={150} total={external.length} />
+          <ColumnChart data={industries} height={150} total={external.length} onSelect={select('업종')} />
         </Card>
         <Card title="투어 언어" subtitle="방문 측 통역 동반 여부">
-          <ColumnChart data={languages} height={150} />
+          <ColumnChart data={languages} height={150} onSelect={select('투어 언어')} />
         </Card>
       </div>
 
       <Card title="방문자 직무" subtitle={`${periodLabel} · 방문자 수 기준`}>
-        <ColumnChart data={jobs} height={130} unit="명" />
+        <ColumnChart data={jobs} height={130} unit="명" onSelect={select('방문자 직무')} />
       </Card>
 
       <section className="border border-warm-300/50 bg-white p-5">
@@ -366,6 +384,7 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
         </header>
         <StatsGrid rows={gridRows} firstHeader={gridView === 'month' ? '월' : '연도'} />
       </section>
+      {detail && <VisitListModal title={detail.title} periodLabel={periodLabel} requests={detail.requests} onClose={() => setDetail(null)} />}
     </div>
   )
 }
