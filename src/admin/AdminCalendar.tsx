@@ -201,12 +201,18 @@ export function AdminCalendar({ month, onMonthChange, requests: allRequests, sel
                       }}
                       title={`${TOUR_BY_ID[request.tour].label} · ${formatSlot(request.slot)} · ${request.company}`}
                       className={cn(
-                        'flex w-full items-center gap-1 overflow-hidden border border-l-[3px] px-1 py-0.5 text-left text-[11px] leading-tight transition hover:brightness-95',
+                        'flex w-full items-center gap-1 overflow-hidden border-2 border-l-[5px] px-1 py-0.5 text-left text-[11px] leading-tight transition hover:brightness-95',
                         STATUS_TONE[request.status].chip,
                       )}
-                      style={{ borderLeftColor: TOUR_BY_ID[request.tour].color }}
+                      style={{ borderColor: TOUR_BY_ID[request.tour].color }}
                     >
                       <span className="shrink-0 font-mono text-[10px] opacity-80">{request.slot ? request.slot.slice(0, 5) : '미정'}</span>
+                      <span
+                        className="shrink-0 rounded-sm px-1 text-[9px] font-bold leading-[14px] text-white"
+                        style={{ background: TOUR_BY_ID[request.tour].color }}
+                      >
+                        {TOUR_BY_ID[request.tour].short}
+                      </span>
                       <span className="truncate font-medium">{request.company}</span>
                       {hasLanguageNote(request) && (
                         <Globe width={10} height={10} className="ml-auto shrink-0" aria-label={languageSummary(request)} />

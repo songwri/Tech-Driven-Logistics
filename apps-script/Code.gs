@@ -1135,7 +1135,7 @@ function textOrNone_(value) {
 }
 
 /** 투어 색 (src/lib/visit.ts 의 TOURS color 와 같다) */
-var TOUR_MAIL_COLOR = { combined: '#7f1d1d', lab: '#7c5cc4', center: '#1a8fa0', other: '#8a8f98' };
+var TOUR_MAIL_COLOR = { combined: '#dc2626', lab: '#7c5cc4', center: '#1a8fa0', other: '#8a8f98' };
 
 function scheduleBox_(r) {
   return [

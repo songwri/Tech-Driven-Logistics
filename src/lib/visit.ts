@@ -53,7 +53,7 @@ export const TOURS: TourDefinition[] = [
     description: '물류센터 + TDL Lab',
     duration: '약 2시간',
     slots: ['09:30-11:30', '13:00-15:00'],
-    color: '#7f1d1d',
+    color: '#dc2626',
   },
   {
     id: 'center',
