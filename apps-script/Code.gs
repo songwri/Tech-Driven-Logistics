@@ -98,7 +98,7 @@ var TOURS = {
   combined: { label: '종합 투어', slots: ['09:30-11:30', '13:00-15:00'] },
   center: {
     label: '센터 투어',
-    slots: ['09:30-10:30', '10:30-11:30', '13:00-14:00', '14:00-15:00', '15:00-16:00'],
+    slots: ['10:00-11:00', '13:00-14:00', '15:00-16:00'],
   },
   lab: { label: 'TDL Lab 투어', slots: ['10:30-11:30', '14:00-15:00'] },
   // 기존 방문 이력 · 관리자 수기 등록 전용 (예약 화면에서는 고를 수 없음). 시간 자유.
@@ -1135,7 +1135,7 @@ function textOrNone_(value) {
 }
 
 /** 투어 색 (src/lib/visit.ts 의 TOURS color 와 같다) */
-var TOUR_MAIL_COLOR = { combined: '#3b4a6b', lab: '#7c5cc4', center: '#1a8fa0', other: '#8a8f98' };
+var TOUR_MAIL_COLOR = { combined: '#7f1d1d', lab: '#7c5cc4', center: '#1a8fa0', other: '#8a8f98' };
 
 function scheduleBox_(r) {
   return [
