@@ -112,9 +112,12 @@ const newId = () =>
  * 시간이 겹치는지는 오늘 이후 일정만 본다. 지난 이력끼리 겹치는 건(기존 방문 기록) 막지 않는다.
  * 서버(busy_)도 지난 날짜를 빼고 판단한다.
  */
-function conflicts(request: Pick<VisitRequest, 'tour' | 'date' | 'slot' | 'status' | 'id'>, all: VisitRequest[]) {
+function conflicts(
+  request: Pick<VisitRequest, 'tour' | 'date' | 'slot' | 'status' | 'id'> & { source?: VisitRequest['source'] },
+  all: VisitRequest[],
+) {
   if (!isConfirmed(request.status) || request.date < toDateKey(new Date())) return false
-  return isSlotBusy(request.tour, request.date, request.slot, busyFromRequests(all, request.id))
+  return isSlotBusy(request.tour, request.date, request.slot, busyFromRequests(all, request.id), request.source === 'manual')
 }
 
 export function readSavedKey() {
@@ -292,7 +295,7 @@ export function useAdminData() {
   /** 관리자 수기 등록 (웹 예약 규칙 밖의 방문: 화 · 목, 자유 시간, 명단 없음 등) */
   const create = useCallback(
     async (input: ManualInput) => {
-      if (conflicts({ ...input, id: '' }, requests)) {
+      if (conflicts({ ...input, id: '', source: 'manual' }, requests)) {
         throw new Error('이미 승인된 다른 예약과 시간이 겹칩니다. 시간을 확인해 주세요.')
       }
       await requireServer()

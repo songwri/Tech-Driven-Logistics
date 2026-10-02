@@ -410,20 +410,29 @@ function fromMinutes(minutes: number) {
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
 }
 
-/** 투어 한 건이 어떤 공간을 언제 쓰는지. 종합 투어는 센터 1시간 → Lab 순서입니다. */
-export function segmentsOf(tour: TourType, date: string, slot: string): BusySegment[] {
+/** 준비 시간(분). 종합 투어의 Lab, 수기 등록 방문은 사용 시작 이만큼 전부터 공간을 점유한다. */
+export const PREP_MINUTES = 60
+
+/**
+ * 투어 한 건이 어떤 공간을 언제 점유하는지. (apps-script/Code.gs 의 segmentsOf_ 와 같아야 한다)
+ * - 종합 투어: 센터 1시간 → Lab. Lab 은 준비를 위해 종합 투어 시작부터 점유 (센터 시간 = Lab 준비 시간)
+ * - manual(수기 등록): 웹 예약 시간표 밖의 방문이라, 모든 공간을 사용 시작 1시간 전부터 점유 (준비 여유)
+ */
+export function segmentsOf(tour: TourType, date: string, slot: string, manual = false): BusySegment[] {
   const [from, to] = slot.split('-')
   if (!from || !to) return [] // 시간 미정
+  const start = toMinutes(from)
+  const prep = (minutes: number) => fromMinutes(Math.max(0, manual ? minutes - PREP_MINUTES : minutes))
   // 기타 방문(수기 등록)은 어느 공간을 쓰는지 모르므로 그 시간의 센터 · Lab 을 모두 막는다.
-  if (tour === 'other') return [{ date, resource: 'all', from, to }]
+  if (tour === 'other') return [{ date, resource: 'all', from: prep(start), to }]
   if (tour === 'combined') {
-    const handoff = fromMinutes(toMinutes(from) + 60)
+    const handoff = start + 60
     return [
-      { date, resource: 'center', from, to: handoff },
-      { date, resource: 'lab', from: handoff, to },
+      { date, resource: 'center', from: prep(start), to: fromMinutes(handoff) },
+      { date, resource: 'lab', from: fromMinutes(Math.max(0, handoff - PREP_MINUTES)), to },
     ]
   }
-  return [{ date, resource: tour, from, to }]
+  return [{ date, resource: tour, from: prep(start), to }]
 }
 
 function overlaps(a: BusySegment, b: BusySegment) {
@@ -432,8 +441,8 @@ function overlaps(a: BusySegment, b: BusySegment) {
   return toMinutes(a.from) < toMinutes(b.to) && toMinutes(b.from) < toMinutes(a.to)
 }
 
-export function isSlotBusy(tour: TourType, date: string, slot: string, busy: BusySegment[]) {
-  const wanted = segmentsOf(tour, date, slot)
+export function isSlotBusy(tour: TourType, date: string, slot: string, busy: BusySegment[], manual = false) {
+  const wanted = segmentsOf(tour, date, slot, manual)
   return busy.some((segment) => wanted.some((part) => overlaps(part, segment)))
 }
 
@@ -441,7 +450,7 @@ export function isSlotBusy(tour: TourType, date: string, slot: string, busy: Bus
 export function busyFromRequests(requests: VisitRequest[], excludeId?: string) {
   return requests
     .filter((request) => isConfirmed(request.status) && request.id !== excludeId)
-    .flatMap((request) => segmentsOf(request.tour, request.date, request.slot))
+    .flatMap((request) => segmentsOf(request.tour, request.date, request.slot, request.source === 'manual'))
 }
 
 export function isOpenWeekday(date: Date) {

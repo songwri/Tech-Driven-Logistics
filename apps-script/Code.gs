@@ -64,7 +64,7 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-14.schedule-cache-race';
+var CODE_VERSION = '2026-10-15.prep-time';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -490,20 +490,29 @@ function fromMinutes_(minutes) {
   return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
 }
 
-/** 투어 한 건이 점유하는 공간·시간 구간 */
-function segmentsOf_(tour, date, slot) {
+/** 준비 시간(분). src/lib/visit.ts 의 PREP_MINUTES 와 같아야 한다. */
+var PREP_MINUTES = 60;
+
+/**
+ * 투어 한 건이 점유하는 공간·시간 구간 (src/lib/visit.ts 의 segmentsOf 와 같아야 한다)
+ * - 종합 투어: 센터 1시간 → Lab. Lab 은 준비를 위해 종합 투어 시작부터 점유
+ * - manual(수기 등록): 모든 공간을 사용 시작 1시간 전부터 점유 (준비 여유)
+ */
+function segmentsOf_(tour, date, slot, manual) {
   var range = String(slot || '').split('-');
   if (!range[0] || !range[1]) return []; // 시간 미정
+  var start = toMinutes_(range[0]);
+  var prep = function (minutes) { return fromMinutes_(Math.max(0, manual ? minutes - PREP_MINUTES : minutes)); };
   // 기타 방문은 어느 공간을 쓰는지 모르므로 그 시간의 센터 · Lab 을 모두 막는다.
-  if (tour === 'other') return [{ date: date, resource: 'all', from: range[0], to: range[1] }];
+  if (tour === 'other') return [{ date: date, resource: 'all', from: prep(start), to: range[1] }];
   if (tour === 'combined') {
-    var handoff = fromMinutes_(toMinutes_(range[0]) + 60);
+    var handoff = start + 60;
     return [
-      { date: date, resource: 'center', from: range[0], to: handoff },
-      { date: date, resource: 'lab', from: handoff, to: range[1] },
+      { date: date, resource: 'center', from: prep(start), to: fromMinutes_(handoff) },
+      { date: date, resource: 'lab', from: fromMinutes_(Math.max(0, handoff - PREP_MINUTES)), to: range[1] },
     ];
   }
-  return [{ date: date, resource: tour, from: range[0], to: range[1] }];
+  return [{ date: date, resource: tour, from: prep(start), to: range[1] }];
 }
 
 function overlaps_(a, b) {
@@ -512,8 +521,8 @@ function overlaps_(a, b) {
   return toMinutes_(a.from) < toMinutes_(b.to) && toMinutes_(b.from) < toMinutes_(a.to);
 }
 
-function isBusy_(tour, date, slot, busy) {
-  var wanted = segmentsOf_(tour, date, slot);
+function isBusy_(tour, date, slot, busy, manual) {
+  var wanted = segmentsOf_(tour, date, slot, manual);
   return busy.some(function (segment) {
     return wanted.some(function (part) { return overlaps_(part, segment); });
   });
@@ -807,7 +816,7 @@ function busy_(excludeId, includePending) {
   readVisits_().forEach(function (request) {
     var occupies = isConfirmed_(request.status) || (includePending && request.status === 'pending');
     if (!occupies || request.id === excludeId || request.date < today) return;
-    busy = busy.concat(segmentsOf_(request.tour, request.date, request.slot));
+    busy = busy.concat(segmentsOf_(request.tour, request.date, request.slot, request.source === 'manual'));
   });
 
   var closedDays = {};
@@ -962,7 +971,7 @@ function changeStatus_(found, status) {
     var current = findVisit_(function (item) { return item.id === found.id; });
     if (!current) throw new Error('예약을 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.');
     if (isConfirmed_(status) && !isConfirmed_(current.status)
-      && isBusy_(current.tour, current.date, current.slot, busy_(current.id).busy)) {
+      && isBusy_(current.tour, current.date, current.slot, busy_(current.id).busy, current.source === 'manual')) {
       throw new Error('이미 승인된 다른 예약과 시간이 겹쳐 승인할 수 없습니다.');
     }
     current._previous = current.status;
@@ -1090,7 +1099,7 @@ function appendVisits_(requests) {
 function createManual_(payload) {
   var request = sanitizeManual_(payload || {});
   return withLock_(function () {
-    if (isConfirmed_(request.status) && isBusy_(request.tour, request.date, request.slot, busy_().busy)) {
+    if (isConfirmed_(request.status) && isBusy_(request.tour, request.date, request.slot, busy_().busy, true)) {
       throw new Error('이미 승인된 다른 예약과 시간이 겹칩니다. 시간을 확인해 주세요.');
     }
     request.id = Utilities.getUuid();
@@ -1217,7 +1226,7 @@ function admin_(payload) {
       if (!current) throw new Error('예약을 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.');
       next.status = current.status;
       next._row = current._row;
-      if (isConfirmed_(next.status) && isBusy_(next.tour, next.date, next.slot, busy_(next.id).busy)) {
+      if (isConfirmed_(next.status) && isBusy_(next.tour, next.date, next.slot, busy_(next.id).busy, next.source === 'manual')) {
         throw new Error('변경한 일정이 이미 승인된 다른 예약과 겹칩니다.');
       }
       writeVisit_(next._row, next);
