@@ -6,6 +6,8 @@ import { Field, Input, Label, Textarea } from './ui/Field'
 import { StarRating } from './ui/StarRating'
 import { maskCompany, maskName } from '@/lib/mask'
 import { formatRating, ratingLabel } from '@/lib/rating'
+import { GUESTBOOK_TOURS, TOUR_BY_ID, type GuestbookTour } from '@/lib/visit'
+import { cn } from '@/lib/utils'
 import { submitGuestbook, type GuestbookEntry } from '@/lib/labApi'
 import { ArmScene } from '@/guestbook/ArmScene'
 import { introFrame, outroFrame, useTimeline } from '@/guestbook/scenes'
@@ -20,14 +22,15 @@ interface GuestbookDialogProps {
   onSubmitted: (entry: GuestbookEntry) => void
 }
 
-type Errors = Partial<Record<'rating' | 'message' | 'name' | 'company' | 'role', string>>
+type Errors = Partial<Record<'tour' | 'rating' | 'message' | 'name' | 'company' | 'role', string>>
 /** intro: 로봇팔이 빈 용지를 집어 올림 → form: 용지가 커져 작성 화면 → outro: 다 쓴 용지를 컨베이어로 보냄 */
 type Phase = 'intro' | 'form' | 'outro'
 /** 장면 속 용지의 화면 위치. 작성 화면이 여기서 커져 나오고, 등록하면 여기로 돌아간다. */
 type Spot = { x: number; y: number; scale: number } | null
 
-function validate(values: { rating: number; message: string; name: string; company: string; role: string }) {
+function validate(values: { tour: GuestbookTour | ''; rating: number; message: string; name: string; company: string; role: string }) {
   const errors: Errors = {}
+  if (!values.tour) errors.tour = '참여하신 투어를 선택해 주세요.'
   if (!values.rating) errors.rating = '별점을 선택해 주세요.'
   if (!values.message.trim()) errors.message = '방문 소감을 한 줄 남겨 주세요.'
   if (!values.name.trim()) errors.name = '이름을 입력해 주세요.'
@@ -97,6 +100,7 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
   const [open, setOpen] = useState(true)
   const [phase, setPhase] = useState<Phase>(reduce ? 'form' : 'intro')
   const [spot, setSpot] = useState<Spot>(null)
+  const [tour, setTour] = useState<GuestbookTour | ''>('')
   const [rating, setRating] = useState(0)
   const [message, setMessage] = useState('')
   const [name, setName] = useState('')
@@ -112,7 +116,7 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
   const sent = useRef<GuestbookEntry | null>(null)
   const opener = useRef<Element | null>(document.activeElement)
 
-  const errors = tried ? validate({ rating, message, name, company, role }) : {}
+  const errors = tried ? validate({ tour, rating, message, name, company, role }) : {}
 
   /** 장면 속 용지 위치를 작성 화면(가운데 정렬) 기준의 이동 · 배율로 바꿔 둔다. */
   const measureSheet = useCallback(() => {
@@ -194,7 +198,7 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     setTried(true)
-    if (Object.keys(validate({ rating, message, name, company, role })).length > 0) return
+    if (Object.keys(validate({ tour, rating, message, name, company, role })).length > 0 || !tour) return
     setStatus('sending')
     setError(null)
     try {
@@ -204,6 +208,7 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
         team: team.trim(),
         role: role.trim(),
         rating,
+        tour,
         message: message.trim(),
       })
       if (reduce) {
@@ -282,6 +287,33 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
 
                 <form onSubmit={handleSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
                   <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+                    <div>
+                      <Label required>어떤 투어에 참여하셨나요?</Label>
+                      <div className="mt-2 grid grid-cols-3 gap-2" role="radiogroup" aria-label="참여한 투어">
+                        {GUESTBOOK_TOURS.map((id) => (
+                          <button
+                            key={id}
+                            type="button"
+                            role="radio"
+                            aria-checked={tour === id}
+                            onClick={() => setTour(id)}
+                            className={cn(
+                              'border px-2 py-2.5 text-center transition',
+                              tour === id
+                                ? 'border-brand bg-brand/5 text-ink'
+                                : errors.tour
+                                  ? 'border-brand/50 text-warm-600 hover:border-brand'
+                                  : 'border-warm-300/60 text-warm-600 hover:border-warm-800',
+                            )}
+                          >
+                            <span className="block text-[13px] font-semibold">{TOUR_BY_ID[id].label}</span>
+                            <span className="mt-0.5 block text-[11px] text-warm-600">{TOUR_BY_ID[id].description}</span>
+                          </button>
+                        ))}
+                      </div>
+                      {errors.tour && <p className="mt-1 text-[12px] text-brand">{errors.tour}</p>}
+                    </div>
+
                     <div>
                       <Label required>이번 방문은 어떠셨나요?</Label>
                       <div className="mt-2 flex items-center gap-3">

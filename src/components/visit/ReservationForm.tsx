@@ -23,6 +23,9 @@ import {
   type BusySegment,
   type FormSection,
   type VisitDraft,
+  type VisitHost,
+  type Visitor,
+  MAX_VISITORS,
 } from '@/lib/visit'
 
 const initialDraft = (): VisitDraft => ({
@@ -69,6 +72,18 @@ function trimDraft(draft: VisitDraft): VisitDraft {
     })),
   }
 }
+
+/** 담당자 정보로 만든 방문자 한 줄. 차량번호 · 직무는 직접 입력한다. */
+const hostAsVisitor = (host: VisitHost, base: Visitor = emptyVisitor()): Visitor => ({
+  ...base,
+  name: host.name,
+  title: host.title,
+  org: host.org,
+  email: host.email,
+})
+
+const isBlankVisitor = (visitor: Visitor) =>
+  !visitor.name.trim() && !visitor.title.trim() && !visitor.org.trim() && !visitor.email.trim() && !visitor.car.trim() && visitor.jobs.length === 0
 
 const sectionId = (section: FormSection) => `rf-${section}`
 
@@ -142,9 +157,32 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
   const [error, setError] = useState<string | null>(null)
   // 한 번 신청을 눌러 본 뒤부터 칸마다 오류를 표시한다 (처음부터 빨간 칸이 가득하지 않게).
   const [showErrors, setShowErrors] = useState(false)
+  // 담당자도 투어에 참석하면 방문자 명단 1번 줄이 담당자 정보와 연동된다.
+  const [hostJoins, setHostJoins] = useState(false)
 
   const patch = (next: Partial<VisitDraft>) => {
-    setDraft((current) => ({ ...current, ...next }))
+    setDraft((current) => {
+      const merged = { ...current, ...next }
+      if (hostJoins && next.host && !next.visitors && merged.visitors.length > 0) {
+        merged.visitors = merged.visitors.map((visitor, index) =>
+          index === 0 ? hostAsVisitor(next.host as VisitHost, visitor) : visitor,
+        )
+      }
+      return merged
+    })
+    setError(null)
+  }
+
+  const toggleHostJoins = (checked: boolean) => {
+    setHostJoins(checked)
+    setDraft((current) => {
+      if (checked) {
+        const rest = isBlankVisitor(current.visitors[0] ?? emptyVisitor()) ? current.visitors.slice(1) : current.visitors
+        return { ...current, visitors: [hostAsVisitor(current.host), ...rest].slice(0, MAX_VISITORS) }
+      }
+      const rest = current.visitors.slice(1)
+      return { ...current, visitors: rest.length > 0 ? rest : [emptyVisitor()] }
+    })
     setError(null)
   }
   // 내부 방문은 방문 조직명 칸이 없으므로, 검사 · 제출에는 담당자 정보로 채운 값을 쓴다.
@@ -217,6 +255,7 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
             className="flex-1"
             onClick={() => {
               setDraft(initialDraft())
+              setHostJoins(false)
               setShowErrors(false)
               setStatus('idle')
               window.scrollTo({ top: 0 })
@@ -329,6 +368,21 @@ export function ReservationForm({ busy, closedDays }: ReservationFormProps) {
         >
           방문자 명단
         </SectionTitle>
+        <label className="mb-4 flex cursor-pointer items-start gap-3 border border-warm-300/50 bg-cream/50 px-4 py-3 text-[13px] text-warm-800">
+          <input
+            type="checkbox"
+            checked={hostJoins}
+            onChange={(e) => toggleHostJoins(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-[#a72b2b]"
+          />
+          <span>
+            <b>신청 담당자도 투어에 참석합니다</b>
+            <span className="mt-0.5 block text-warm-600">
+              체크하면 방문자 명단 1번에 담당자의 성함 · 직책 · 조직 · 이메일이 자동으로 들어가고, 위 담당자 정보를 고치면 함께 바뀝니다.
+              차량번호와 직무는 직접 입력해 주세요.
+            </span>
+          </span>
+        </label>
         <VisitorsFields
           visitors={draft.visitors}
           onChange={(visitors) => patch({ visitors })}

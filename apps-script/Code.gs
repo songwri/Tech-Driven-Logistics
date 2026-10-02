@@ -64,19 +64,20 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-04.mail-split';
+var CODE_VERSION = '2026-10-05.guestbook-tour';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
  *   2: 수기 등록(create) · 기존 이력 가져오기(import) · 완료/취소 상태 · 운영 기록 열
  *   3: 신청 담당자의 담당(실) 열
  *   4: 관리자 방명록 관리 (guestbookList · guestbookSetHidden · guestbookDelete)
+ *   5: 방명록 투어 구분 (투어 열 · guestbookSetTour)
  *   (방명록 팀 열 · 0.5점 단위 평가는 공개 방명록 쓰기 변경이라 수준을 올리지 않는다)
  */
-var API_LEVEL = 4;
+var API_LEVEL = 5;
 var ADMIN_ACTIONS = [
   'list', 'health', 'delete', 'setStatus', 'update', 'create', 'import',
-  'guestbookList', 'guestbookSetHidden', 'guestbookDelete',
+  'guestbookList', 'guestbookSetHidden', 'guestbookDelete', 'guestbookSetTour',
 ];
 
 var GUESTBOOK_SHEET = 'guestbook';
@@ -116,6 +117,7 @@ var GUESTBOOK_HEADERS = [
   'id', 'createdAt', '표시이름', '표시소속', '직함', '평가', '메시지', '실명', '실제소속', '숨김',
   // 새 열은 기존 시트와 맞도록 맨 뒤에 붙인다.
   '팀',
+  '투어',
 ];
 /** src/admin/importLegacy.ts 의 VISIT_SHEET_HEADERS 와 같아야 합니다 (가져오기 양식). */
 var VISIT_HEADERS = [
@@ -130,6 +132,12 @@ var BLOCKED_HEADERS = ['날짜', '시간대(비우면 종일)', '사유'];
 
 var GUESTBOOK_HIDDEN_COL = 10; // 1-based
 var GUESTBOOK_TEAM_COL = 11; // 1-based
+var GUESTBOOK_TOUR_COL = 12; // 1-based
+var GUESTBOOK_TOURS = ['combined', 'lab', 'center'];
+function guestbookTour_(value) {
+  var tour = String(value == null ? '' : value);
+  return GUESTBOOK_TOURS.indexOf(tour) === -1 ? '' : tour;
+}
 
 /* ------------------------------------------------------------------ 공통 */
 
@@ -282,6 +290,7 @@ function readGuestbook_() {
       role: String(values[row][4]),
       rating: Number(values[row][5]),
       message: String(values[row][6]),
+      tour: guestbookTour_(values[row][GUESTBOOK_TOUR_COL - 1]),
     });
   }
 
@@ -309,6 +318,7 @@ function readGuestbookAdmin_() {
       name: String(values[row][7] == null ? '' : values[row][7]),
       company: String(values[row][8] == null ? '' : values[row][8]),
       hidden: isGuestbookHidden_(values[row][GUESTBOOK_HIDDEN_COL - 1]),
+      tour: guestbookTour_(values[row][GUESTBOOK_TOUR_COL - 1]),
     });
   }
   return entries.reverse();
@@ -335,6 +345,20 @@ function setGuestbookHidden_(id, hidden) {
   });
 }
 
+/** 방명록의 투어 구분 지정 (투어 선택이 생기기 전 기록을 분류할 때). 빈 값이면 미분류. */
+function setGuestbookTour_(id, tour) {
+  var value = guestbookTour_(tour);
+  if (tour && !value) throw new Error('알 수 없는 투어입니다.');
+  return withLock_(function () {
+    var target = sheet_(GUESTBOOK_SHEET, GUESTBOOK_HEADERS);
+    var rowNumber = findGuestbookRow_(target, id);
+    if (!rowNumber) throw new Error('방명록을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.');
+    target.getRange(rowNumber, GUESTBOOK_TOUR_COL).setValue(value);
+    SpreadsheetApp.flush();
+    return { id: id, tour: value };
+  });
+}
+
 /** 방명록을 시트에서 완전히 지운다 (되돌릴 수 없음). */
 function deleteGuestbook_(id) {
   return withLock_(function () {
@@ -353,6 +377,8 @@ function addGuestbook_(payload) {
   var team = optionalText_(payload.team, 60);
   var role = requireText_(payload.role, '직책', 60);
   var message = requireText_(payload.message, '메시지', MESSAGE_LIMIT);
+  var tour = guestbookTour_(payload.tour);
+  if (!tour) throw new Error('참여하신 투어를 선택해 주세요.');
   var rating = Number(payload.rating);
   // 0.5점 단위 (0.5 ~ 5). 이전 사이트가 보내는 1~5 정수도 그대로 받는다.
   if (!(rating >= 0.5 && rating <= 5) || rating * 2 !== Math.round(rating * 2)) {
@@ -368,11 +394,12 @@ function addGuestbook_(payload) {
     role: role,
     rating: rating,
     message: message,
+    tour: tour,
   };
 
   sheet_(GUESTBOOK_SHEET, GUESTBOOK_HEADERS).appendRow([
     entry.id, entry.createdAt, entry.name, entry.company,
-    entry.role, entry.rating, entry.message, name, company, '', team,
+    entry.role, entry.rating, entry.message, name, company, '', team, tour,
   ]);
 
   // 방명록은 메일을 보내지 않는다. 관리자 페이지(방명록 탭)나 guestbook 시트에서 확인한다.
@@ -969,6 +996,7 @@ function admin_(payload) {
 
   if (payload.action === 'guestbookList') return { entries: readGuestbookAdmin_() };
   if (payload.action === 'guestbookSetHidden') return setGuestbookHidden_(String(payload.id), payload.hidden === true);
+  if (payload.action === 'guestbookSetTour') return setGuestbookTour_(String(payload.id), String(payload.tour || ''));
   if (payload.action === 'guestbookDelete') return deleteGuestbook_(String(payload.id));
 
   if (payload.action === 'delete') {

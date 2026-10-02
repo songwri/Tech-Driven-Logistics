@@ -2,6 +2,7 @@ import { Fragment } from 'react'
 import { motion } from 'framer-motion'
 import type { GuestbookEntry } from '@/lib/labApi'
 import { cn } from '@/lib/utils'
+import { TOUR_BY_ID } from '@/lib/visit'
 import { StarRating } from './StarRating'
 
 function formatDate(iso: string) {
@@ -13,7 +14,15 @@ function formatDate(iso: string) {
 export function GuestbookCard({ entry, className }: { entry: GuestbookEntry; className?: string }) {
   return (
     <div className={cn('w-full max-w-xs border border-warm-300/50 bg-white p-6', className)}>
-      <StarRating value={entry.rating} size={14} />
+      <div className="flex items-center justify-between gap-2">
+        <StarRating value={entry.rating} size={14} />
+        {entry.tour && (
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-warm-600">
+            <span className="h-2 w-2 rounded-sm" style={{ background: TOUR_BY_ID[entry.tour].color }} aria-hidden />
+            {TOUR_BY_ID[entry.tour].label}
+          </span>
+        )}
+      </div>
       <p className="mt-3 text-sm leading-relaxed text-warm-800">{entry.message}</p>
       <div className="mt-5 border-t border-warm-300/40 pt-3">
         <p className="text-sm font-semibold text-warm-800">

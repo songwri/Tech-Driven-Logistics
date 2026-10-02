@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
+import type { GuestbookTour } from '@/lib/visit'
 import { adminRequest, fetchServerVersion, isLiveBackend, outdatedServerMessage } from '@/lib/labApi'
 import { buildSampleGuestbook, normalizeGuestbook, type AdminGuestbookEntry } from './guestbookData'
 
-/** 방명록 관리 기능이 들어 있는 Apps Script 기능 수준 (Code.gs 의 API_LEVEL 4) */
-export const GUESTBOOK_ADMIN_API_LEVEL = 4
+/** 방명록 관리 기능이 들어 있는 Apps Script 기능 수준 (Code.gs 의 API_LEVEL 5) */
+export const GUESTBOOK_ADMIN_API_LEVEL = 5
 
 const DEMO_KEY = 'tdl-lab-admin-guestbook-demo-v1'
 
@@ -104,6 +105,19 @@ export function useAdminGuestbook(adminKey: string) {
     [adminKey],
   )
 
+  /** 투어 구분 지정 (투어 선택이 생기기 전 기록을 분류) */
+  const setTour = useCallback(
+    async (id: string, tour: GuestbookTour | '') => {
+      if (isLiveBackend) await adminRequest<{ id: string; tour: string }>(adminKey, 'guestbookSetTour', { id, tour })
+      setEntries((current) => {
+        const next = current.map((entry) => (entry.id === id ? { ...entry, tour } : entry))
+        if (!isLiveBackend) writeDemo(next)
+        return next
+      })
+    },
+    [adminKey],
+  )
+
   /** 방명록을 완전히 삭제한다 (구글 시트의 행도 삭제, 되돌릴 수 없음). */
   const remove = useCallback(
     async (id: string) => {
@@ -123,5 +137,5 @@ export function useAdminGuestbook(adminKey: string) {
     setEntries(fresh)
   }, [])
 
-  return { entries, loading, error, outdated, reload, setHidden, remove, resetDemo, demo: !isLiveBackend } as const
+  return { entries, loading, error, outdated, reload, setHidden, setTour, remove, resetDemo, demo: !isLiveBackend } as const
 }

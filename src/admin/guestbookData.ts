@@ -1,5 +1,6 @@
 import { maskCompany, maskName } from '@/lib/mask'
 import { snapRating } from '@/lib/rating'
+import { isGuestbookTour, type GuestbookTour } from '@/lib/visit'
 
 /** 관리자가 보는 방명록 한 건: 실명 · 실제 소속과 공개 표시값, 숨김 여부를 함께 가진다. */
 export interface AdminGuestbookEntry {
@@ -18,6 +19,8 @@ export interface AdminGuestbookEntry {
   displayCompany: string
   /** 숨김이면 방명록 페이지에 나오지 않는다 */
   hidden: boolean
+  /** 어떤 투어 후기인지. 없으면 '미분류' (투어 선택이 생기기 전 기록) */
+  tour: GuestbookTour | ''
 }
 
 const text = (value: unknown) => (value == null ? '' : String(value))
@@ -40,6 +43,7 @@ export function normalizeGuestbook(raw: unknown): AdminGuestbookEntry[] {
       displayName: text(entry.displayName),
       displayCompany: text(entry.displayCompany),
       hidden: entry.hidden === true,
+      tour: isGuestbookTour(entry.tour) ? entry.tour : '',
     }
   })
 }
@@ -47,6 +51,7 @@ export function normalizeGuestbook(raw: unknown): AdminGuestbookEntry[] {
 /** 데모 모드용 예시 방명록 (서버 연결 전 화면 확인용). 최신순. */
 export function buildSampleGuestbook(now = new Date()): AdminGuestbookEntry[] {
   const day = 24 * 60 * 60 * 1000
+  const tourOrder: (GuestbookTour | '')[] = ['center', 'combined', 'lab', 'combined', 'lab', 'center', 'lab', 'center', 'combined', 'lab', '', 'center']
   const rows: [number, string, string, string, string, number, string, boolean][] = [
     [1, '김도현', '세림케미칼', '물류혁신팀', '책임', 5, '로봇이 실제로 작업하는 모습을 가까이서 볼 수 있어 도입 검토에 큰 도움이 됐습니다.', false],
     [3, '박서윤', '누리전자', 'SCM팀', '선임', 4, '현장 적용 관점으로 설명해 주셔서 우리 센터에 맞는 방식을 바로 떠올릴 수 있었습니다.', false],
@@ -73,5 +78,6 @@ export function buildSampleGuestbook(now = new Date()): AdminGuestbookEntry[] {
     displayName: maskName(name),
     displayCompany: maskCompany(company),
     hidden,
+    tour: tourOrder[index],
   }))
 }

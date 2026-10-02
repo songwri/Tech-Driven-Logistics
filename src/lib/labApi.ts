@@ -1,5 +1,5 @@
 import { maskCompany, maskName } from './mask'
-import type { BusySegment, VisitDraft } from './visit'
+import type { BusySegment, GuestbookTour, VisitDraft } from './visit'
 
 export interface GuestbookEntry {
   id: string
@@ -12,6 +12,8 @@ export interface GuestbookEntry {
   rating: number
   message: string
   createdAt: string
+  /** 어떤 투어 후기인지 (이전 기록에는 없다) */
+  tour?: GuestbookTour
 }
 
 export interface GuestbookDraft {
@@ -21,6 +23,7 @@ export interface GuestbookDraft {
   role: string
   rating: number
   message: string
+  tour: GuestbookTour
 }
 
 const API_BASE = (import.meta.env.VITE_LAB_API as string | undefined)?.replace(/\/$/, '')
@@ -136,6 +139,7 @@ export async function submitGuestbook(draft: GuestbookDraft): Promise<GuestbookE
       role: draft.role,
       rating: draft.rating,
       message: draft.message,
+      tour: draft.tour,
       createdAt: new Date().toISOString(),
     }
     writeLocal([entry, ...readLocal()])
