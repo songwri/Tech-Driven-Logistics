@@ -106,8 +106,13 @@ export function ManualVisitModal({
   const [purposes, setPurposes] = useState((initial?.purposes ?? []).join(', '))
   const [industries, setIndustries] = useState((initial?.industries ?? []).join(', '))
   const [headcount, setHeadcount] = useState(initial?.headcount != null ? String(initial.headcount) : '')
-  const [language, setLanguage] = useState(initial?.language ?? 'ko')
+  // 진행 언어: 한국어 · 영어 · 중국어. 이전 기록의 다른 외국어(예: '기타: 태국어')는 고치지 않으면 그대로 둔다.
+  const initialForeign = initial?.language === 'foreign' ? initial.foreignLanguage : ''
+  const [language, setLanguage] = useState<string>(
+    initial?.language !== 'foreign' ? 'ko' : initialForeign === '중국어' ? 'zh' : initialForeign === '영어' || !initialForeign ? 'en' : 'keep',
+  )
   const [interpreter, setInterpreter] = useState(initial?.interpreter ?? false)
+  const [interpreterLanguage, setInterpreterLanguage] = useState(initial?.interpreterLanguage ?? '')
   const [hostName, setHostName] = useState(initial?.host.name ?? '')
   const [hostDivision, setHostDivision] = useState(initial?.host.division ?? '')
   const [hostOrg, setHostOrg] = useState(initial?.host.org ?? '')
@@ -132,9 +137,10 @@ export function ManualVisitModal({
       source: 'manual',
       category,
       clientType: category === 'external' && clientType !== 'none' ? clientType : undefined,
-      language,
-      foreignLanguage: language === 'foreign' ? '영어' : '',
-      interpreter: language === 'foreign' && interpreter,
+      language: language === 'ko' ? 'ko' : 'foreign',
+      foreignLanguage: language === 'en' ? '영어' : language === 'zh' ? '중국어' : language === 'keep' ? initialForeign : '',
+      interpreter,
+      interpreterLanguage: interpreter ? interpreterLanguage.trim() : '',
       company: company.trim(),
       industries: category === 'external' ? splitComma(industries) : [],
       purposes: splitComma(purposes),
@@ -256,15 +262,27 @@ export function ManualVisitModal({
                 onChange={setLanguage}
                 options={[
                   ['ko', '한국어'],
-                  ['foreign', '영어'],
+                  ['en', '영어'],
+                  ['zh', '중국어'],
+                  ...(initialForeign && language !== 'ko' && !['영어', '중국어'].includes(initialForeign)
+                    ? [['keep', initialForeign.replace(/^기타:\s*/, '')] as [string, string]]
+                    : []),
                 ]}
               />
             </div>
-            {language === 'foreign' && (
-              <label className="flex items-center gap-2 pb-2 text-sm text-warm-800">
-                <input type="checkbox" checked={interpreter} onChange={(e) => setInterpreter(e.target.checked)} className="accent-brand" />
-                통역 동반
-              </label>
+            <label className="flex items-center gap-2 pb-2 text-sm text-warm-800">
+              <input type="checkbox" checked={interpreter} onChange={(e) => setInterpreter(e.target.checked)} className="accent-brand" />
+              고객사 통역 동반
+            </label>
+            {interpreter && (
+              <input
+                value={interpreterLanguage}
+                onChange={(e) => setInterpreterLanguage(e.target.value)}
+                maxLength={40}
+                placeholder="방문객 사용 언어 (선택)"
+                aria-label="방문객 사용 언어"
+                className="mb-1 w-44 border border-warm-300/60 bg-white px-2 py-1.5 text-sm"
+              />
             )}
           </div>
           <div className="mt-4 grid gap-4 md:grid-cols-2">

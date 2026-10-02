@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { SceneFrame } from './ArmScene'
+import type { SceneFrame } from './RobotScene'
 import { ARM, REST, along, bilinear, ease, lerp, onSheet, scriptAt, sheetCorners, span, type Point } from './robot'
 
 /** 종이가 멈춰 서는 위치(종이 중심 x) */
@@ -14,7 +14,7 @@ const penOn = (cx: number, u: number, v: number, raise = 0): Point => {
 }
 
 /**
- * 머리말 장면 (반복): 빈 종이가 들어오고 → 로봇팔이 펜으로 글을 쓰고 → 도장을 찍고 → 컨베이어로 흘려보낸다.
+ * 머리말 장면 (반복): 빈 종이가 들어오고 → 로봇이 펜으로 글을 쓰고 → 도장을 찍고 → 컨베이어로 흘려보낸다.
  */
 export function heroFrame(t: number): SceneFrame {
   const cx =

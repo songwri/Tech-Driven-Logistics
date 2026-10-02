@@ -30,6 +30,7 @@ export function normalizeRequest(value: unknown): VisitRequest {
     language: r.language === 'foreign' ? 'foreign' : 'ko',
     foreignLanguage: text(r.foreignLanguage),
     interpreter: r.interpreter === true,
+    interpreterLanguage: text(r.interpreterLanguage),
     company: text(r.company),
     industries: list(r.industries),
     purposes: list(r.purposes),

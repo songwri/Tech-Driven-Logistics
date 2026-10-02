@@ -106,7 +106,7 @@ export function summarize(label: string, all: VisitRequest[]): PeriodRow {
     unclassified: count((request) => request.category === 'external' && !request.clientType),
     korean: count((request) => request.language !== 'foreign'),
     foreign: count((request) => request.language === 'foreign'),
-    interpreter: count((request) => request.language === 'foreign' && request.interpreter),
+    interpreter: count((request) => request.interpreter),
   }
 }
 
@@ -189,7 +189,7 @@ function distributionSheet(name: string, requests: VisitRequest[]): Sheet {
   push('투어 종류', tally((request) => [TOUR_BY_ID[request.tour].label], TOURS.map((tour) => tour.label)), requests.length)
   push(
     '투어 언어',
-    tally((request) => [request.language === 'foreign' ? languageSummary(request) : '한국어'], ['한국어']),
+    tally((request) => [languageSummary(request)], ['한국어']),
     requests.length,
   )
   push('업종(고객 방문)', tally((request) => request.industries.map(baseOption), [...INDUSTRIES, OTHER], external), external.length)

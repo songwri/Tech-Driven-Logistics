@@ -10,12 +10,11 @@ import {
   MAIN_DIVISIONS,
   MAX_VISITORS,
   OTHER,
-  FOREIGN_LANGUAGE,
+  LANGUAGE_CHOICES,
+  tourLanguageName,
   PURPOSES,
-  TOUR_LANGUAGE_LABEL,
   emptyVisitor,
   type ClientType,
-  type TourLanguage,
   type VisitCategory,
   type VisitDraft,
   type VisitHost,
@@ -346,50 +345,63 @@ function RadioDot({ active }: { active: boolean }) {
   )
 }
 
-/** 투어 진행 언어 · 외국어 종류 · 방문 측 통역 동반 여부 */
+/** 투어 진행 언어(한국어 · 영어 · 중국어) · 방문 측 통역 동반 여부 · 통역 대상 언어 */
 function LanguageFields({ draft, onChange }: { draft: VisitDraft; onChange: Patch }) {
-  const foreign = draft.language === 'foreign'
+  const current =
+    LANGUAGE_CHOICES.find(
+      (choice) => choice.language === draft.language && (choice.language === 'ko' || choice.foreignLanguage === draft.foreignLanguage),
+    )?.id ?? null
+  const languageName = tourLanguageName(draft)
   return (
     <div className="border border-warm-300/50 bg-cream/40 p-4">
       <FieldLabel required>투어 진행 언어</FieldLabel>
-      <div className="mt-1.5 flex flex-wrap items-center gap-2" role="radiogroup">
-        {(Object.keys(TOUR_LANGUAGE_LABEL) as TourLanguage[]).map((language) => (
+      <div className="mt-1.5 flex flex-wrap items-center gap-2" role="radiogroup" aria-label="투어 진행 언어">
+        {LANGUAGE_CHOICES.map((choice) => (
           <Chip
-            key={language}
+            key={choice.id}
             multi={false}
-            selected={draft.language === language}
-            onClick={() =>
-              onChange(
-                language === 'ko'
-                  ? { language, foreignLanguage: '', interpreter: false }
-                  : { language, foreignLanguage: FOREIGN_LANGUAGE },
-              )
-            }
+            selected={current === choice.id}
+            onClick={() => onChange({ language: choice.language, foreignLanguage: choice.foreignLanguage })}
             className="min-w-20 justify-center"
           >
-            {TOUR_LANGUAGE_LABEL[language]}
+            {choice.label}
           </Chip>
         ))}
+        <span className="text-[12px] text-warm-600">
+          {draft.language === 'foreign'
+            ? `${languageName}로 안내 가능한 인력을 배정합니다.`
+            : '기본은 한국어로 안내합니다.'}
+        </span>
       </div>
 
-      {foreign && (
-        <div className="mt-4 border-t border-warm-300/40 pt-3">
-          <FieldLabel required>방문 측(고객사) 통역 동반</FieldLabel>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2" role="radiogroup">
-            <Chip multi={false} selected={draft.interpreter} onClick={() => onChange({ interpreter: true })}>
-              통역 동반
-            </Chip>
-            <Chip multi={false} selected={!draft.interpreter} onClick={() => onChange({ interpreter: false })}>
-              통역 없음
-            </Chip>
-            <span className="text-[12px] text-warm-600">
-              {draft.interpreter
-                ? '고객사 통역이 함께 오면 한국어로 안내하고 통역이 전달합니다.'
-                : '통역 없이 오시는 경우 영어로 안내 가능한 인력을 배정합니다.'}
-            </span>
-          </div>
+      <div className="mt-4 border-t border-warm-300/40 pt-3">
+        <FieldLabel required>방문 측(고객사) 통역 동반</FieldLabel>
+        <div className="mt-1.5 flex flex-wrap items-center gap-2" role="radiogroup" aria-label="통역 동반">
+          <Chip multi={false} selected={!draft.interpreter} onClick={() => onChange({ interpreter: false, interpreterLanguage: '' })}>
+            통역 없음
+          </Chip>
+          <Chip multi={false} selected={draft.interpreter} onClick={() => onChange({ interpreter: true })}>
+            통역 동반
+          </Chip>
+          <span className="text-[12px] text-warm-600">
+            {draft.interpreter
+              ? `${languageName}로 안내하면 함께 오는 통역이 방문객에게 전달합니다.`
+              : '방문객이 진행 언어로 바로 들을 수 있는 경우'}
+          </span>
         </div>
-      )}
+        {draft.interpreter && (
+          <div className="mt-3 max-w-xs">
+            <Field label="방문객 사용 언어" optional hint="통역이 전달할 언어">
+              <Input
+                value={draft.interpreterLanguage ?? ''}
+                onChange={(e) => onChange({ interpreterLanguage: e.target.value })}
+                maxLength={40}
+                placeholder="예) 베트남어, 일본어"
+              />
+            </Field>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

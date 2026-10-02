@@ -1,7 +1,8 @@
 /**
- * 방명록 장면(로봇팔 + 컨베이어)의 기하와 움직임 계산.
+ * 방명록 장면(휴머노이드 로봇 + 컨베이어)의 기하와 움직임 계산.
  * 화면 좌표는 SVG viewBox(0 0 480 280) 기준, y 는 아래로 커진다.
- * 로봇팔은 2관절 팔이라 손목 위치만 정하면 관절 각도를 역기구학으로 구한다.
+ * 로봇은 컨베이어 뒤에 서서 오른팔(화면 왼쪽 팔)로 일한다. 팔은 2관절이라
+ * 손목 위치만 정하면 팔꿈치 위치를 역기구학으로 구한다.
  */
 
 export const VIEW = { width: 480, height: 280 }
@@ -9,11 +10,14 @@ export const VIEW = { width: 480, height: 280 }
 /** 컨베이어 벨트 윗면: 앞 모서리 y, 뒤 모서리는 (DEPTH_X, -DEPTH_Y) 만큼 비스듬히 */
 export const BELT = { y: 204, depthX: 22, depthY: 18, thickness: 14 }
 
+/** 휴머노이드 몸의 기준점: 몸 중심 x, 머리 중심, 발바닥 y */
+export const BODY = { x: 350, head: { x: 350, y: 64 }, ground: 268 }
+
 export const ARM = {
-  base: { x: 404, y: 252 },
-  shoulder: { x: 404, y: 112 },
-  upper: 124,
-  fore: 112,
+  /** 일하는 팔(로봇의 오른팔)의 어깨 */
+  shoulder: { x: 326, y: 110 },
+  upper: 80,
+  fore: 74,
   /** 손목에서 집게 끝까지 */
   grip: 22,
   /** 손목에서 펜 끝까지 */
@@ -21,7 +25,7 @@ export const ARM = {
 }
 
 /** 휴식 자세의 손목 위치 */
-export const REST = { x: 300, y: 138 }
+export const REST = { x: 288, y: 140 }
 
 /** 종이(누운 상태) 크기: 벨트 위 가로 · 깊이 */
 export const SHEET = { width: 58, depth: 14 }
@@ -39,7 +43,7 @@ export interface ArmPose {
   wrist: Point
 }
 
-/** 손목 목표 위치 → 팔꿈치 위치. 팔꿈치가 위로 접히는 해를 고른다. */
+/** 손목 목표 위치 → 팔꿈치 위치. 사람 팔처럼 팔꿈치가 아래로 처지는 해를 고른다. */
 export function solveArm(target: Point): ArmPose {
   const { shoulder, upper, fore } = ARM
   let dx = target.x - shoulder.x
@@ -58,7 +62,7 @@ export function solveArm(target: Point): ArmPose {
     x: shoulder.x + Math.cos(angle) * upper,
     y: shoulder.y + Math.sin(angle) * upper,
   }))
-  const elbow = candidates[0].y < candidates[1].y ? candidates[0] : candidates[1]
+  const elbow = candidates[0].y > candidates[1].y ? candidates[0] : candidates[1]
   return { elbow, wrist: { x: shoulder.x + dx, y: shoulder.y + dy } }
 }
 

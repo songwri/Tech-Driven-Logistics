@@ -9,7 +9,7 @@ import { formatRating, ratingLabel } from '@/lib/rating'
 import { GUESTBOOK_TOURS, TOUR_BY_ID, type GuestbookTour } from '@/lib/visit'
 import { cn } from '@/lib/utils'
 import { submitGuestbook, type GuestbookEntry } from '@/lib/labApi'
-import { ArmScene } from '@/guestbook/ArmScene'
+import { RobotScene } from '@/guestbook/RobotScene'
 import { introFrame, outroFrame, useTimeline } from '@/guestbook/scenes'
 
 const MESSAGE_LIMIT = 100
@@ -23,7 +23,7 @@ interface GuestbookDialogProps {
 }
 
 type Errors = Partial<Record<'tour' | 'rating' | 'message' | 'name' | 'company' | 'role', string>>
-/** intro: 로봇팔이 빈 용지를 집어 올림 → form: 용지가 커져 작성 화면 → outro: 다 쓴 용지를 컨베이어로 보냄 */
+/** intro: 로봇이 빈 용지를 집어 올림 → form: 용지가 커져 작성 화면 → outro: 다 쓴 용지를 컨베이어로 보냄 */
 type Phase = 'intro' | 'form' | 'outro'
 /** 장면 속 용지의 화면 위치. 작성 화면이 여기서 커져 나오고, 등록하면 여기로 돌아간다. */
 type Spot = { x: number; y: number; scale: number } | null
@@ -44,7 +44,7 @@ const today = () => {
   return `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`
 }
 
-/** 로봇팔 장면을 담는 무대. 작성 전후의 짧은 연출에만 보인다. */
+/** 로봇 장면을 담는 무대. 작성 전후의 짧은 연출에만 보인다. */
 function Stage({
   phase,
   onDone,
@@ -67,11 +67,11 @@ function Stage({
       transition={{ duration: 0.4, ease: EASE }}
       onClick={(event) => event.stopPropagation()}
     >
-      <ArmScene
+      <RobotScene
         frame={frame}
         sheetRef={sheetRef}
         className="h-auto w-full"
-        label={phase === 'intro' ? '로봇팔이 컨베이어에서 빈 방명록 용지를 집어 올리는 장면' : '작성한 방명록 용지가 컨베이어를 따라 나가는 장면'}
+        label={phase === 'intro' ? '휴머노이드 로봇이 컨베이어에서 빈 방명록 용지를 집어 올리는 장면' : '작성한 방명록 용지가 컨베이어를 따라 나가는 장면'}
       />
       <div className="mt-2 flex items-center justify-between gap-3 text-[13px]">
         <p className="text-warm-600" aria-live="polite">
@@ -92,7 +92,7 @@ function Stage({
 }
 
 /**
- * 방명록 작성. 로봇팔이 컨베이어에서 빈 용지를 집어 들면 그 용지가 커져 작성 화면이 되고,
+ * 방명록 작성. 로봇이 컨베이어에서 빈 용지를 집어 들면 그 용지가 커져 작성 화면이 되고,
  * 등록하면 용지가 다시 작아져 컨베이어로 나간다. 움직임 줄이기 설정이면 연출 없이 바로 열고 닫는다.
  */
 export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialogProps) {

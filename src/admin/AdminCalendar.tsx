@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { OPEN_WEEKDAYS, TOURS, TOUR_BY_ID, formatSlot, isCounted, toDateKey, type VisitRequest } from '@/lib/visit'
+import { languageSummary, hasLanguageNote, OPEN_WEEKDAYS, TOURS, TOUR_BY_ID, formatSlot, isCounted, toDateKey, type VisitRequest } from '@/lib/visit'
 import { STATUS_TONE } from './statusTone'
 import { StatusBadge } from './status'
 
@@ -86,7 +86,7 @@ export function AdminCalendar({ month, onMonthChange, requests, selectedDate, on
           <StatusBadge status="completed" />
           <StatusBadge status="rejected" />
           <span className="inline-flex items-center gap-1">
-            <Globe width={11} height={11} /> 외국어 투어
+            <Globe width={11} height={11} /> 외국어 · 통역
           </span>
         </div>
       </div>
@@ -185,8 +185,8 @@ export function AdminCalendar({ month, onMonthChange, requests, selectedDate, on
                     >
                       <span className="shrink-0 font-mono text-[10px] opacity-80">{request.slot ? request.slot.slice(0, 5) : '미정'}</span>
                       <span className="truncate font-medium">{request.company}</span>
-                      {request.language === 'foreign' && (
-                        <Globe width={10} height={10} className="ml-auto shrink-0" aria-label="외국어 투어" />
+                      {hasLanguageNote(request) && (
+                        <Globe width={10} height={10} className="ml-auto shrink-0" aria-label={languageSummary(request)} />
                       )}
                     </button>
                   ))}

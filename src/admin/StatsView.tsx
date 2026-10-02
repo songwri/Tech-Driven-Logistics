@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { downloadWorkbook } from '@/lib/xlsx'
-import {
+import { tourLanguageName, FOREIGN_LANGUAGES,
   INDUSTRIES,
   JOBS,
   OTHER,
@@ -153,9 +153,17 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
     .filter((datum) => datum.value > 0)
     .sort((a, b) => b.value - a.value)
   const languages: Datum[] = [
-    withList('한국어', scoped.filter((request) => request.language !== 'foreign')),
-    withList('외국어 · 통역 동반', scoped.filter((request) => request.language === 'foreign' && request.interpreter)),
-    withList('외국어 · 통역 없음', scoped.filter((request) => request.language === 'foreign' && !request.interpreter)),
+    withList('한국어', scoped.filter((request) => request.language !== 'foreign' && !request.interpreter)),
+    withList('한국어 · 통역 동반', scoped.filter((request) => request.language !== 'foreign' && request.interpreter)),
+    ...FOREIGN_LANGUAGES.map((name) =>
+      withList(name, scoped.filter((request) => request.language === 'foreign' && tourLanguageName(request) === name)),
+    ),
+    ...(() => {
+      const others = scoped.filter(
+        (request) => request.language === 'foreign' && !(FOREIGN_LANGUAGES as readonly string[]).includes(tourLanguageName(request)),
+      )
+      return others.length > 0 ? [withList('기타 외국어', others)] : []
+    })(),
   ]
   // 직무는 방문자 수 기준이라 값(명)은 그대로 두고, 눌렀을 때는 해당 직무 방문자가 있는 방문 건을 보여준다.
   const jobs: Datum[] = JOBS.map((job) => ({
@@ -355,7 +363,7 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
         <Card title="업종 (고객 방문)" subtitle={`${periodLabel} · 많은 순`}>
           <ColumnChart data={industries} height={150} total={external.length} onSelect={select('업종')} />
         </Card>
-        <Card title="투어 언어" subtitle="방문 측 통역 동반 여부">
+        <Card title="투어 언어" subtitle="진행 언어 · 한국어 투어의 통역 동반">
           <ColumnChart data={languages} height={150} onSelect={select('투어 언어')} />
         </Card>
       </div>

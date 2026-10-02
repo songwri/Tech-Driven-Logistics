@@ -32,14 +32,15 @@ const GUIDE: Record<Header, [string, string]> = {
   수정일시: ['비워 두세요 (자동)', ''],
   방문자JSON: ['비워 두세요 (웹 예약의 방문자 명단)', ''],
   투어언어: ['한국어 / 외국어', '외국어'],
-  외국어: ['외국어 투어일 때 언어', '영어'],
-  통역동반: ['동반 / 없음', '없음'],
+  외국어: ['외국어 투어일 때 언어: 영어 / 중국어', '영어'],
+  통역동반: ['방문 측 통역 동반: 동반 / 없음 (모든 언어)', '없음'],
   출처: ['비워 두세요 (자동: 수기)', ''],
   주요인원: ['줄바꿈 또는 쉼표로 구분', '김철수 상무'],
   가이드: ['안내한 인원, 줄바꿈으로 구분', '홍길동 책임\n김영희 선임'],
   유관부서: ['쉼표로 구분', '풀필먼트영업팀, SC품질팀'],
   '담당(실)': ['신청 담당자의 담당(실). 통계는 6개 주요 담당 + 기타로 집계', 'CL운영담당'],
   후속진행: ['', 'PoC 논의'],
+  통역언어: ['통역 동반일 때 방문객 사용 언어 (선택)', ''],
 }
 
 const WIDTHS: Partial<Record<Header, number>> = {
@@ -104,7 +105,8 @@ function toSheetRow(request: VisitRequest): CellValue[] {
     방문자JSON: JSON.stringify(request.visitors),
     투어언어: foreign ? '외국어' : '한국어',
     외국어: foreign ? request.foreignLanguage : '',
-    통역동반: foreign ? (request.interpreter ? '동반' : '없음') : '',
+    통역동반: request.interpreter ? '동반' : '없음',
+    통역언어: request.interpreter ? (request.interpreterLanguage ?? '') : '',
     출처: request.source === 'manual' ? '수기' : '웹',
     주요인원: request.keyPersons ?? '',
     가이드: request.guides ?? '',

@@ -164,11 +164,25 @@ export const JOBS = [
 
 export const TOUR_LANGUAGE_LABEL: Record<TourLanguage, string> = {
   ko: '한국어',
-  foreign: '외국어 (영어)',
+  foreign: '외국어',
 }
 
-/** 외국어 투어는 영어로만 진행한다. */
-export const FOREIGN_LANGUAGE = '영어'
+/** 외국어 투어는 영어 · 중국어로 진행한다. 예약 화면은 한국어 · 영어 · 중국어 중 하나를 고른다. */
+export const FOREIGN_LANGUAGES = ['영어', '중국어'] as const
+export const FOREIGN_LANGUAGE = FOREIGN_LANGUAGES[0]
+
+/** 예약 화면의 투어 진행 언어 선택지 (language + foreignLanguage 조합) */
+export const LANGUAGE_CHOICES = [
+  { id: 'ko', label: '한국어', language: 'ko' as TourLanguage, foreignLanguage: '' },
+  { id: 'en', label: '영어', language: 'foreign' as TourLanguage, foreignLanguage: '영어' },
+  { id: 'zh', label: '중국어', language: 'foreign' as TourLanguage, foreignLanguage: '중국어' },
+]
+
+/** 투어 진행 언어 이름: '한국어' · '영어' · '중국어' (이전 기록의 '기타: 태국어' 등은 그대로) */
+export function tourLanguageName(request: Pick<VisitDraft, 'language' | 'foreignLanguage'>) {
+  if (request.language !== 'foreign') return TOUR_LANGUAGE_LABEL.ko
+  return request.foreignLanguage.replace(/^기타:\s*/, '') || TOUR_LANGUAGE_LABEL.foreign
+}
 
 /** 준비 시간 확보: 당일 · 익일은 신청 불가 (오늘 +2일부터). apps-script/Code.gs 의 MIN_LEAD_DAYS 와 같아야 합니다. */
 export const MIN_LEAD_DAYS = 2
@@ -216,8 +230,10 @@ export interface VisitDraft {
   language: TourLanguage
   /** 외국어 투어일 때 언어 ('영어', '기타: 태국어' 등) */
   foreignLanguage: string
-  /** 방문 측(고객사)에서 통역이 동반되는지 */
+  /** 방문 측(고객사)에서 통역이 동반되는지 (모든 진행 언어에서 선택) */
   interpreter: boolean
+  /** 통역 동반일 때 방문객 사용 언어 (선택 입력, 예: 베트남어) */
+  interpreterLanguage?: string
   company: string
   /** '기타: 직접입력' 형태로 기타 항목이 들어올 수 있습니다. */
   industries: string[]
@@ -410,12 +426,21 @@ export function baseOption(value: string) {
   return value.startsWith(OTHER) ? OTHER : value
 }
 
-/** '한국어' 또는 '영어 · 통역 동반' 형태 */
-export function languageSummary(request: Pick<VisitDraft, 'language' | 'foreignLanguage' | 'interpreter'>) {
-  if (request.language !== 'foreign') return TOUR_LANGUAGE_LABEL.ko
-  const name = request.foreignLanguage.replace(/^기타:\s*/, '') || TOUR_LANGUAGE_LABEL.foreign
-  return `${name} · ${request.interpreter ? '통역 동반' : '통역 없음'}`
+/** '한국어' · '한국어 · 통역 동반(베트남어)' · '중국어 · 통역 없음' 형태. 한국어 · 통역 없음은 '한국어'만. */
+export function languageSummary(
+  request: Pick<VisitDraft, 'language' | 'foreignLanguage' | 'interpreter' | 'interpreterLanguage'>,
+) {
+  const name = tourLanguageName(request)
+  if (request.interpreter) {
+    const target = request.interpreterLanguage?.trim()
+    return `${name} · 통역 동반${target ? `(${target})` : ''}`
+  }
+  return request.language === 'foreign' ? `${name} · 통역 없음` : name
 }
+
+/** 기본(한국어 · 통역 없음)이 아닌 언어 조건이 있는지: 목록 · 달력에서 따로 표시한다. */
+export const hasLanguageNote = (request: Pick<VisitDraft, 'language' | 'interpreter'>) =>
+  request.language === 'foreign' || request.interpreter
 
 export function clientSegment(request: Pick<VisitDraft, 'category' | 'clientType'>) {
   if (request.category === 'internal') return '내부 방문'
