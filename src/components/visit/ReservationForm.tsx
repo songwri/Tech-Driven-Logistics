@@ -358,20 +358,14 @@ export function ReservationForm({ busy, closedDays, scheduleLoading }: Reservati
           신청 담당자
         </SectionTitle>
         <HostFields host={draft.host} onChange={(host) => patch({ host })} errors={errors} />
-        <label className="mt-4 flex cursor-pointer items-start gap-3 border border-warm-300/50 bg-cream/50 px-4 py-3 text-[13px] text-warm-800">
+        <label className="mt-4 flex cursor-pointer items-center gap-3 border border-warm-300/50 bg-cream/50 px-4 py-3 text-[13px] text-warm-800">
           <input
             type="checkbox"
             checked={hostJoins}
             onChange={(e) => toggleHostJoins(e.target.checked)}
-            className="mt-0.5 h-4 w-4 shrink-0 accent-[#a72b2b]"
+            className="h-4 w-4 shrink-0 accent-[#a72b2b]"
           />
-          <span>
-            <b>신청 담당자도 투어에 참석합니다</b>
-            <span className="mt-0.5 block text-warm-600">
-              체크하면 아래 ‘방문자 명단’ 1번에 담당자의 성함 · 직책 · 조직 · 이메일이 자동으로 들어가고, 담당자 정보를 고치면 함께 바뀝니다.
-              차량번호와 직무는 방문자 명단에서 직접 입력해 주세요.
-            </span>
-          </span>
+          <b>신청 담당자도 투어에 참석합니다</b>
         </label>
       </section>
 
