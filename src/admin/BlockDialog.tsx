@@ -3,6 +3,7 @@ import { AlertTriangle, Lock, X } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Field'
+import { TimeField } from '@/components/ui/TimeField'
 import { cn } from '@/lib/utils'
 import { isHoliday } from '@/lib/holidays'
 import {
@@ -190,9 +191,9 @@ export function BlockDialog({ start: initialStart, end: initialEnd, blocks, requ
             </div>
             {!allDay && (
               <div className="flex items-center gap-2">
-                <Input type="time" step={900} value={from} onChange={(e) => setFrom(e.target.value)} />
+                <TimeField value={from} onChange={setFrom} aria-label="시작 시간" />
                 <span className="text-warm-600">~</span>
-                <Input type="time" step={900} value={to} onChange={(e) => setTo(e.target.value)} />
+                <TimeField value={to} onChange={setTo} aria-label="끝 시간" />
               </div>
             )}
           </div>
