@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Field, Input, Textarea } from '@/components/ui/Field'
+import { TimeField } from '@/components/ui/TimeField'
 import { cn } from '@/lib/utils'
 import {
   MAIN_DIVISIONS,
@@ -197,10 +198,10 @@ export function ManualVisitModal({
               <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </Field>
             <Field label="시작 시간" hint="비우면 시간 미정">
-              <Input type="time" step={900} value={start} onChange={(e) => setStart(e.target.value)} />
+              <TimeField value={start} onChange={setStart} aria-label="시작 시간" />
             </Field>
             <Field label="종료 시간">
-              <Input type="time" step={900} value={end} onChange={(e) => setEnd(e.target.value)} />
+              <TimeField value={end} onChange={setEnd} aria-label="종료 시간" />
             </Field>
             <Field label="투어">
               <select className={selectClass} value={tour} onChange={(e) => setTour(e.target.value as VisitRequest['tour'])}>
