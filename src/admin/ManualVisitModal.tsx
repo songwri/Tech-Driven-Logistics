@@ -179,7 +179,7 @@ export function ManualVisitModal({
       description={
         initial
           ? `${formatDateShort(initial.date)} · ${initial.company}`
-          : '전화 · 메일로 잡힌 방문이나 지난 방문을 직접 기록합니다. 요일 · 시간 제한이 없습니다.'
+          : '전화 · 메일로 잡힌 방문이나 지난 방문을 직접 기록합니다. 요일 · 시간 제한이 없고, 같은 시간에 다른 예약이 있어도 등록됩니다(공동 진행).'
       }
       onClose={onClose}
       className="max-w-4xl"

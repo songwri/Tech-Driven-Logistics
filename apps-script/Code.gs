@@ -64,7 +64,7 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-16.single-industry';
+var CODE_VERSION = '2026-10-17.manual-overlap';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -971,7 +971,7 @@ function changeStatus_(found, status) {
     // 잠금을 기다리는 사이 행 위치가 바뀌었을 수 있어 id 로 다시 찾는다.
     var current = findVisit_(function (item) { return item.id === found.id; });
     if (!current) throw new Error('예약을 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.');
-    if (isConfirmed_(status) && !isConfirmed_(current.status)
+    if (isConfirmed_(status) && !isConfirmed_(current.status) && current.source !== 'manual'
       && isBusy_(current.tour, current.date, current.slot, busy_(current.id).busy, current.source === 'manual')) {
       throw new Error('이미 승인된 다른 예약과 시간이 겹쳐 승인할 수 없습니다.');
     }
@@ -1100,9 +1100,7 @@ function appendVisits_(requests) {
 function createManual_(payload) {
   var request = sanitizeManual_(payload || {});
   return withLock_(function () {
-    if (isConfirmed_(request.status) && isBusy_(request.tour, request.date, request.slot, busy_().busy, true)) {
-      throw new Error('이미 승인된 다른 예약과 시간이 겹칩니다. 시간을 확인해 주세요.');
-    }
+    // 관리자 수기 등록은 다른 예약과 겹쳐도 등록된다 (공동 진행). 웹 신청에는 적용되지 않는다.
     request.id = Utilities.getUuid();
     request.createdAt = new Date().toISOString();
     appendVisits_([request]);
@@ -1227,7 +1225,7 @@ function admin_(payload) {
       if (!current) throw new Error('예약을 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.');
       next.status = current.status;
       next._row = current._row;
-      if (isConfirmed_(next.status) && isBusy_(next.tour, next.date, next.slot, busy_(next.id).busy, next.source === 'manual')) {
+      if (isConfirmed_(next.status) && next.source !== 'manual' && isBusy_(next.tour, next.date, next.slot, busy_(next.id).busy, next.source === 'manual')) {
         throw new Error('변경한 일정이 이미 승인된 다른 예약과 겹칩니다.');
       }
       writeVisit_(next._row, next);

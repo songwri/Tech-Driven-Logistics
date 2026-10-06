@@ -116,8 +116,10 @@ function conflicts(
   request: Pick<VisitRequest, 'tour' | 'date' | 'slot' | 'status' | 'id'> & { source?: VisitRequest['source'] },
   all: VisitRequest[],
 ) {
+  // 관리자 수기 등록 건은 다른 예약과 겹쳐도 된다 (한 일정에 두 팀을 받아 공동 진행하는 경우).
+  if (request.source === 'manual') return false
   if (!isConfirmed(request.status) || request.date < toDateKey(new Date())) return false
-  return isSlotBusy(request.tour, request.date, request.slot, busyFromRequests(all, request.id), request.source === 'manual')
+  return isSlotBusy(request.tour, request.date, request.slot, busyFromRequests(all, request.id))
 }
 
 export function readSavedKey() {
