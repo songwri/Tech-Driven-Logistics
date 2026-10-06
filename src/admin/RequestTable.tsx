@@ -16,7 +16,7 @@ import { hasLanguageNote,
   type VisitStatus,
 } from '@/lib/visit'
 import { STATUS_TONE } from './statusTone'
-import { StatusBadge, TourTag } from './status'
+import { StatusBadge, TourTag, tourTint } from './status'
 
 interface RequestTableProps {
   requests: VisitRequest[]
@@ -165,7 +165,7 @@ export function RequestTable({
                 <p className="text-[13px] font-bold">
                   {formatDateShort(request.date)} <span className="font-mono font-normal">{formatSlot(request.slot)}</span>
                 </p>
-                <p className="mt-0.5 truncate text-[14px] font-semibold">
+                <p className="mt-1 truncate py-1 pl-2.5 pr-2 text-[14px] font-semibold" style={tourTint(request.tour)}>
                   {request.company}
                   {request.source === 'manual' && <ManualTag />}
                 </p>
@@ -257,7 +257,10 @@ export function RequestTable({
                     <span className="opacity-60">한국어</span>
                   )}
                 </td>
-                <td className="max-w-56 truncate px-2 py-2.5 font-semibold">
+                <td
+                  className={cn('max-w-56 truncate px-3 py-2.5 font-semibold', !isCounted(request.status) && 'opacity-60')}
+                  style={tourTint(request.tour)}
+                >
                   {request.company}
                   {request.source === 'manual' && <ManualTag />}
                 </td>

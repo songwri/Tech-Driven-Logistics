@@ -8,7 +8,7 @@ import {
   type VisitRequest,
   type VisitStatus,
 } from '@/lib/visit'
-import { TourTag } from './status'
+import { TourTag, tourTint } from './status'
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -49,12 +49,12 @@ function PendingRow({
         {formatDateShort(request.date)}
         <span className="block text-warm-300">{formatSlot(request.slot)}</span>
       </span>
-      <button type="button" onClick={() => onOpen(request.id)} className="min-w-0 text-left">
+      <button type="button" onClick={() => onOpen(request.id)} className="min-w-0 py-1.5 pl-3 pr-2 text-left" style={tourTint(request.tour)}>
         <span className="block truncate text-sm font-semibold text-warm-800 group-hover:text-brand">
           {request.company || '(업체명 없음)'}
         </span>
         <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12px] text-warm-600">
-          <TourTag tour={request.tour} className="text-[12px] font-normal" />
+          <TourTag tour={request.tour} className="px-1.5 py-0 text-[11px]" />
           <span>·</span>
           <span>
             {request.host.name} {request.host.title}
@@ -232,10 +232,13 @@ export function UpcomingPanel({
                 <span className="font-mono text-[12px] font-semibold tabular-nums text-warm-800">
                   {dayLabel(request.date, today)}
                 </span>
-                <span className="min-w-0">
+                <span className="min-w-0 py-1 pl-3 pr-2" style={tourTint(request.tour)}>
                   <span className="block truncate text-sm font-semibold text-warm-800">{request.company}</span>
-                  <span className="block font-mono text-[12px] tabular-nums text-warm-600">
-                    {formatDateShort(request.date)} {formatSlot(request.slot)} · {headcountLabel(request)}
+                  <span className="mt-0.5 flex flex-wrap items-center gap-x-2 font-mono text-[12px] tabular-nums text-warm-600">
+                    <TourTag tour={request.tour} className="px-1.5 py-0 font-sans text-[11px]" />
+                    <span>
+                      {formatDateShort(request.date)} {formatSlot(request.slot)} · {headcountLabel(request)}
+                    </span>
                   </span>
                 </span>
               </button>
