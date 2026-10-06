@@ -190,9 +190,9 @@ export function BlockDialog({ start: initialStart, end: initialEnd, blocks, requ
             </div>
             {!allDay && (
               <div className="flex items-center gap-2">
-                <Input type="time" step={600} value={from} onChange={(e) => setFrom(e.target.value)} />
+                <Input type="time" step={900} value={from} onChange={(e) => setFrom(e.target.value)} />
                 <span className="text-warm-600">~</span>
-                <Input type="time" step={600} value={to} onChange={(e) => setTo(e.target.value)} />
+                <Input type="time" step={900} value={to} onChange={(e) => setTo(e.target.value)} />
               </div>
             )}
           </div>

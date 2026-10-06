@@ -197,10 +197,10 @@ export function ManualVisitModal({
               <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </Field>
             <Field label="시작 시간" hint="비우면 시간 미정">
-              <Input type="time" step={600} value={start} onChange={(e) => setStart(e.target.value)} />
+              <Input type="time" step={900} value={start} onChange={(e) => setStart(e.target.value)} />
             </Field>
             <Field label="종료 시간">
-              <Input type="time" step={600} value={end} onChange={(e) => setEnd(e.target.value)} />
+              <Input type="time" step={900} value={end} onChange={(e) => setEnd(e.target.value)} />
             </Field>
             <Field label="투어">
               <select className={selectClass} value={tour} onChange={(e) => setTour(e.target.value as VisitRequest['tour'])}>
