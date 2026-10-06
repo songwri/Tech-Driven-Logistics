@@ -221,8 +221,8 @@ export function UpcomingPanel({
       {upcoming.length === 0 ? (
         <p className="px-4 py-6 text-sm text-warm-600">예정된 확정 방문이 없습니다.</p>
       ) : (
-        <ol className="divide-y divide-warm-300/30">
-          {upcoming.slice(0, 5).map((request) => (
+        <ol className="max-h-[22rem] divide-y divide-warm-300/30 overflow-y-auto overscroll-contain" tabIndex={0} aria-label="다가오는 확정 방문 목록 (스크롤)">
+          {upcoming.map((request) => (
             <li key={request.id}>
               <button
                 type="button"
