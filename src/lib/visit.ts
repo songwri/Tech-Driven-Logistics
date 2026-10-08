@@ -255,6 +255,8 @@ export interface VisitRequest extends VisitDraft {
   source?: VisitSource
   /** 방문 인원수 (방문자 명단이 없는 수기 기록용). 없으면 명단 인원 */
   headcount?: number
+  /** 관리자가 정한 실제 방문 인원 (예: '홍길동 외 9명' 단체). 있으면 명단 인원보다 우선 */
+  actualHeadcount?: number
   /** 주요 인원 (예: '홍길동 상무, 김철수 이사') */
   keyPersons?: string
   /** 안내 가이드 (줄바꿈 구분) */
@@ -265,14 +267,19 @@ export interface VisitRequest extends VisitDraft {
   followUp?: string
 }
 
-/** 방문 인원: 명단이 있으면 명단 인원, 없으면 기록된 인원수 */
-export function headcountOf(request: Pick<VisitRequest, 'visitors' | 'headcount'>) {
+type HeadcountSource = Pick<VisitRequest, 'visitors' | 'headcount' | 'actualHeadcount'>
+
+/** 방문 인원: 관리자가 정한 실제 인원 → 명단 인원 → 기록된 인원수 순 */
+export function headcountOf(request: HeadcountSource) {
+  if (request.actualHeadcount != null) return request.actualHeadcount
   return request.visitors.length > 0 ? request.visitors.length : (request.headcount ?? 0)
 }
 
 /** '6명' / 인원 미정인 수기 기록은 '미정' */
-export function headcountLabel(request: Pick<VisitRequest, 'visitors' | 'headcount'>) {
-  return request.visitors.length === 0 && request.headcount == null ? '미정' : `${headcountOf(request)}명`
+export function headcountLabel(request: HeadcountSource) {
+  return request.actualHeadcount == null && request.visitors.length === 0 && request.headcount == null
+    ? '미정'
+    : `${headcountOf(request)}명`
 }
 
 /** 확정된 예약 또는 휴무가 점유하는 구간 (개인정보 없음). */
