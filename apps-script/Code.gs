@@ -60,11 +60,18 @@ function mailTo_(tour) {
     return true;
   }).join(',');
 }
+/** 신청자 메일에 적는 담당자 연락처 (그 투어의 알림을 받는 주소들). */
+function contactHtml_(tour) {
+  return mailTo_(tour).split(',').map(function (address) {
+    var safe = escapeHtml_(address);
+    return '<a href="mailto:' + safe + '" style="color:' + BRAND + ';">' + safe + '</a>';
+  }).join(' · ');
+}
 var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-17.manual-overlap';
+var CODE_VERSION = '2026-10-18.gate1-contact';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -1399,7 +1406,7 @@ function reservationMailHtml_(r) {
     '<p style="margin:14px 0 0;font-size:12px;color:#aca8a7;line-height:1.7;">',
     '버튼을 누르면 관리자 페이지에서 이 예약의 상세 화면이 열립니다. (관리자 키로 로그인)<br>',
     '승인하면 해당 시간대는 예약 화면에서 자동으로 선택 불가 처리되고, 신청 담당자에게 확정 메일이 발송됩니다.<br>',
-    '이 메일에 그대로 <b>회신</b>하시면 신청 담당자에게 바로 답장이 갑니다.',
+    '신청 담당자와의 문의 · 일정 조율은 위 연락처 · 이메일로 직접 소통해 주세요.',
     '</p>',
   ].join('');
 
@@ -1421,10 +1428,10 @@ var VISIT_GUIDE = {
   /** 주차 · 미팅 위치 지도 (사이트 public/media/visit-map.jpg) */
   mapImage: SITE_URL + 'media/visit-map.jpg',
   arriveBefore: 10,
-  /** 모든 투어 공통: 입구(IN) 왼쪽 투어 주차장 */
-  parking: '입구(IN)로 들어와 왼쪽의 투어 주차장에 주차해 주세요.',
+  /** 모든 투어 공통: 1층 출입구 옆 1번 게이트 (G1-1 도크 앞) */
+  parking: '입구(IN)로 들어와 1층 출입구 옆 1번 게이트(G1-1 도크 앞)에 주차해 주세요.',
   /** TDL Lab 투어는 주차장에서 담당자가 Lab 으로 안내 */
-  labMeeting: '주차 후 투어 주차장에서 담당자가 TDL Lab 까지 안내해 드립니다.',
+  labMeeting: '주차 후 1번 게이트 앞에서 담당자가 TDL Lab 까지 안내해 드립니다.',
 };
 
 function visitGuideHtml_(r) {
@@ -1438,12 +1445,12 @@ function visitGuideHtml_(r) {
     '<div style="margin-top:26px;font-size:15px;font-weight:700;color:#3d3532;">오시는 길</div>',
     rows_(pairs),
     '<a href="', VISIT_GUIDE.mapUrl, '" style="display:block;margin-top:14px;">',
-    '<img src="', VISIT_GUIDE.mapImage, '" alt="주차 · 미팅 장소 안내 지도" width="504" ',
+    '<img src="', VISIT_GUIDE.mapImage, '" alt="주차 위치 안내 지도 (1층 출입구 옆 1번 게이트, G1-1 도크 앞)" width="504" ',
     'style="display:block;width:100%;max-width:504px;height:auto;border:1px solid #e3e0de;"></a>',
     '<div style="margin-top:22px;background:#faf9f8;border:1px solid #eeecea;padding:14px 16px;',
     'font-size:13px;color:#534a47;line-height:1.8;">',
     '· 원활한 진행을 위해 투어 시작 <b>', VISIT_GUIDE.arriveBefore, '분 전</b>까지 도착해 주시기 바랍니다.<br>',
-    '· 일정이 변경되거나 취소되는 경우 <b>최소 1일 전</b>까지 이 메일에 회신해 알려 주시기 바랍니다.',
+    '· 문의나 일정 변경 · 취소는 <b>최소 1일 전</b>까지 담당자(', contactHtml_(r.tour), ')와 직접 소통해 주시기 바랍니다.',
     '</div>',
   ].join('');
 }
@@ -1456,7 +1463,7 @@ function notifyHost_(r) {
     ? escapeHtml_(r.host.name) + ' 님, 신청하신 투어 방문 일정이 <b style="color:' + BRAND + ';">확정</b>되었습니다.<br>'
       + '아래 오시는 길과 주차 안내를 확인해 주세요.'
     : escapeHtml_(r.host.name) + ' 님, 아쉽지만 신청하신 일정으로는 방문이 어렵습니다.<br>'
-      + '다른 날짜로 다시 신청해 주시거나, 이 메일에 회신해 일정을 조율해 주세요.';
+      + '다른 날짜로 다시 신청해 주시거나, 일정 조율 · 문의는 담당자(' + contactHtml_(r.tour) + ')와 직접 소통해 주세요.';
   MailApp.sendEmail({
     to: r.host.email,
     name: MAIL_SENDER_NAME,
