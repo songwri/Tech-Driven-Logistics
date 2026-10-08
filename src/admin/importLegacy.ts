@@ -177,7 +177,7 @@ export const VISIT_SHEET_HEADERS = [
   '방문인원', '방문자명단', '요청사항', '개인정보동의', '관리자메모', '토큰', '수정일시', '방문자JSON',
   '투어언어', '외국어', '통역동반', '출처', '주요인원', '가이드', '유관부서', '후속진행',
   // 새 열은 기존 시트와 맞도록 맨 뒤에 붙인다.
-  '담당(실)', '통역언어',
+  '담당(실)', '통역언어', '실제방문인원',
 ] as const
 
 /** 가져올 때 쓰지 않는 열 (시스템이 채움) */
@@ -298,6 +298,7 @@ function parseVisitSheet(table: string[][], headerAt: number): ParsedRow[] {
         hostComment: get('담당자의견'),
         visitors: visitorsFrom(get('방문자JSON')),
         headcount: headcount ? Number(headcount[0]) : undefined,
+        actualHeadcount: /^\d+$/.test(get('실제방문인원').trim()) ? Number(get('실제방문인원').trim()) : undefined,
         note: get('요청사항'),
         consent: false,
         adminMemo: get('관리자메모'),

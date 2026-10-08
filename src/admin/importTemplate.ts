@@ -41,6 +41,7 @@ const GUIDE: Record<Header, [string, string]> = {
   '담당(실)': ['신청 담당자의 담당(실). 통계는 6개 주요 담당 + 기타로 집계', 'CL운영담당'],
   후속진행: ['', 'PoC 논의'],
   통역언어: ['통역 동반일 때 방문객 사용 언어 (선택)', ''],
+  실제방문인원: ['단체 방문 등 명단과 다른 실제 인원 (비우면 명단 · 방문인원)', ''],
 }
 
 const WIDTHS: Partial<Record<Header, number>> = {
@@ -113,6 +114,7 @@ function toSheetRow(request: VisitRequest): CellValue[] {
     유관부서: (request.departments ?? []).join(', '),
     '담당(실)': request.host.division,
     후속진행: request.followUp ?? '',
+    실제방문인원: request.actualHeadcount ?? '',
   }
   return VISIT_SHEET_HEADERS.map((header) => values[header])
 }

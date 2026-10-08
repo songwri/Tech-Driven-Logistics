@@ -53,10 +53,32 @@ function Segmented<T extends string>({
 const selectClass =
   'w-full border border-warm-300/60 bg-white px-3 py-2 text-sm text-warm-800 outline-none transition focus:border-brand'
 
-export function OpsFields({ value, onChange }: { value: OpsValue; onChange: (value: OpsValue) => void }) {
+export function OpsFields({
+  value,
+  onChange,
+  listedHeadcount,
+}: {
+  value: OpsValue
+  onChange: (value: OpsValue) => void
+  /** 웹 예약의 방문자 명단 인원. 주면 '실제 방문 인원' 칸을 보여준다 (수기 등록은 방문 인원수 칸을 따로 쓴다). */
+  listedHeadcount?: number
+}) {
   const set = (patch: Partial<OpsValue>) => onChange({ ...value, ...patch })
   return (
     <div className="grid gap-4 md:grid-cols-2">
+      {listedHeadcount !== undefined && (
+        <Field
+          label="실제 방문 인원"
+          hint={`단체 방문처럼 신청 명단(${listedHeadcount}명)과 다를 때 입력 · 비우면 명단 인원으로 집계`}
+        >
+          <Input
+            inputMode="numeric"
+            value={value.actualHeadcount}
+            onChange={(e) => set({ actualHeadcount: e.target.value.replace(/[^\d]/g, '').slice(0, 4) })}
+            placeholder={String(listedHeadcount)}
+          />
+        </Field>
+      )}
       <Field label="주요 인원" hint="줄바꿈 또는 쉼표로 구분">
         <Textarea rows={3} value={value.keyPersons} onChange={(e) => set({ keyPersons: e.target.value })} placeholder="홍길동 상무" />
       </Field>

@@ -49,11 +49,18 @@ export function normalizeRequest(value: unknown): VisitRequest {
     adminMemo: text(r.adminMemo),
     source: r.source === 'manual' ? 'manual' : 'web',
     headcount: r.headcount === null || r.headcount === undefined || r.headcount === '' || !Number.isFinite(headcount) ? undefined : headcount,
+    actualHeadcount: wholeNumber(r.actualHeadcount),
     keyPersons: text(r.keyPersons),
     guides: text(r.guides),
     departments: list(r.departments),
     followUp: text(r.followUp),
   }
+}
+
+function wholeNumber(value: unknown) {
+  if (value === null || value === undefined || value === '') return undefined
+  const number = Number(value)
+  return Number.isFinite(number) && number >= 0 ? Math.floor(number) : undefined
 }
 
 export const normalizeRequests = (value: unknown) =>

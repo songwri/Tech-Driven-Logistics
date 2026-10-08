@@ -64,7 +64,7 @@ var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-19.contact-generic';
+var CODE_VERSION = '2026-10-20.actual-headcount';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -129,7 +129,7 @@ var VISIT_HEADERS = [
   '방문인원', '방문자명단', '요청사항', '개인정보동의', '관리자메모', '토큰', '수정일시', '방문자JSON',
   '투어언어', '외국어', '통역동반', '출처', '주요인원', '가이드', '유관부서', '후속진행',
   // 새 열은 기존 시트와 맞도록 맨 뒤에 붙인다 (시트를 열면 제목이 자동으로 추가된다).
-  '담당(실)', '통역언어',
+  '담당(실)', '통역언어', '실제방문인원',
 ];
 var BLOCKED_HEADERS = ['날짜', '시간대(비우면 종일)', '사유', '대상(all/center/lab)', 'id'];
 
@@ -624,7 +624,13 @@ function rowToRequest_(row, col) {
     guides: String(get('가이드')),
     departments: splitList_(get('유관부서')),
     followUp: String(get('후속진행')),
+    actualHeadcount: headcountFromCell_(get('실제방문인원')),
   };
+}
+
+/** 메일에 적는 방문 인원: 관리자가 정한 실제 인원 → 명단 인원 */
+function headcountOf_(r) {
+  return typeof r.actualHeadcount === 'number' ? r.actualHeadcount : r.visitors.length;
 }
 
 function headcountFromCell_(value) {
@@ -723,6 +729,7 @@ function fillVisitRow_(values, col, request, extra) {
   set('가이드', request.guides || '');
   set('유관부서', (request.departments || []).join(', '));
   set('후속진행', request.followUp || '');
+  set('실제방문인원', typeof request.actualHeadcount === 'number' ? request.actualHeadcount : '');
   for (var key in (extra || {})) set(key, extra[key]);
 }
 
@@ -1061,6 +1068,10 @@ function sanitizeManual_(payload) {
 
 /** 운영 기록 필드 (웹 예약에도 방문 후 기록할 수 있다) */
 function applyOpsFields_(target, payload) {
+  // 실제 방문 인원: 단체 방문처럼 신청 명단과 실제 인원이 다를 때 관리자가 정한다 (비우면 명단 인원).
+  var actual = Number(payload.actualHeadcount);
+  target.actualHeadcount = payload.actualHeadcount === '' || payload.actualHeadcount == null || !(actual >= 0 && actual <= 9999)
+    ? undefined : Math.floor(actual);
   target.keyPersons = optionalText_(payload.keyPersons, 1000);
   target.guides = optionalText_(payload.guides, 1000);
   target.departments = (payload.departments || []).map(function (item) { return optionalText_(item, 60).replace(/,/g, ' '); })
@@ -1381,7 +1392,7 @@ function reservationMailHtml_(r) {
     [r.category === 'internal' ? '방문 조직' : '업체명', escapeHtml_(r.company)],
     ['업종', listOrNone_(r.industries)],
     ['방문 목적', listOrNone_(r.purposes)],
-    ['방문 인원', r.visitors.length + '명'],
+    ['방문 인원', headcountOf_(r) + '명'],
     ['담당자', escapeHtml_(r.host.name + ' ' + r.host.title + ' · '
       + [r.host.division, r.host.org].filter(Boolean).join(' '))],
     ['연락처', '<a href="tel:' + escapeHtml_(r.host.phone) + '" style="color:#3d3532;">'
@@ -1465,7 +1476,7 @@ function notifyHost_(r) {
     htmlBody: mailShell_(approved ? '방문 일정 확정' : '방문 예약 결과 안내', lead, scheduleBox_(r) + rows_([
       [r.category === 'internal' ? '방문 조직' : '업체명', escapeHtml_(r.company)],
       ['투어 언어', languageText_(r)],
-      ['방문 인원', r.visitors.length + '명'],
+      ['방문 인원', headcountOf_(r) + '명'],
     ]) + (approved ? visitGuideHtml_(r) : ''), mailBrand_(r.tour)),
   });
 }

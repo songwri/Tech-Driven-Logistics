@@ -219,6 +219,9 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
           {tour.label} ({tour.duration})
           <br />
           방문 인원 <b className="text-warm-800">{headcount}</b>
+          {request.actualHeadcount != null && request.visitors.length > 0 && request.actualHeadcount !== request.visitors.length && (
+            <span className="ml-1 text-[12px]">(명단 {request.visitors.length}명)</span>
+          )}
         </p>
       </div>
 
@@ -286,7 +289,7 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
         </SectionTitle>
         {editingOps ? (
           <div className="border border-warm-300/50 bg-cream/40 p-4">
-            <OpsFields value={ops} onChange={setOps} />
+            <OpsFields value={ops} onChange={setOps} listedHeadcount={manual ? undefined : request.visitors.length} />
             <div className="mt-3 flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => setEditingOps(false)}>
                 취소
@@ -298,6 +301,11 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
           </div>
         ) : (
           <div className="grid gap-x-6 md:grid-cols-2">
+            {!manual && (
+              <Row label="실제 방문 인원">
+                {request.actualHeadcount != null && `${request.actualHeadcount}명 (명단 ${request.visitors.length}명)`}
+              </Row>
+            )}
             <Row label="주요 인원">
               {request.keyPersons && <span className="whitespace-pre-line">{request.keyPersons}</span>}
             </Row>
@@ -312,7 +320,7 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
 
       {request.visitors.length > 0 && (
         <div className="mt-6">
-          <SectionTitle>방문자 ({headcount})</SectionTitle>
+          <SectionTitle>방문자 명단 ({request.visitors.length}명)</SectionTitle>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] border-collapse text-[12px]">
               <thead>
