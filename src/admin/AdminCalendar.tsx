@@ -2,19 +2,34 @@ import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Globe, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { holidayName } from '@/lib/holidays'
-import { blockTargetLabel, languageSummary, hasLanguageNote, OPEN_WEEKDAYS, TOURS, TOUR_BY_ID, formatSlot, isCounted, toDateKey, type TourBlock, type TourType, type VisitRequest } from '@/lib/visit'
+import {
+  blockTargetLabel,
+  languageSummary,
+  hasLanguageNote,
+  OPEN_WEEKDAYS,
+  TOUR_BY_ID,
+  formatScheduleShort,
+  isCounted,
+  toDateKey,
+  toursForSite,
+  type AdminSite,
+  type TourBlock,
+  type TourType,
+  type VisitRequest,
+} from '@/lib/visit'
 import { STATUS_TONE } from './statusTone'
 import { StatusBadge } from './status'
 
 interface AdminCalendarProps {
+  site: AdminSite
   month: Date
   onMonthChange: (month: Date) => void
   requests: VisitRequest[]
   onOpen: (id: string) => void
   /** 막힌 일정 (센터 · Lab 담당자 사정) */
   blocks: TourBlock[]
-  /** 일정 막기 창을 연다. 달력을 끌어 기간을 고르거나, 막힌 칩 · 버튼을 눌렀을 때. */
-  onBlock: (start: string, end: string) => void
+  /** 일정 막기 창을 연다. 달력을 끌어 기간을 고르거나, 막힌 칩 · 버튼을 눌렀을 때. 없으면 보기 전용 (통합 관제) */
+  onBlock?: (start: string, end: string) => void
 }
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
@@ -22,13 +37,16 @@ const MAX_CHIPS = 3
 
 const BLOCK_STRIPES = 'repeating-linear-gradient(135deg, rgba(0,0,0,0.05) 0 6px, transparent 6px 12px)'
 
-const blockVisibleFor = (block: TourBlock, tour: TourType | null) =>
-  tour === null ||
-  block.resource === 'all' ||
-  tour === 'combined' ||
-  (tour !== 'other' && block.resource === tour)
+/** 투어 필터를 걸었을 때 그 투어에 영향을 주는 막힌 일정만 보여준다. 'all' 은 메가와이즈 센터 · TDL Lab 전체. */
+function blockVisibleFor(block: TourBlock, tour: TourType | null) {
+  if (tour === null) return true
+  if (tour === 'other') return block.resource === 'all'
+  const places = TOUR_BY_ID[tour].places
+  return block.resource === 'all' ? places.some((place) => place !== 'mtv') : places.includes(block.resource)
+}
 
 export function AdminCalendar({
+  site,
   month,
   onMonthChange,
   requests: allRequests,
@@ -55,7 +73,7 @@ export function AdminCalendar({
       if (state.anchor !== state.current) {
         justDragged.current = true
         const [start, end] = [state.anchor, state.current].sort()
-        onBlockRef.current(start, end)
+        onBlockRef.current?.(start, end)
       }
     }
     const cancel = () => setDrag(null)
@@ -131,18 +149,20 @@ export function AdminCalendar({
           </button>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-warm-600">
-          <button
-            type="button"
-            onClick={() => {
-              const today = toDateKey(new Date())
-              onBlock(today, today)
-            }}
-            title="날짜 칸을 누르면 그 날만, 끌면 기간으로 일정 막기 창이 열립니다"
-            className="inline-flex items-center gap-1 border border-warm-800 bg-warm-800 px-2.5 py-1 text-[12px] font-semibold text-white transition hover:brightness-125"
-          >
-            <Lock width={12} height={12} aria-hidden /> 일정 막기
-          </button>
-          {TOURS.map((tour) => {
+          {onBlock && (
+            <button
+              type="button"
+              onClick={() => {
+                const today = toDateKey(new Date())
+                onBlock(today, today)
+              }}
+              title="날짜 칸을 누르면 그 날만, 끌면 기간으로 일정 막기 창이 열립니다"
+              className="inline-flex items-center gap-1 border border-warm-800 bg-warm-800 px-2.5 py-1 text-[12px] font-semibold text-white transition hover:brightness-125"
+            >
+              <Lock width={12} height={12} aria-hidden /> 일정 막기
+            </button>
+          )}
+          {toursForSite(site).map((tour) => {
             const active = tourFilter === tour.id
             return (
               <button
@@ -211,7 +231,7 @@ export function AdminCalendar({
                 role="button"
                 tabIndex={0}
                 onPointerDown={(event) => {
-                  if (event.button === 0 && event.pointerType === 'mouse') setDrag({ anchor: key, current: key })
+                  if (onBlock && event.button === 0 && event.pointerType === 'mouse') setDrag({ anchor: key, current: key })
                 }}
                 onPointerEnter={() => setDrag((current) => (current ? { ...current, current: key } : current))}
                 onClick={() => {
@@ -219,17 +239,18 @@ export function AdminCalendar({
                     justDragged.current = false
                     return
                   }
-                  onBlock(key, key)
+                  onBlock?.(key, key)
                 }}
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
+                  if (onBlock && (event.key === 'Enter' || event.key === ' ')) {
                     event.preventDefault()
                     onBlock(key, key)
                   }
                 }}
                 aria-label={`${monthIndex + 1}월 ${day}일 예약 ${list.length}건${blockList.length > 0 ? `, 막힌 일정 ${blockList.length}건` : ''}`}
                 className={cn(
-                  'group min-h-14 cursor-pointer border-b border-r border-warm-300/30 p-1 text-left transition sm:min-h-28 sm:p-1.5',
+                  'group min-h-14 border-b border-r border-warm-300/30 p-1 text-left transition sm:min-h-28 sm:p-1.5',
+                  onBlock && 'cursor-pointer',
                   open ? 'bg-white hover:bg-cream/60' : 'bg-cream/50 hover:bg-cream',
                   inDrag && 'bg-brand/10 hover:bg-brand/10',
                 )}
@@ -282,9 +303,9 @@ export function AdminCalendar({
                       onPointerDown={(event) => event.stopPropagation()}
                       onClick={(event) => {
                         event.stopPropagation()
-                        onBlock(block.date, block.date)
+                        onBlock?.(block.date, block.date)
                       }}
-                      title={`${blockTargetLabel(block.resource)} 일정 막힘${block.slot ? ` · ${block.slot}` : ' · 종일'}${block.reason ? ` · ${block.reason}` : ''} (눌러서 해제)`}
+                      title={`${blockTargetLabel(block.resource)} 일정 막힘${block.slot ? ` · ${block.slot}` : ' · 종일'}${block.reason ? ` · ${block.reason}` : ''}${onBlock ? ' (눌러서 해제)' : ''}`}
                       className="flex w-full items-center gap-1 overflow-hidden border border-warm-600/40 bg-warm-300/30 px-1 py-0.5 text-left text-[11px] leading-tight text-warm-800 transition hover:brightness-95"
                       style={{ backgroundImage: BLOCK_STRIPES }}
                     >
@@ -303,7 +324,7 @@ export function AdminCalendar({
                         event.stopPropagation()
                         onOpen(request.id)
                       }}
-                      title={`${TOUR_BY_ID[request.tour].label} · ${formatSlot(request.slot)} · ${request.company}`}
+                      title={`${TOUR_BY_ID[request.tour].label} · ${formatScheduleShort(request.tour, request.slot)} · ${request.company}`}
                       className={cn(
                         'flex w-full items-center gap-1 overflow-hidden border-2 border-l-[5px] px-1 py-0.5 text-left text-[11px] leading-tight transition hover:brightness-95',
                         STATUS_TONE[request.status].chip,

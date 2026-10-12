@@ -3,26 +3,31 @@ import { Check, CheckCheck, Globe, Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { hasLanguageNote,
   STATUS_LABEL,
-  TOURS,
+  awaitingPartner,
   clientSegment,
   formatDateShort,
-  formatSlot,
+  formatScheduleShort,
   headcountLabel,
   isCounted,
+  needsDecisionBy,
   toDateKey,
+  toursForSite,
   languageSummary,
+  type AdminSite,
   type TourType,
   type VisitRequest,
   type VisitStatus,
 } from '@/lib/visit'
 import { STATUS_TONE } from './statusTone'
-import { StatusBadge, TourTag, tourTint } from './status'
+import { SiteApprovals, StatusBadge, TourTag, tourTint } from './status'
 
 interface RequestTableProps {
+  site: AdminSite
   requests: VisitRequest[]
   scopeLabel: string
   onOpen: (id: string) => void
-  onSetStatus: (id: string, status: VisitStatus) => void
+  /** 없으면 보기 전용 (통합 관제) */
+  onSetStatus?: (id: string, status: VisitStatus) => void
   busyId: string | null
   /** 상단 요약 카드에서도 바꿀 수 있도록 상태 필터는 부모가 가진다. */
   status: StatusFilter
@@ -41,7 +46,17 @@ function ManualTag() {
   )
 }
 
+/** 상대 센터 승인을 기다리는 복합 투어 표시 */
+function WaitingTag() {
+  return (
+    <span className="inline-flex items-center border border-warm-300/70 bg-white px-2 py-1 text-[12px] font-semibold text-warm-600">
+      상대 센터 대기
+    </span>
+  )
+}
+
 export function RequestTable({
+  site,
   requests,
   scopeLabel,
   onOpen,
@@ -125,7 +140,7 @@ export function RequestTable({
           className="border border-warm-300/60 bg-white px-2 py-1.5 text-[13px] text-warm-800"
         >
           <option value="all">모든 투어</option>
-          {TOURS.map((item) => (
+          {toursForSite(site).map((item) => (
             <option key={item.id} value={item.id}>
               {item.label}
             </option>
@@ -163,14 +178,18 @@ export function RequestTable({
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-[13px] font-bold">
-                  {formatDateShort(request.date)} <span className="font-mono font-normal">{formatSlot(request.slot)}</span>
+                  {formatDateShort(request.date)}{' '}
+                  <span className="font-mono font-normal">{formatScheduleShort(request.tour, request.slot)}</span>
                 </p>
                 <p className="mt-1 truncate py-1 pl-2.5 pr-2 text-[14px] font-semibold" style={tourTint(request.tour)}>
                   {request.company}
                   {request.source === 'manual' && <ManualTag />}
                 </p>
               </div>
-              <StatusBadge status={request.status} />
+              <span className="flex flex-col items-end gap-1">
+                <StatusBadge status={request.status} />
+                <SiteApprovals request={request} site={site} className="justify-end" />
+              </span>
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
               <TourTag tour={request.tour} />
@@ -182,7 +201,7 @@ export function RequestTable({
                 </span>
               )}
             </div>
-            {request.status === 'pending' && (
+            {onSetStatus && needsDecisionBy(request, site) && (
               <div className="mt-2 flex gap-2" onClick={(event) => event.stopPropagation()}>
                 <button
                   type="button"
@@ -242,7 +261,9 @@ export function RequestTable({
                 )}
               >
                 <td className="whitespace-nowrap py-2.5 pl-3 pr-2 font-semibold">{formatDateShort(request.date)}</td>
-                <td className="whitespace-nowrap px-2 py-2.5 font-mono text-[12px]">{formatSlot(request.slot)}</td>
+                <td className="whitespace-nowrap px-2 py-2.5 font-mono text-[12px]">
+                  {formatScheduleShort(request.tour, request.slot)}
+                </td>
                 <td className="px-2 py-2.5">
                   <TourTag tour={request.tour} className={isCounted(request.status) ? undefined : 'opacity-60'} />
                 </td>
@@ -271,9 +292,20 @@ export function RequestTable({
                 <td className="whitespace-nowrap px-2 py-2.5 text-right font-mono">{headcountLabel(request)}</td>
                 <td className="px-2 py-2.5">
                   <StatusBadge status={request.status} />
+                  <SiteApprovals request={request} site={site} className="mt-1 flex" />
                 </td>
                 <td className="whitespace-nowrap px-2 py-2.5 text-right" onClick={(event) => event.stopPropagation()}>
-                  {request.status === 'pending' ? (
+                  {!onSetStatus ? (
+                    <button
+                      type="button"
+                      onClick={() => onOpen(request.id)}
+                      className="border border-warm-300/60 bg-white/70 px-2 py-1 text-[12px] font-semibold text-warm-600 transition hover:border-warm-800 hover:text-warm-800"
+                    >
+                      상세
+                    </button>
+                  ) : awaitingPartner(request, site) ? (
+                    <WaitingTag />
+                  ) : request.status === 'pending' ? (
                     <span className="inline-flex gap-1">
                       <button
                         type="button"

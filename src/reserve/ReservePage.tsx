@@ -7,7 +7,7 @@ import { GUESTBOOK_URL, RESERVE_URL } from '@/lib/routes'
 
 const STEPS = [
   { icon: Send, title: '예약 신청', text: '투어 · 일정 · 방문자 정보를 입력합니다.' },
-  { icon: CalendarCheck, title: '담당자 확인', text: '일정을 검토하고 승인 여부를 결정합니다.' },
+  { icon: CalendarCheck, title: '담당자 확인', text: '방문하는 센터의 담당자가 일정을 검토하고 승인합니다.' },
   { icon: MailCheck, title: '확정 안내', text: '신청 담당자 이메일로 결과를 보내드립니다.' },
 ]
 
@@ -45,7 +45,7 @@ export default function ReservePage() {
     <div className="min-h-screen">
       <header className="border-b border-warm-300/40 bg-white/85 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
-          <a href={RESERVE_URL} aria-label="TDL 방문 예약">
+          <a href={RESERVE_URL} aria-label="센터 · TDL Lab 방문 예약">
             <Logo className="h-7" />
           </a>
           <a
@@ -60,10 +60,10 @@ export default function ReservePage() {
       <main className="mx-auto max-w-6xl px-4 pb-6 pt-8 md:px-6 md:pt-12">
         <div className="mb-10 grid gap-6 md:grid-cols-[1fr_auto] md:items-end">
           <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-brand">TDL Lab · Visit Reservation</p>
-            <h1 className="mt-2 text-3xl font-bold text-warm-800 md:text-4xl">TDL 방문 예약</h1>
+            <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-brand">Center · TDL Lab · Visit Reservation</p>
+            <h1 className="mt-2 text-3xl font-bold text-warm-800 md:text-4xl">센터 · TDL Lab 방문 예약</h1>
             <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-warm-600">
-              <span className="block">물류센터와 TDL Lab에서 검증된 물류 기술을 직접 확인하세요.</span>
+              <span className="block">메가와이즈 · 시화MTV 물류센터와 TDL Lab에서 검증된 물류 기술을 직접 확인하세요.</span>
               <span className="block">
                 방문은 <b className="text-warm-800">월 · 수 · 금</b>에 운영됩니다.
               </span>

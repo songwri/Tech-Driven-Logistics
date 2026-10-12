@@ -15,12 +15,15 @@ import {
   isConfirmed,
   isCounted,
   languageSummary,
+  toursForSite,
+  type AdminSite,
+  type TourType,
   type VisitRequest,
 } from '@/lib/visit'
 import type { Sheet, SheetColumn } from '@/lib/xlsx'
 
-/** 기간(월/연) 한 줄의 집계값 */
-export interface PeriodRow {
+/** 기간(월/연) 한 줄의 집계값. 투어 종류별 건수는 투어 id 를 키로 쓴다. */
+export interface PeriodRow extends Record<TourType, number> {
   label: string
   total: number
   pending: number
@@ -32,10 +35,6 @@ export interface PeriodRow {
   /** 처리(승인·완료+거절) 대비 승인 비율, 0~1 */
   approvalRate: number | null
   visitors: number
-  combined: number
-  center: number
-  lab: number
-  other: number
   internal: number
   existing: number
   newClient: number
@@ -63,10 +62,7 @@ export const METRIC_COLUMNS: MetricColumn[] = [
   { key: 'cancelled', label: '취소', group: '처리 현황' },
   { key: 'approvalRate', label: '승인률', group: '처리 현황', percent: true },
   { key: 'visitors', label: '방문 인원(승인·완료)', group: '처리 현황' },
-  { key: 'combined', label: '종합', group: '투어 종류' },
-  { key: 'lab', label: 'Lab', group: '투어 종류' },
-  { key: 'center', label: '센터', group: '투어 종류' },
-  { key: 'other', label: '기타', group: '투어 종류' },
+  ...TOURS.map((tour): MetricColumn => ({ key: tour.id, label: tour.short, group: '투어 종류' })),
   { key: 'internal', label: '내부 방문', group: '방문 유형' },
   { key: 'existing', label: '고객·기존', group: '방문 유형' },
   { key: 'newClient', label: '고객·신규', group: '방문 유형' },
@@ -80,6 +76,12 @@ export const METRIC_COLUMNS: MetricColumn[] = [
  * 기간 한 줄 집계. 거절된 예약은 통계에서 제외한다(처음부터 거절이든, 승인 후 거절로 바꾼 것이든).
  * '거절' 열과 승인률 계산에만 거절 건수를 쓴다.
  */
+/** 관리자 페이지별 통계 열: 투어 종류는 그 페이지에서 보는 투어만 */
+export function metricColumns(site: AdminSite) {
+  const tours = new Set<string>(toursForSite(site).map((tour) => tour.id))
+  return METRIC_COLUMNS.filter((column) => column.group !== '투어 종류' || tours.has(column.key))
+}
+
 export function summarize(label: string, all: VisitRequest[]): PeriodRow {
   const rejected = all.filter((request) => request.status === 'rejected').length
   const cancelled = all.filter((request) => request.status === 'cancelled').length
@@ -96,10 +98,10 @@ export function summarize(label: string, all: VisitRequest[]): PeriodRow {
     cancelled,
     approvalRate: approvedList.length + rejected > 0 ? approvedList.length / (approvedList.length + rejected) : null,
     visitors: approvedList.reduce((sum, request) => sum + headcountOf(request), 0),
-    combined: count((request) => request.tour === 'combined'),
-    center: count((request) => request.tour === 'center'),
-    lab: count((request) => request.tour === 'lab'),
-    other: count((request) => request.tour === 'other'),
+    ...(Object.fromEntries(TOURS.map((tour) => [tour.id, count((request) => request.tour === tour.id)])) as Record<
+      TourType,
+      number
+    >),
     internal: count((request) => request.category === 'internal'),
     existing: count((request) => request.category === 'external' && request.clientType === 'existing'),
     newClient: count((request) => request.category === 'external' && request.clientType === 'new'),
@@ -125,10 +127,10 @@ export function yearlyRows(requests: VisitRequest[], years: number[]) {
 
 /* ---------------------------------------------------------- 엑셀 */
 
-function periodSheet(name: string, firstHeader: string, rows: PeriodRow[]): Sheet {
+function periodSheet(name: string, firstHeader: string, rows: PeriodRow[], metrics: MetricColumn[]): Sheet {
   const columns: SheetColumn[] = [
     { header: firstHeader, width: 10 },
-    ...METRIC_COLUMNS.map((column) => ({
+    ...metrics.map((column) => ({
       header: `${column.group} · ${column.label}`,
       width: Math.max(12, column.group.length + column.label.length + 6),
       percent: column.percent,
@@ -137,7 +139,7 @@ function periodSheet(name: string, firstHeader: string, rows: PeriodRow[]): Shee
   return {
     name,
     columns,
-    rows: rows.map((row) => [row.label, ...METRIC_COLUMNS.map((column) => row[column.key])]),
+    rows: rows.map((row) => [row.label, ...metrics.map((column) => row[column.key])]),
     totalRow: true,
   }
 }
@@ -273,6 +275,7 @@ export function buildStatsSheets({
   year,
   years,
   periodLabel,
+  site,
 }: {
   /** 전체 예약 (상태 무관) */
   requests: VisitRequest[]
@@ -283,10 +286,12 @@ export function buildStatsSheets({
   year: number
   years: number[]
   periodLabel: string
+  site: AdminSite
 }): Sheet[] {
+  const metrics = metricColumns(site)
   return [
-    periodSheet(`${year}년 월별`, '월', monthlyRows(requests, year)),
-    periodSheet('연도별', '연도', yearlyRows(requests, years)),
+    periodSheet(`${year}년 월별`, '월', monthlyRows(requests, year), metrics),
+    periodSheet('연도별', '연도', yearlyRows(requests, years), metrics),
     distributionSheet(`항목별 분포(${periodLabel})`, scoped),
     divisionSheet(`담당(실)별(${periodLabel})`, scoped),
     listSheet(`예약 목록(${periodLabel})`, periodRequests),

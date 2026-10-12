@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   REQUIRED_API_LEVEL,
   adminRequest,
@@ -9,10 +9,14 @@ import {
   type ServerVersion,
 } from '@/lib/labApi'
 import {
+  applyDecision,
+  blockSite,
   busyFromRequests,
+  inSite,
   isConfirmed,
   isSlotBusy,
   toDateKey,
+  type AdminSite,
   type BlockTarget,
   type TourBlock,
   type VisitRequest,
@@ -36,8 +40,13 @@ export interface ServerHealth {
   }
 }
 
-const DEMO_KEY = 'tdl-lab-admin-demo-v4'
-const SESSION_KEY = 'tdl-lab-admin-key'
+const DEMO_KEY = 'tdl-lab-admin-demo-v5'
+/** 관리자 키는 페이지마다 따로 기억한다 (한 브라우저에서 두 센터 페이지를 열어도 섞이지 않게). */
+const SESSION_KEYS: Record<AdminSite, string> = {
+  main: 'tdl-lab-admin-key',
+  mtv: 'tdl-lab-admin-key-mtv',
+  hq: 'tdl-lab-admin-key-hq',
+}
 const DEMO_BLOCKS_KEY = 'tdl-lab-admin-blocks-v1'
 
 function readDemoBlocks(): TourBlock[] {
@@ -67,7 +76,8 @@ function normalizeBlocks(value: unknown): TourBlock[] {
       date: String(item.date ?? ''),
       slot: String(item.slot ?? ''),
       reason: String(item.reason ?? ''),
-      resource: item.resource === 'center' ? 'center' : item.resource === 'lab' ? 'lab' : 'all',
+      resource:
+        item.resource === 'center' || item.resource === 'lab' || item.resource === 'mtv' ? item.resource : 'all',
     }))
     .filter((block) => block.id && block.date)
 }
@@ -122,18 +132,18 @@ function conflicts(
   return isSlotBusy(request.tour, request.date, request.slot, busyFromRequests(all, request.id))
 }
 
-export function readSavedKey() {
+export function readSavedKey(site: AdminSite) {
   try {
-    return sessionStorage.getItem(SESSION_KEY) ?? ''
+    return sessionStorage.getItem(SESSION_KEYS[site]) ?? ''
   } catch {
     return ''
   }
 }
 
-function saveKey(key: string) {
+function saveKey(site: AdminSite, key: string) {
   try {
-    if (key) sessionStorage.setItem(SESSION_KEY, key)
-    else sessionStorage.removeItem(SESSION_KEY)
+    if (key) sessionStorage.setItem(SESSION_KEYS[site], key)
+    else sessionStorage.removeItem(SESSION_KEYS[site])
   } catch {
     /* 세션 저장 불가 — 새로고침 시 다시 입력 */
   }
@@ -141,15 +151,27 @@ function saveKey(key: string) {
 
 /**
  * 관리자 데이터 소스.
- * - VITE_LAB_API 가 있으면 Apps Script 관리자 API (ADMIN_KEY 필요)
+ * - VITE_LAB_API 가 있으면 Apps Script 관리자 API (페이지별 관리자 키 필요)
  * - 없으면 이 브라우저에만 저장되는 데모 데이터
+ *
+ * site: 이 페이지가 다루는 곳. 서버도 키에 따라 걸러 보내지만, 데모 데이터 · 이전 서버를 위해 화면에서도 한 번 더 거른다.
+ * 통합 관제(hq)는 보기 전용이라 바꾸는 요청을 보내지 않는다.
  */
-export function useAdminData() {
+export function useAdminData(site: AdminSite) {
   const mode = isLiveBackend ? 'live' : 'demo'
-  const [key, setKey] = useState(readSavedKey)
-  const [requests, setRequests] = useState<VisitRequest[]>(() => (isLiveBackend ? [] : readDemo()))
+  const [key, setKey] = useState(() => readSavedKey(site))
+  const [allRequests, setRequests] = useState<VisitRequest[]>(() => (isLiveBackend ? [] : readDemo()))
+  const requests = useMemo(() => allRequests.filter((request) => inSite(request.tour, site)), [allRequests, site])
   const [loading, setLoading] = useState(isLiveBackend && Boolean(key))
-  const [blocks, setBlocks] = useState<TourBlock[]>(() => (isLiveBackend ? [] : readDemoBlocks()))
+  const [allBlocks, setBlocks] = useState<TourBlock[]>(() => (isLiveBackend ? [] : readDemoBlocks()))
+  const blocks = useMemo(
+    () => (site === 'hq' ? allBlocks : allBlocks.filter((block) => blockSite(block.resource) === site)),
+    [allBlocks, site],
+  )
+  const readOnly = site === 'hq'
+  const guard = useCallback(() => {
+    if (readOnly) throw new Error('통합 관제 페이지는 보기 전용입니다. 변경은 각 센터 관리자 페이지에서 해 주세요.')
+  }, [readOnly])
   const [error, setError] = useState<string | null>(null)
   const [server, setServer] = useState<ServerVersion | null>(null)
 
@@ -196,22 +218,22 @@ export function useAdminData() {
       setRequests(normalizeRequests(data.requests))
       setBlocks(normalizeBlocks(data.blocks))
       applyServerInfo(data, adminKey)
-      saveKey(adminKey)
+      saveKey(site, adminKey)
       setKey(adminKey)
       return true
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : '예약 목록을 불러오지 못했습니다.')
-      saveKey('')
+      saveKey(site, '')
       setKey('')
       return false
     } finally {
       setLoading(false)
     }
-  }, [applyServerInfo])
+  }, [applyServerInfo, site])
 
   useEffect(() => {
     // 저장된 키가 있으면 첫 진입 시 목록을 바로 불러온다.
-    const savedKey = readSavedKey()
+    const savedKey = readSavedKey(site)
     if (!isLiveBackend) return
     if (!savedKey) {
       // 로그인 화면: 키를 입력하는 동안 서버를 미리 깨워 둔다.
@@ -229,7 +251,7 @@ export function useAdminData() {
       .catch((loadError: unknown) => {
         if (cancelled) return
         setError(loadError instanceof Error ? loadError.message : '예약 목록을 불러오지 못했습니다.')
-        saveKey('')
+        saveKey(site, '')
         setKey('')
       })
       .finally(() => {
@@ -238,7 +260,7 @@ export function useAdminData() {
     return () => {
       cancelled = true
     }
-  }, [applyServerInfo])
+  }, [applyServerInfo, site])
 
   const replace = useCallback((next: VisitRequest) => {
     setRequests((current) => {
@@ -248,27 +270,33 @@ export function useAdminData() {
     })
   }, [])
 
-  /** 승인은 다른 승인 건과 시간이 겹치면 막습니다 (서버에서도 한 번 더 검사). */
+  /**
+   * 승인은 다른 승인 건과 시간이 겹치면 막습니다 (서버에서도 한 번 더 검사).
+   * 복합 투어는 이 페이지 센터의 결정으로 기록되고, 두 센터가 모두 승인해야 확정됩니다 (applyDecision).
+   */
   const setStatus = useCallback(
     async (id: string, status: VisitStatus) => {
-      const target = requests.find((request) => request.id === id)
+      guard()
+      const target = allRequests.find((request) => request.id === id)
       if (!target) return
-      if (!isConfirmed(target.status) && conflicts({ ...target, status }, requests)) {
+      const next = { ...target, ...applyDecision(target, site, status) }
+      if (!isConfirmed(target.status) && conflicts(next, allRequests)) {
         throw new Error('이미 승인된 다른 예약과 시간이 겹쳐 승인할 수 없습니다. 일정을 먼저 조정해 주세요.')
       }
       if (!isLiveBackend) {
-        replace({ ...target, status })
+        replace(next)
         return
       }
       const data = await adminRequest<{ request: VisitRequest }>(key, 'setStatus', { id, status })
       replace(normalizeRequest(data.request))
     },
-    [key, replace, requests],
+    [allRequests, guard, key, replace, site],
   )
 
   const update = useCallback(
     async (next: VisitRequest) => {
-      if (conflicts(next, requests)) {
+      guard()
+      if (conflicts(next, allRequests)) {
         throw new Error('변경한 일정이 이미 승인된 다른 예약과 겹칩니다.')
       }
       if (!isLiveBackend) {
@@ -278,12 +306,13 @@ export function useAdminData() {
       const data = await adminRequest<{ request: VisitRequest }>(key, 'update', { id: next.id, request: next })
       replace(normalizeRequest(data.request))
     },
-    [key, replace, requests],
+    [allRequests, guard, key, replace],
   )
 
   /** 예약을 완전히 삭제한다 (구글 시트의 행도 삭제, 되돌릴 수 없음). */
   const remove = useCallback(
     async (id: string) => {
+      guard()
       if (isLiveBackend) await adminRequest<{ deleted: string }>(key, 'delete', { id })
       setRequests((current) => {
         const next = current.filter((request) => request.id !== id)
@@ -291,13 +320,14 @@ export function useAdminData() {
         return next
       })
     },
-    [key],
+    [guard, key],
   )
 
   /** 관리자 수기 등록 (웹 예약 규칙 밖의 방문: 화 · 목, 자유 시간, 명단 없음 등) */
   const create = useCallback(
     async (input: ManualInput) => {
-      if (conflicts({ ...input, id: '', source: 'manual' }, requests)) {
+      guard()
+      if (conflicts({ ...input, id: '', source: 'manual' }, allRequests)) {
         throw new Error('이미 승인된 다른 예약과 시간이 겹칩니다. 시간을 확인해 주세요.')
       }
       await requireServer()
@@ -311,12 +341,13 @@ export function useAdminData() {
       })
       return created
     },
-    [key, requests, requireServer],
+    [allRequests, guard, key, requireServer],
   )
 
   /** 기존 방문 이력 일괄 가져오기. 이미 있는 방문(날짜 + 업체 + 시간)은 건너뛴다. */
   const importMany = useCallback(
     async (inputs: ManualInput[], importKey = ''): Promise<ImportResult> => {
+      guard()
       let result: ImportResult
       if (isLiveBackend) {
         await requireServer()
@@ -326,7 +357,7 @@ export function useAdminData() {
         })
         result = { created: normalizeRequests(data.created), skipped: Array.isArray(data.skipped) ? data.skipped : [] }
       } else {
-        const seen = new Set(requests.map(visitKey))
+        const seen = new Set(allRequests.map(visitKey))
         const now = new Date().toISOString()
         result = { created: [], skipped: [] }
         inputs.forEach((input, index) => {
@@ -345,12 +376,13 @@ export function useAdminData() {
       })
       return result
     },
-    [key, requests, requireServer],
+    [allRequests, guard, key, requireServer],
   )
 
   /** 일정 막기: 날짜마다 한 건씩 저장한다 (구글 시트 blocked 탭). */
   const addBlocks = useCallback(
     async (input: BlockInput) => {
+      guard()
       if (isLiveBackend) {
         await requireServer()
         const data = await adminRequest<{ blocks?: unknown }>(key, 'blockAdd', { ...input })
@@ -370,11 +402,12 @@ export function useAdminData() {
         return next
       })
     },
-    [key, requireServer],
+    [guard, key, requireServer],
   )
 
   const removeBlocks = useCallback(
     async (ids: string[]) => {
+      guard()
       if (isLiveBackend) {
         await requireServer()
         await adminRequest<{ removed: string[] }>(key, 'blockRemove', { ids })
@@ -385,7 +418,7 @@ export function useAdminData() {
         return next
       })
     },
-    [key, requireServer],
+    [guard, key, requireServer],
   )
 
   const resetDemo = useCallback(() => {
@@ -398,18 +431,22 @@ export function useAdminData() {
   const diagnose = useCallback(() => adminRequest<ServerHealth>(key, 'health'), [key])
 
   const logout = useCallback(() => {
-    saveKey('')
+    saveKey(site, '')
     setKey('')
     setRequests([])
     setBlocks([])
-  }, [])
+  }, [site])
 
   return {
     mode,
     authenticated: mode === 'demo' || Boolean(key),
     /** 관리자 키 (방명록 관리 등 별도 화면이 같은 키로 서버에 요청한다) */
     adminKey: key,
+    /** 이 페이지에서 볼 수 있는 예약 (복합 투어는 두 센터 페이지에 함께 보인다) */
     requests,
+    /** 시간 겹침 검사용: 다른 센터 예약까지 포함한 전체 (데모 · 통합 관제에서만 다른 센터 것이 들어 있다) */
+    allRequests,
+    readOnly,
     blocks,
     addBlocks,
     removeBlocks,

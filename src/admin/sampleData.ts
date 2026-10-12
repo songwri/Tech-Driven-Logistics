@@ -1,4 +1,4 @@
-import { toDateKey, type TourType, type VisitRequest, type VisitStatus, type Visitor } from '@/lib/visit'
+import { isCrossSite, toDateKey, type SiteApprovals, type TourType, type VisitRequest, type VisitStatus, type Visitor } from '@/lib/visit'
 
 /**
  * 백엔드(VITE_LAB_API)가 연결되지 않았을 때 관리자 화면을 둘러볼 수 있도록 하는
@@ -64,6 +64,22 @@ const MOCKUP: VisitRequest[] = [
         ['정다은', '사원', 'CL사업담당', 'de.jung@lxpantos.example', '', ['기획']],
       ]),
     category: 'internal',
+  },
+  // 복합 투어: 메가와이즈 · Lab 은 승인했고 시화MTV 승인을 기다리는 예약, 두 센터 모두 아직인 예약
+  {
+    ...mock('m12', '2026-10-21', 'center_mtv', '10:00-15:00', 'pending', '한빛전자', 'existing', ['전자'], ['기존 고객사 Lock-in'],
+      '메가와이즈 자동화 설비와 시화MTV 운영 비교', ['박준서', '책임', 'CL사업담당 전자산업팀'], [
+        ['김하준', '팀장', 'SCM팀', 'hj.kim@hanbit.example', '', ['물류']],
+        ['이서윤', '매니저', '구매팀', 'sy.lee@hanbit.example', '', ['구매']],
+      ]),
+    approvals: { main: 'approved' },
+  },
+  {
+    ...mock('m13', '2026-10-23', 'all3', '10:00-15:00', 'pending', '코스모뷰티', 'new', ['화장품'], ['신규 영업'],
+      '3개 센터 전체 투어 요청', ['최유리', '선임', 'CL사업담당 신사업팀'], [
+        ['정다인', '이사', '경영기획실', 'di.jung@cosmo.example', '', ['경영진']],
+      ]),
+    approvals: {},
   },
 ]
 
@@ -168,6 +184,20 @@ const MORNING: [TourType, string][] = [
 const AFTERNOON: [TourType, string][] = [
   ['combined', '13:00-15:00'], ['lab', '14:00-15:00'], ['center', '13:00-14:00'], ['center', '15:00-16:00'],
 ]
+/** 시화MTV 가 들어간 투어 (2026년 하반기부터 운영하는 모양). 복합 투어는 하루 일정이라 오전 칸에서 고른다. */
+const MTV_FROM = '2026-07-01'
+const MTV_MORNING: [TourType, string][] = [
+  ['mtv', '10:00-11:00'], ['center_mtv', '10:00-15:00'], ['center_mtv', '10:00-14:00'], ['all3', '09:30-15:00'], ['all3', '10:00-15:00'],
+]
+const MTV_AFTERNOON: [TourType, string][] = [['mtv', '14:00-15:00']]
+
+/** 복합 투어의 센터별 승인: 확정은 두 곳 모두 승인, 거절은 한 곳 거절, 대기는 한 곳만 승인했거나 아직 없음 */
+function sampleApprovals(tour: TourType, status: VisitStatus, roll: number): SiteApprovals | undefined {
+  if (!isCrossSite(tour)) return undefined
+  if (status === 'approved' || status === 'completed') return { main: 'approved', mtv: 'approved' }
+  if (status === 'rejected') return roll < 0.5 ? { main: 'approved', mtv: 'rejected' } : { main: 'rejected' }
+  return roll < 0.33 ? {} : roll < 0.66 ? { main: 'approved' } : { mtv: 'approved' }
+}
 
 function generate(): VisitRequest[] {
   const random = mulberry32(20260929)
@@ -189,7 +219,8 @@ function generate(): VisitRequest[] {
       const future = key > today ? Math.max(0.05, 0.5 - (month - (2026 * 12 + 9)) * 0.15) : 1
       for (const [half, options] of [[0, MORNING], [1, AFTERNOON]] as const) {
         if (random() > growth * future * (half === 0 ? 1.1 : 0.8)) continue
-        const [tour, slot] = pick([...options])
+        const mtvPool = half === 0 ? MTV_MORNING : MTV_AFTERNOON
+        const [tour, slot] = key >= MTV_FROM && random() < 0.35 ? pick(mtvPool) : pick([...options])
         const upcoming = key >= today
         const roll = random()
         const status: VisitStatus = upcoming
@@ -197,7 +228,7 @@ function generate(): VisitRequest[] {
           : roll < 0.82 ? 'approved' : 'rejected'
         const internal = random() < 0.15
         const [company, industries] = pick(COMPANIES)
-        const size = 1 + Math.floor(random() * (tour === 'combined' ? 8 : 5))
+        const size = 1 + Math.floor(random() * (tour === 'combined' || tour === 'all3' ? 8 : 5))
         const visitors: Visitor[] = Array.from({ length: size }, () => {
           const name = pick(SURNAMES) + pick(GIVEN)
           return {
@@ -233,6 +264,7 @@ function generate(): VisitRequest[] {
           visitors,
           note: '',
           consent: true,
+          approvals: sampleApprovals(tour, status, random()),
         })
       }
     }

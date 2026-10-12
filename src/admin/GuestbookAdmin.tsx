@@ -66,7 +66,10 @@ export function GuestbookAdmin({ adminKey }: { adminKey: string }) {
   const tourCounts = useMemo(() => {
     const count = (tour: TourFilter) =>
       entries.filter((entry) => tour === 'all' || (tour === 'none' ? entry.tour === '' : entry.tour === tour)).length
-    return { all: count('all'), combined: count('combined'), lab: count('lab'), center: count('center'), none: count('none') }
+    return Object.fromEntries((['all', 'none', ...GUESTBOOK_TOURS] as TourFilter[]).map((tour) => [tour, count(tour)])) as Record<
+      TourFilter,
+      number
+    >
   }, [entries])
 
   const counts = useMemo(() => {

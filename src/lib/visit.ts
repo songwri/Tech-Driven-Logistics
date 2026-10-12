@@ -4,8 +4,16 @@
  * (apps-script/Code.gs 의 TOURS 정의와 값이 같아야 합니다.)
  */
 
-/** other: 기존 방문 이력 · 수기 등록처럼 정해진 투어 시간표 밖의 방문 (웹 예약에서는 선택 불가) */
-export type TourType = 'combined' | 'center' | 'lab' | 'other'
+/**
+ * 투어 종류.
+ * - 한 곳: lab(TDL Lab) · center(메가와이즈 센터) · mtv(시화MTV)
+ * - 여러 곳: combined(메가와이즈 + TDL Lab, 기존 '종합 투어') · center_mtv(메가와이즈 + 시화MTV) · all3(3개 센터)
+ * - other: 기존 방문 이력 · 수기 등록처럼 정해진 투어 시간표 밖의 방문 (웹 예약에서는 선택 불가)
+ * TDL Lab + 시화MTV(메가와이즈 없이) 조합은 운영하지 않는다.
+ */
+export type TourType = 'lab' | 'center' | 'mtv' | 'combined' | 'center_mtv' | 'all3' | 'other'
+/** 복합 투어를 이루는 한 구간의 투어 (종합 투어는 메가와이즈 → Lab 이 붙어 있어 한 구간으로 본다) */
+export type LegTour = 'lab' | 'center' | 'mtv' | 'combined'
 /** completed: 방문 완료 / cancelled: 일정 취소. 거절 · 취소는 통계에서 제외한다. */
 export type VisitStatus = 'pending' | 'approved' | 'completed' | 'rejected' | 'cancelled'
 /** web: 예약 페이지 신청 / manual: 관리자 수기 등록 · 기존 이력 가져오기 */
@@ -13,8 +21,25 @@ export type VisitSource = 'web' | 'manual'
 export type VisitCategory = 'internal' | 'external'
 export type ClientType = 'existing' | 'new'
 export type TourLanguage = 'ko' | 'foreign'
-/** 센터와 TDL Lab은 한 번에 한 팀만 안내합니다. */
-export type Resource = 'center' | 'lab'
+/** 투어 공간. 공간마다 한 번에 한 팀만 안내합니다. 메가와이즈 센터와 TDL Lab 은 같은 건물, 시화MTV 는 떨어진 센터. */
+export type Resource = 'center' | 'lab' | 'mtv'
+/**
+ * 관리 단위(관리자 페이지). main = 메가와이즈 센터 + TDL Lab 담당자가 함께 쓰는 /admin/, mtv = 시화MTV 담당자의 /admin-mtv/.
+ * 서로의 단독 예약은 보지 않고, 두 곳이 모두 들어간 복합 투어만 양쪽에 함께 보인다.
+ */
+export type Site = 'main' | 'mtv'
+/** 관리자 페이지 종류: 센터별 두 곳 + 전체를 보기 전용으로 보는 통합 관제(/admin-hq/) */
+export type AdminSite = Site | 'hq'
+/** 복합 투어에서 각 센터의 승인 결정 */
+export type Decision = 'pending' | 'approved' | 'rejected'
+export type SiteApprovals = Partial<Record<Site, Decision>>
+
+/** 복합 투어의 한 구간: 어느 투어를 몇 시에 */
+export interface TourLeg {
+  tour: LegTour
+  /** 'HH:mm-HH:mm' */
+  slot: string
+}
 
 export interface TourDefinition {
   id: TourType
@@ -22,19 +47,36 @@ export interface TourDefinition {
   short: string
   description: string
   duration: string
-  /** 'HH:mm-HH:mm' */
+  /** 'HH:mm-HH:mm'. 복합 투어는 하루 일정 전체(첫 구간 시작 ~ 마지막 구간 끝)이고 순서마다 값이 다르다. */
   slots: string[]
-  /** 투어 색: 상태 색(주황 · 초록 · 파랑 · 회색)과 겹치지 않게 남색 · 보라 · 청록을 쓴다. */
+  /** 투어 색: 상태 색(주황 · 초록 · 파랑 · 회색)과 겹치지 않게 고른다. */
   color: string
+  /** 들르는 공간 */
+  places: Resource[]
+  /** 예약 화면의 묶음: 한 곳만 / 여러 곳 함께 */
+  group?: 'single' | 'multi'
+  /** 복합 투어: slots 의 값마다 오전 · 오후 구간 */
+  legs?: Record<string, TourLeg[]>
+  /** 이전 이름 (시트 · 엑셀에 남은 투어 이름을 읽을 때) */
+  aliases?: string[]
 }
 
+/** 시화MTV 투어 시작 시간 (오전 · 오후). 바꿀 때는 apps-script/Code.gs 의 TOURS 도 같이 고친다. */
+const MTV_AM = '10:00-11:00'
+const MTV_PM = '14:00-15:00'
+
 /**
- * 화면 표시 순서: TDL Lab → 종합 → 센터
+ * 화면 표시 순서: 한 곳(TDL Lab → 메가와이즈 → 시화MTV) → 여러 곳(메가와이즈+Lab → 메가와이즈+시화 → 3개 센터)
  * - TDL Lab 투어: 10:30–11:30, 14:00–15:00
- * - 센터 투어: 10:00–11:00, 13:00–14:00, 15:00–16:00. 종합 투어의 센터 구간(09:30–10:30, 13:00–14:00)과 겹치면
+ * - 메가와이즈 센터 투어: 10:00–11:00, 13:00–14:00, 15:00–16:00. 종합 투어의 센터 구간(09:30–10:30, 13:00–14:00)과 겹치면
  *   먼저 확정된 예약이 상대 시간대를 막는다.
- * - 종합 투어: 센터 1시간 → TDL Lab 1시간. Lab 시간대 앞에 한 시간을 붙여
- *   09:30–11:30, 13:00–15:00
+ * - 시화MTV 투어: 10:00–11:00, 14:00–15:00
+ * - 메가와이즈 + TDL Lab(기존 종합 투어): 센터 1시간 → TDL Lab 1시간. 09:30–11:30, 13:00–15:00
+ * - 메가와이즈 + 시화MTV: 두 센터가 떨어져 있어 오전에 한 곳, 오후에 다른 한 곳 (이동 · 점심 포함)
+ *     오전 메가와이즈 10:00 → 오후 시화MTV 14:00 / 오전 시화MTV 10:00 → 오후 메가와이즈 13:00
+ * - 3개 센터: 메가와이즈 + TDL Lab 과 시화MTV 를 오전 · 오후로 나눈다
+ *     오전 메가와이즈+Lab 09:30 → 오후 시화MTV 14:00 / 오전 시화MTV 10:00 → 오후 메가와이즈+Lab 13:00
+ * 한쪽 센터의 오전(또는 오후)이 이미 차 있으면 그 순서만 막히고 반대 순서는 고를 수 있다.
  */
 export const TOURS: TourDefinition[] = [
   {
@@ -45,24 +87,85 @@ export const TOURS: TourDefinition[] = [
     duration: '약 1시간',
     slots: ['10:30-11:30', '14:00-15:00'],
     color: '#7c5cc4',
-  },
-  {
-    id: 'combined',
-    label: '종합 투어',
-    short: '종합',
-    description: '물류센터 + TDL Lab',
-    duration: '약 2시간',
-    slots: ['09:30-11:30', '13:00-15:00'],
-    color: '#dc2626',
+    places: ['lab'],
+    group: 'single',
   },
   {
     id: 'center',
-    label: '센터 투어',
+    label: '메가와이즈 센터 투어',
     short: '센터',
-    description: '센터투어만',
+    description: '메가와이즈 물류센터만',
     duration: '약 1시간',
     slots: ['10:00-11:00', '13:00-14:00', '15:00-16:00'],
     color: '#1a8fa0',
+    places: ['center'],
+    group: 'single',
+    aliases: ['센터 투어'],
+  },
+  {
+    id: 'mtv',
+    label: '시화MTV 투어',
+    short: '시화',
+    description: '시화MTV 센터만',
+    duration: '약 1시간',
+    slots: [MTV_AM, MTV_PM],
+    color: '#3d5a80',
+    places: ['mtv'],
+    group: 'single',
+  },
+  {
+    id: 'combined',
+    label: '메가와이즈 + TDL Lab',
+    short: '센터+Lab',
+    description: '메가와이즈 센터 → TDL Lab (기존 종합 투어)',
+    duration: '약 2시간',
+    slots: ['09:30-11:30', '13:00-15:00'],
+    color: '#dc2626',
+    places: ['center', 'lab'],
+    group: 'multi',
+    aliases: ['종합 투어', '종합'],
+  },
+  {
+    id: 'center_mtv',
+    label: '메가와이즈 + 시화MTV',
+    short: '센터+시화',
+    description: '오전 · 오후로 나눠 두 센터 방문',
+    duration: '하루 일정 · 이동 · 점심 포함',
+    slots: ['10:00-15:00', '10:00-14:00'],
+    color: '#9c6644',
+    places: ['center', 'mtv'],
+    group: 'multi',
+    legs: {
+      '10:00-15:00': [
+        { tour: 'center', slot: '10:00-11:00' },
+        { tour: 'mtv', slot: MTV_PM },
+      ],
+      '10:00-14:00': [
+        { tour: 'mtv', slot: MTV_AM },
+        { tour: 'center', slot: '13:00-14:00' },
+      ],
+    },
+  },
+  {
+    id: 'all3',
+    label: '3개 센터 전체',
+    short: '3곳',
+    description: '메가와이즈 + TDL Lab + 시화MTV',
+    duration: '하루 일정 · 이동 · 점심 포함',
+    slots: ['09:30-15:00', '10:00-15:00'],
+    color: '#343a40',
+    places: ['center', 'lab', 'mtv'],
+    group: 'multi',
+    legs: {
+      '09:30-15:00': [
+        { tour: 'combined', slot: '09:30-11:30' },
+        { tour: 'mtv', slot: MTV_PM },
+      ],
+      '10:00-15:00': [
+        { tour: 'mtv', slot: MTV_AM },
+        { tour: 'combined', slot: '13:00-15:00' },
+      ],
+    },
   },
   {
     id: 'other',
@@ -72,38 +175,79 @@ export const TOURS: TourDefinition[] = [
     duration: '시간 자유',
     slots: [],
     color: '#8a8f98',
+    places: [],
   },
 ]
 
+/** 구간 투어가 열리는 곳의 이름 (예약 화면 · 메일 · 관리자 화면 공통) */
+export const LEG_PLACE: Record<LegTour, { label: string; short: string }> = {
+  center: { label: '메가와이즈 센터', short: '센터' },
+  lab: { label: 'TDL Lab', short: 'Lab' },
+  combined: { label: '메가와이즈 + TDL Lab', short: '센터+Lab' },
+  mtv: { label: '시화MTV', short: '시화' },
+}
+
+export const SITES: Record<Site, { label: string; places: Resource[] }> = {
+  main: { label: '메가와이즈 · TDL Lab', places: ['center', 'lab'] },
+  mtv: { label: '시화MTV', places: ['mtv'] },
+}
+
+export const ADMIN_SITE_LABEL: Record<AdminSite, string> = {
+  main: '메가와이즈 · TDL Lab',
+  mtv: '시화MTV',
+  hq: '통합 관제',
+}
+
+export const siteOf = (resource: Resource): Site => (resource === 'mtv' ? 'mtv' : 'main')
+
+/** 투어를 관리하는 곳. 기타 방문(수기 · 기존 이력)은 메가와이즈 · Lab 기록으로 본다. */
+export function sitesOf(tour: TourType): Site[] {
+  if (tour === 'other') return ['main']
+  return [...new Set(TOUR_BY_ID[tour].places.map(siteOf))]
+}
+
+/** 두 관리 단위(메가와이즈 · Lab 과 시화MTV)가 모두 들어간 투어 */
+export const isCrossSite = (tour: TourType) => sitesOf(tour).length > 1
+
+/** 이 관리자 페이지에서 보고 다룰 수 있는 투어인지 (통합 관제는 전체) */
+export const inSite = (tour: TourType, site: AdminSite) => site === 'hq' || sitesOf(tour).includes(site)
+
+export const toursForSite = (site: AdminSite) => TOURS.filter((tour) => inSite(tour.id, site))
+
 /**
- * 관리자 보기 범위. 센터 담당자와 TDL Lab 담당자가 각자 관련된 실적만 볼 수 있게 한다.
- * - center: 센터 관리자용 = 종합 + 센터 투어
- * - lab: Lab 관리자용 = 종합 + Lab 투어 (+ 투어 종류가 없는 수기 · 기존 이력은 일단 여기에 포함)
+ * 관리자 보기 범위.
+ * - /admin/: 센터 담당자와 TDL Lab 담당자가 각자 관련된 실적만 볼 수 있게 나눈다.
+ *   center = 메가와이즈 센터가 들어간 투어, lab = TDL Lab 이 들어간 투어 (+ 투어 종류가 없는 수기 · 기존 이력)
+ * - /admin-hq/: 센터별로 나눠 본다. main = 메가와이즈 · Lab, mtv = 시화MTV
  */
-export type AdminScope = 'all' | 'center' | 'lab'
+export type AdminScope = 'all' | 'center' | 'lab' | Site
 
-export const ADMIN_SCOPES: { id: AdminScope; label: string; hint: string }[] = [
-  { id: 'all', label: '전체', hint: '모든 투어' },
-  { id: 'center', label: '센터 관리자용', hint: '종합 + 센터 투어' },
-  { id: 'lab', label: 'Lab 관리자용', hint: '종합 + Lab 투어 · 기타 방문' },
-]
-
-const SCOPE_TOURS: Record<AdminScope, TourType[] | null> = {
-  all: null,
-  center: ['combined', 'center'],
-  lab: ['combined', 'lab', 'other'],
+export const ADMIN_SCOPES: Record<AdminSite, { id: AdminScope; label: string; hint: string }[]> = {
+  main: [
+    { id: 'all', label: '전체', hint: '메가와이즈 · TDL Lab 이 들어간 모든 투어' },
+    { id: 'center', label: '센터 관리자용', hint: '메가와이즈 센터가 들어간 투어' },
+    { id: 'lab', label: 'Lab 관리자용', hint: 'TDL Lab 이 들어간 투어 · 기타 방문' },
+  ],
+  mtv: [],
+  hq: [
+    { id: 'all', label: '전체', hint: '3개 센터 모든 투어' },
+    { id: 'main', label: '메가와이즈 · Lab', hint: '메가와이즈 센터 · TDL Lab 이 들어간 투어' },
+    { id: 'mtv', label: '시화MTV', hint: '시화MTV 가 들어간 투어' },
+  ],
 }
 
 export const inAdminScope = (tour: TourType, scope: AdminScope) => {
-  const tours = SCOPE_TOURS[scope]
-  return !tours || tours.includes(tour)
+  if (scope === 'all') return true
+  if (scope === 'main' || scope === 'mtv') return inSite(tour, scope)
+  if (scope === 'lab' && tour === 'other') return true
+  return TOUR_BY_ID[tour].places.includes(scope)
 }
 
 /** 방명록에서 방문자가 고르는 투어 (기타 방문 제외) */
-export type GuestbookTour = 'combined' | 'lab' | 'center'
-export const GUESTBOOK_TOURS: GuestbookTour[] = ['combined', 'lab', 'center']
+export type GuestbookTour = Exclude<TourType, 'other'>
+export const GUESTBOOK_TOURS: GuestbookTour[] = ['lab', 'center', 'mtv', 'combined', 'center_mtv', 'all3']
 export const isGuestbookTour = (value: unknown): value is GuestbookTour =>
-  value === 'combined' || value === 'lab' || value === 'center'
+  GUESTBOOK_TOURS.includes(value as GuestbookTour)
 
 /** 예약 페이지에서 고를 수 있는 투어 (기타 방문 제외) */
 export const BOOKABLE_TOURS = TOURS.filter((tour) => tour.id !== 'other')
@@ -113,9 +257,31 @@ export const TOUR_BY_ID = Object.fromEntries(TOURS.map((tour) => [tour.id, tour]
   TourDefinition
 >
 
-/** 월·수·금만 운영합니다. */
-export const OPEN_WEEKDAYS = [1, 3, 5]
-export const CLOSED_WEEKDAYS = [0, 2, 4, 6]
+/** 투어 이름(현재 · 이전 이름 · 짧은 이름) → id. 모르는 이름은 null */
+export function tourFromLabel(value: string): TourType | null {
+  const text = value.trim()
+  return (
+    TOURS.find((tour) => tour.id === text || tour.label === text || tour.short === text || tour.aliases?.includes(text))
+      ?.id ?? null
+  )
+}
+
+/** 운영 요일 (월·수·금). 공간마다 다르게 바꿀 수 있다. apps-script/Code.gs 의 PLACE_WEEKDAYS 와 같아야 합니다. */
+export const PLACE_WEEKDAYS: Record<Resource, number[]> = {
+  center: [1, 3, 5],
+  lab: [1, 3, 5],
+  mtv: [1, 3, 5],
+}
+/** 어느 공간이든 운영하는 요일 (관리자 달력 표시용) */
+export const OPEN_WEEKDAYS = [...new Set(Object.values(PLACE_WEEKDAYS).flat())].sort()
+export const CLOSED_WEEKDAYS = [0, 1, 2, 3, 4, 5, 6].filter((day) => !OPEN_WEEKDAYS.includes(day))
+
+/** 투어가 열리는 요일: 들르는 모든 공간이 운영하는 요일 */
+export function tourWeekdays(tour: TourType) {
+  const places = TOUR_BY_ID[tour].places
+  if (places.length === 0) return OPEN_WEEKDAYS
+  return OPEN_WEEKDAYS.filter((day) => places.every((place) => PLACE_WEEKDAYS[place].includes(day)))
+}
 
 export const STATUS_LABEL: Record<VisitStatus, string> = {
   pending: '대기중',
@@ -265,6 +431,8 @@ export interface VisitRequest extends VisitDraft {
   departments?: string[]
   /** 후속 진행 현황 */
   followUp?: string
+  /** 복합 투어(메가와이즈 · Lab + 시화MTV)의 센터별 승인. 두 곳이 모두 승인해야 확정된다. */
+  approvals?: SiteApprovals
 }
 
 type HeadcountSource = Pick<VisitRequest, 'visitors' | 'headcount' | 'actualHeadcount'>
@@ -285,7 +453,7 @@ export function headcountLabel(request: HeadcountSource) {
 /** 확정된 예약 또는 휴무가 점유하는 구간 (개인정보 없음). */
 export interface BusySegment {
   date: string
-  /** 'all' 은 휴무 등 두 공간을 모두 막는 경우 */
+  /** 'all' 은 메가와이즈 센터와 TDL Lab 을 함께 막는 경우 (기타 방문 · 전체 휴무). 떨어진 시화MTV 는 막지 않는다. */
   resource: Resource | 'all'
   from: string
   to: string
@@ -303,13 +471,16 @@ export interface TourBlock {
   reason: string
 }
 
-export const BLOCK_TARGETS: { id: BlockTarget; label: string; hint: string }[] = [
-  { id: 'center', label: '센터', hint: '센터 · 종합 투어 불가' },
-  { id: 'lab', label: 'TDL Lab', hint: 'TDL Lab · 종합 투어 불가' },
-  { id: 'all', label: '전체', hint: '모든 투어 불가' },
+export const BLOCK_TARGETS: { id: BlockTarget; label: string; hint: string; site: Site }[] = [
+  { id: 'center', label: '메가와이즈 센터', hint: '메가와이즈 센터가 들어간 투어 불가', site: 'main' },
+  { id: 'lab', label: 'TDL Lab', hint: 'TDL Lab 이 들어간 투어 불가', site: 'main' },
+  { id: 'all', label: '센터 · Lab 전체', hint: '메가와이즈 · TDL Lab 투어 모두 불가', site: 'main' },
+  { id: 'mtv', label: '시화MTV', hint: '시화MTV 가 들어간 투어 불가', site: 'mtv' },
 ]
 
 export const blockTargetLabel = (target: BlockTarget) => BLOCK_TARGETS.find((item) => item.id === target)?.label ?? '전체'
+
+export const blockSite = (target: BlockTarget): Site => (target === 'mtv' ? 'mtv' : 'main')
 
 /** 막힌 일정이 점유하는 구간 (종일은 00:00–24:00). 신청 화면의 busy 와 같은 형태. */
 export function blockSegment(block: TourBlock): BusySegment {
@@ -420,9 +591,18 @@ function fromMinutes(minutes: number) {
 /** 준비 시간(분). 종합 투어의 Lab, 수기 등록 방문은 사용 시작 이만큼 전부터 공간을 점유한다. */
 export const PREP_MINUTES = 60
 
+/** 복합 투어의 오전 · 오후 구간. 한 곳 투어는 그 자체가 한 구간. 정해진 시간표 밖(수기 등록)의 복합 투어는 null */
+export function legsOf(tour: TourType, slot: string): TourLeg[] | null {
+  const definition = TOUR_BY_ID[tour]
+  if (definition.legs) return definition.legs[slot] ?? null
+  if (tour === 'other') return null
+  return [{ tour: tour as LegTour, slot }]
+}
+
 /**
  * 투어 한 건이 어떤 공간을 언제 점유하는지. (apps-script/Code.gs 의 segmentsOf_ 와 같아야 한다)
  * - 종합 투어: 센터 1시간 → Lab. Lab 은 준비를 위해 종합 투어 시작부터 점유 (센터 시간 = Lab 준비 시간)
+ * - 복합 투어(메가와이즈 + 시화MTV, 3개 센터): 오전 · 오후 구간마다 위 규칙
  * - manual(수기 등록): 웹 예약 시간표 밖의 방문이라, 모든 공간을 사용 시작 1시간 전부터 점유 (준비 여유)
  */
 export function segmentsOf(tour: TourType, date: string, slot: string, manual = false): BusySegment[] {
@@ -432,6 +612,13 @@ export function segmentsOf(tour: TourType, date: string, slot: string, manual = 
   const prep = (minutes: number) => fromMinutes(Math.max(0, manual ? minutes - PREP_MINUTES : minutes))
   // 기타 방문(수기 등록)은 어느 공간을 쓰는지 모르므로 그 시간의 센터 · Lab 을 모두 막는다.
   if (tour === 'other') return [{ date, resource: 'all', from: prep(start), to }]
+  const definition = TOUR_BY_ID[tour]
+  if (definition.legs) {
+    const legs = definition.legs[slot]
+    if (legs) return legs.flatMap((leg) => segmentsOf(leg.tour, date, leg.slot, manual))
+    // 시간표 밖의 복합 투어(수기 등록): 들르는 공간을 그 시간 동안 모두 막는다.
+    return definition.places.map((resource) => ({ date, resource, from: prep(start), to }))
+  }
   if (tour === 'combined') {
     const handoff = start + 60
     return [
@@ -439,12 +626,20 @@ export function segmentsOf(tour: TourType, date: string, slot: string, manual = 
       { date, resource: 'lab', from: fromMinutes(Math.max(0, handoff - PREP_MINUTES)), to },
     ]
   }
-  return [{ date, resource: tour, from: prep(start), to }]
+  return [{ date, resource: tour as Resource, from: prep(start), to }]
+}
+
+/** 'all'(센터 · Lab 전체)은 메가와이즈 센터 · TDL Lab 과 겹치고, 떨어진 시화MTV 와는 겹치지 않는다. */
+function sameSpace(a: BusySegment['resource'], b: BusySegment['resource']) {
+  if (a === b) return true
+  if (a === 'all') return b !== 'mtv'
+  if (b === 'all') return a !== 'mtv'
+  return false
 }
 
 function overlaps(a: BusySegment, b: BusySegment) {
   if (a.date !== b.date) return false
-  if (a.resource !== 'all' && b.resource !== 'all' && a.resource !== b.resource) return false
+  if (!sameSpace(a.resource, b.resource)) return false
   return toMinutes(a.from) < toMinutes(b.to) && toMinutes(b.from) < toMinutes(a.to)
 }
 
@@ -459,6 +654,72 @@ export function busyFromRequests(requests: VisitRequest[], excludeId?: string) {
     .filter((request) => isConfirmed(request.status) && request.id !== excludeId)
     .flatMap((request) => segmentsOf(request.tour, request.date, request.slot, request.source === 'manual'))
 }
+
+/* ------------------------------------------------------- 일정 표시 */
+
+const halfOf = (slot: string) => (toMinutes(slot.split('-')[0] ?? '00:00') < 12 * 60 ? '오전' : '오후')
+
+/** '오전 메가와이즈 센터 10:00 – 11:00 → 오후 시화MTV 14:00 – 15:00'. 한 곳 투어는 시간만. */
+export function formatSchedule(tour: TourType, slot: string) {
+  const legs = TOUR_BY_ID[tour].legs ? legsOf(tour, slot) : null
+  if (!legs) return formatSlot(slot)
+  return legs.map((leg) => `${halfOf(leg.slot)} ${LEG_PLACE[leg.tour].label} ${formatSlot(leg.slot)}`).join(' → ')
+}
+
+/** 목록용 짧은 표기: '10:00 센터 → 14:00 시화'. 한 곳 투어는 '10:00 – 11:00' */
+export function formatScheduleShort(tour: TourType, slot: string) {
+  const legs = TOUR_BY_ID[tour].legs ? legsOf(tour, slot) : null
+  if (!legs) return formatSlot(slot)
+  return legs.map((leg) => `${leg.slot.slice(0, 5)} ${LEG_PLACE[leg.tour].short}`).join(' → ')
+}
+
+/* ------------------------------------------------- 복합 투어 센터별 승인 */
+
+/** 센터별 승인을 받는 예약: 두 관리 단위가 모두 들어간 웹 예약 (수기 등록은 관리자가 상태를 바로 정한다) */
+export const needsSiteApproval = (request: Pick<VisitRequest, 'tour' | 'source'>) =>
+  isCrossSite(request.tour) && request.source !== 'manual'
+
+export const siteDecision = (request: Pick<VisitRequest, 'approvals'>, site: Site): Decision =>
+  request.approvals?.[site] ?? 'pending'
+
+const isDecision = (status: VisitStatus): status is Decision =>
+  status === 'pending' || status === 'approved' || status === 'rejected'
+
+/**
+ * 관리자가 상태를 바꿀 때의 결과. (apps-script/Code.gs 의 applyDecision_ 과 같아야 한다)
+ * 복합 투어의 승인 · 거절 · 대기는 그 관리자 센터의 결정으로 기록하고, 전체 상태는
+ * 한 곳이라도 거절 → 거절, 모두 승인 → 승인, 그 밖에는 대기. 거절 · 취소된 예약을 다시 열면 두 센터 모두 처음부터 결정한다.
+ * 완료 · 취소는 어느 센터든 전체 상태를 바로 바꾼다.
+ */
+export function applyDecision(
+  request: Pick<VisitRequest, 'tour' | 'source' | 'status' | 'approvals'>,
+  site: AdminSite,
+  status: VisitStatus,
+): { status: VisitStatus; approvals?: SiteApprovals } {
+  if (!needsSiteApproval(request) || site === 'hq' || !isDecision(status)) return { status, approvals: request.approvals }
+  const reopened = request.status === 'rejected' || request.status === 'cancelled'
+  const approvals: SiteApprovals = { ...(reopened ? {} : request.approvals), [site]: status }
+  const decisions = sitesOf(request.tour).map((each) => approvals[each] ?? 'pending')
+  const next: VisitStatus = decisions.includes('rejected')
+    ? 'rejected'
+    : decisions.every((decision) => decision === 'approved')
+      ? 'approved'
+      : 'pending'
+  return { status: next, approvals }
+}
+
+/** 시트 '센터별승인' 열 값: 'main:approved,mtv:pending' (apps-script/Code.gs 의 approvalsText_ 와 같다) */
+export function approvalsText(approvals?: SiteApprovals) {
+  return (Object.entries(approvals ?? {}) as [Site, Decision][]).map(([site, decision]) => `${site}:${decision}`).join(',')
+}
+
+/** 이 센터는 승인했고 상대 센터의 승인을 기다리는 복합 투어 */
+export const awaitingPartner = (request: VisitRequest, site: AdminSite) =>
+  site !== 'hq' && request.status === 'pending' && needsSiteApproval(request) && siteDecision(request, site) === 'approved'
+
+/** 이 관리자가 승인 · 거절해야 하는 요청 */
+export const needsDecisionBy = (request: VisitRequest, site: AdminSite) =>
+  site !== 'hq' && request.status === 'pending' && !awaitingPartner(request, site)
 
 export function isOpenWeekday(date: Date) {
   return OPEN_WEEKDAYS.includes(date.getDay())

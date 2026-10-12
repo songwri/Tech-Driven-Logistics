@@ -7,19 +7,30 @@ import { tourLanguageName, FOREIGN_LANGUAGES,
   JOBS,
   OTHER,
   PURPOSES,
-  TOURS,
+  SITES,
+  TOUR_BY_ID,
   baseOption,
   clientSegment,
   headcountOf,
   isConfirmed,
   isCounted,
   divisionGroup,
+  toursForSite,
+  type AdminSite,
+  type Resource,
   type VisitRequest,
 } from '@/lib/visit'
 import { ColumnChart, DonutChart, type Datum } from './charts'
 import { StatsGrid } from './StatsGrid'
 import { VisitListModal } from './VisitListModal'
-import { buildStatsSheets, divisionStats, monthlyRows, yearlyRows } from './statsData'
+import { buildStatsSheets, divisionStats, metricColumns, monthlyRows, yearlyRows } from './statsData'
+
+/** 통합 관제의 센터별 방문: 복합 투어는 들르는 센터마다 한 번씩 센다. */
+const PLACES: { id: Resource; label: string; color: string }[] = [
+  { id: 'center', label: '메가와이즈 센터', color: TOUR_BY_ID.center.color },
+  { id: 'lab', label: 'TDL Lab', color: TOUR_BY_ID.lab.color },
+  { id: 'mtv', label: SITES.mtv.label, color: TOUR_BY_ID.mtv.color },
+]
 
 /** 방문 유형 색: 차트와 같은 슬레이트 계열 + 신규 고객만 브랜드 색으로 강조 */
 const SEGMENTS = [
@@ -84,7 +95,7 @@ function Segmented<T extends string>({
   )
 }
 
-export function StatsView({ requests }: { requests: VisitRequest[] }) {
+export function StatsView({ requests, site }: { requests: VisitRequest[]; site: AdminSite }) {
   const [now] = useState(() => new Date())
   const years = useMemo(() => {
     const set = new Set(requests.map((request) => Number(request.date.slice(0, 4))))
@@ -141,7 +152,10 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
     requests: list,
     ...extra,
   })
-  const tours: Datum[] = TOURS.map((tour) =>
+  const places: Datum[] = PLACES.map((place) =>
+    withList(place.label, scoped.filter((request) => TOUR_BY_ID[request.tour].places.includes(place.id)), { color: place.color }),
+  )
+  const tours: Datum[] = toursForSite(site).map((tour) =>
     withList(tour.label, scoped.filter((request) => request.tour === tour.id), { color: tour.color }),
   )
   const external = scoped.filter((request) => request.category === 'external')
@@ -205,6 +219,7 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
         year,
         years,
         periodLabel,
+        site,
       }),
     )
   }
@@ -341,6 +356,12 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
         </Card>
       </div>
 
+      {site === 'hq' && (
+        <Card title="센터별 방문 건수" subtitle={`${periodLabel} · 복합 투어는 들르는 센터마다 1건씩`}>
+          <ColumnChart data={places} height={150} unit="건" onSelect={select('센터별')} />
+        </Card>
+      )}
+
       <Card title="담당(실)별 방문 건수" subtitle={`${periodLabel} · 방문 횟수 기준 · 주요 6개 담당 + 기타`}>
         <ColumnChart data={divisionCounts} height={170} unit="건" onSelect={select('담당(실)')} />
       </Card>
@@ -390,7 +411,7 @@ export function StatsView({ requests }: { requests: VisitRequest[] }) {
             ]}
           />
         </header>
-        <StatsGrid rows={gridRows} firstHeader={gridView === 'month' ? '월' : '연도'} />
+        <StatsGrid rows={gridRows} firstHeader={gridView === 'month' ? '월' : '연도'} columns={metricColumns(site)} />
       </section>
       {detail && <VisitListModal title={detail.title} periodLabel={periodLabel} requests={detail.requests} onClose={() => setDetail(null)} />}
     </div>

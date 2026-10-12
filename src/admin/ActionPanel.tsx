@@ -1,14 +1,17 @@
 import { ArrowRight, Check, CircleAlert, Inbox, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
+  awaitingPartner,
   formatDateShort,
-  formatSlot,
+  formatScheduleShort,
   headcountLabel,
+  needsDecisionBy,
   parseDateKey,
+  type AdminSite,
   type VisitRequest,
   type VisitStatus,
 } from '@/lib/visit'
-import { TourTag, tourTint } from './status'
+import { SiteApprovals, TourTag, tourTint } from './status'
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -26,13 +29,16 @@ function PendingRow({
   busy,
   onOpen,
   onSetStatus,
+  site,
 }: {
   request: VisitRequest
   today: string
   overdue?: boolean
   busy: boolean
   onOpen: (id: string) => void
-  onSetStatus: (id: string, status: VisitStatus) => void
+  /** 없으면 보기 전용 (통합 관제) */
+  onSetStatus?: (id: string, status: VisitStatus) => void
+  site: AdminSite
 }) {
   const soon = !overdue && request.date <= today
   return (
@@ -47,7 +53,7 @@ function PendingRow({
       </span>
       <span className="hidden font-mono text-[12px] tabular-nums text-warm-600 md:block">
         {formatDateShort(request.date)}
-        <span className="block text-warm-300">{formatSlot(request.slot)}</span>
+        <span className="block text-warm-300">{formatScheduleShort(request.tour, request.slot)}</span>
       </span>
       <button type="button" onClick={() => onOpen(request.id)} className="min-w-0 py-1.5 pl-3 pr-2 text-left" style={tourTint(request.tour)}>
         <span className="block truncate text-sm font-semibold text-warm-800 group-hover:text-brand">
@@ -63,9 +69,18 @@ function PendingRow({
           <span className="tabular-nums">{headcountLabel(request)}</span>
           <span className="font-mono tabular-nums md:hidden">· {formatDateShort(request.date)}</span>
         </span>
+        <SiteApprovals request={request} site={site} className="mt-1" />
       </button>
       <span className="flex items-center gap-1.5">
-        {overdue ? (
+        {!onSetStatus ? (
+          <button
+            type="button"
+            onClick={() => onOpen(request.id)}
+            className="border border-warm-300/70 px-2.5 py-1.5 text-[12px] font-semibold text-warm-600 transition hover:border-warm-800 hover:text-warm-800"
+          >
+            상세
+          </button>
+        ) : overdue ? (
           <button
             type="button"
             onClick={() => onOpen(request.id)}
@@ -110,17 +125,22 @@ export function ActionPanel({
   onOpen,
   onSetStatus,
   onShowAll,
+  site,
 }: {
   requests: VisitRequest[]
   today: string
   busyId: string | null
   onOpen: (id: string) => void
-  onSetStatus: (id: string, status: VisitStatus) => void
+  /** 없으면 보기 전용 (통합 관제) */
+  onSetStatus?: (id: string, status: VisitStatus) => void
   onShowAll: () => void
+  site: AdminSite
 }) {
+  // 복합 투어를 이 센터가 이미 승인했으면 상대 센터 차례라 '처리 필요'에서 뺀다 (보기 전용은 대기 전체).
   const pending = requests
-    .filter((request) => request.status === 'pending')
+    .filter((request) => (onSetStatus ? needsDecisionBy(request, site) : request.status === 'pending'))
     .sort((a, b) => (a.date + a.slot).localeCompare(b.date + b.slot))
+  const waiting = requests.filter((request) => awaitingPartner(request, site) && request.date >= today)
   const upcoming = pending.filter((request) => request.date >= today)
   const overdue = pending.filter((request) => request.date < today).reverse()
   const LIMIT = 6
@@ -161,6 +181,7 @@ export function ActionPanel({
               busy={busyId === request.id}
               onOpen={onOpen}
               onSetStatus={onSetStatus}
+              site={site}
             />
           ))}
           {upcoming.length > LIMIT && (
@@ -169,6 +190,13 @@ export function ActionPanel({
             </li>
           )}
         </ul>
+      )}
+
+      {waiting.length > 0 && (
+        <p className="border-t border-warm-300/40 px-4 py-2.5 text-[12px] text-warm-600">
+          우리 센터는 승인했고 <b className="text-warm-800">상대 센터 승인을 기다리는 복합 투어 {waiting.length}건</b> · 두 센터가 모두 승인하면
+          신청자에게 확정 메일이 나갑니다.
+        </p>
       )}
 
       {overdue.length > 0 && (
@@ -188,6 +216,7 @@ export function ActionPanel({
                 busy={busyId === request.id}
                 onOpen={onOpen}
                 onSetStatus={onSetStatus}
+                site={site}
               />
             ))}
           </ul>
@@ -237,7 +266,7 @@ export function UpcomingPanel({
                   <span className="mt-0.5 flex flex-wrap items-center gap-x-2 font-mono text-[12px] tabular-nums text-warm-600">
                     <TourTag tour={request.tour} className="px-1.5 py-0 font-sans text-[11px]" />
                     <span>
-                      {formatDateShort(request.date)} {formatSlot(request.slot)} · {headcountLabel(request)}
+                      {formatDateShort(request.date)} {formatScheduleShort(request.tour, request.slot)} · {headcountLabel(request)}
                     </span>
                   </span>
                 </span>

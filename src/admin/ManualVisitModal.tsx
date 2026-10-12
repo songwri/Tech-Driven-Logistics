@@ -7,7 +7,8 @@ import { cn } from '@/lib/utils'
 import {
   MAIN_DIVISIONS,
   STATUS_LABEL,
-  TOURS,
+  toursForSite,
+  type AdminSite,
   formatDateShort,
   type VisitRequest,
   type VisitStatus,
@@ -109,10 +110,13 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
  * 웹 예약 규칙(월 · 수 · 금, 정해진 시간대, 방문자 명단, 개인정보 동의)을 적용하지 않는다.
  */
 export function ManualVisitModal({
+  site,
   initial,
   onClose,
   onSubmit,
 }: {
+  /** 이 관리자 페이지에서 고를 수 있는 투어만 보여준다 (시화MTV 페이지는 시화MTV 가 들어간 투어) */
+  site: AdminSite
   /** 있으면 수정, 없으면 새 등록 */
   initial?: VisitRequest
   onClose: () => void
@@ -121,7 +125,8 @@ export function ManualVisitModal({
   const [date, setDate] = useState(initial?.date ?? '')
   const [start, setStart] = useState(initial?.slot.split('-')[0] ?? '')
   const [end, setEnd] = useState(initial?.slot.split('-')[1] ?? '')
-  const [tour, setTour] = useState(initial?.tour ?? 'other')
+  const tours = toursForSite(site)
+  const [tour, setTour] = useState(initial?.tour ?? (site === 'mtv' ? 'mtv' : 'other'))
   const [status, setStatus] = useState<VisitStatus>(initial?.status ?? 'approved')
   const [category, setCategory] = useState(initial?.category ?? 'external')
   const [clientType, setClientType] = useState<'none' | 'existing' | 'new'>(initial?.clientType ?? 'none')
@@ -227,7 +232,7 @@ export function ManualVisitModal({
             </Field>
             <Field label="투어">
               <select className={selectClass} value={tour} onChange={(e) => setTour(e.target.value as VisitRequest['tour'])}>
-                {TOURS.map((item) => (
+                {tours.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.label}
                   </option>

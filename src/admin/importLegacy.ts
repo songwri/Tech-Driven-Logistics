@@ -1,4 +1,4 @@
-import { TOURS, emptyHost, type TourType, type Visitor, type VisitRequest, type VisitStatus } from '@/lib/visit'
+import { emptyHost, tourFromLabel, type TourType, type Visitor, type VisitRequest, type VisitStatus } from '@/lib/visit'
 
 /**
  * 방문 이력 가져오기 (붙여넣기 · .xlsx · .csv 파일). 두 가지 양식을 알아본다.
@@ -177,11 +177,11 @@ export const VISIT_SHEET_HEADERS = [
   '방문인원', '방문자명단', '요청사항', '개인정보동의', '관리자메모', '토큰', '수정일시', '방문자JSON',
   '투어언어', '외국어', '통역동반', '출처', '주요인원', '가이드', '유관부서', '후속진행',
   // 새 열은 기존 시트와 맞도록 맨 뒤에 붙인다.
-  '담당(실)', '통역언어', '실제방문인원',
+  '담당(실)', '통역언어', '실제방문인원', '센터별승인',
 ] as const
 
 /** 가져올 때 쓰지 않는 열 (시스템이 채움) */
-export const SYSTEM_COLUMNS = ['id', '신청일시', '방문자명단', '개인정보동의', '토큰', '수정일시', '출처'] as const
+export const SYSTEM_COLUMNS = ['id', '신청일시', '방문자명단', '개인정보동의', '토큰', '수정일시', '출처', '센터별승인'] as const
 
 export type TableFormat = 'visit_requests' | 'legacy'
 
@@ -209,9 +209,9 @@ export function normalizeSlot(value: string) {
   return start && end && start < end ? `${start}-${end}` : ''
 }
 
+/** 투어 이름 → id. 이전 이름(종합 투어 · 센터 투어)도 읽는다. 모르는 이름은 기타 방문 */
 function tourFrom(value: string): TourType {
-  const text = value.trim()
-  return TOURS.find((tour) => tour.id === text || tour.label === text || tour.short === text)?.id ?? 'other'
+  return tourFromLabel(value) ?? 'other'
 }
 
 function visitorsFrom(value: string): Visitor[] {
