@@ -5,10 +5,11 @@ import { Textarea } from '@/components/ui/Field'
 import { HostFields, SectionTitle, VisitInfoFields, VisitorsFields } from '@/components/visit/VisitFields'
 import {
   TOUR_BY_ID,
+  awaitingPartner,
   busyFromRequests,
   clientSegment,
   formatDateLong,
-  formatSlot,
+  formatSchedule,
   headcountLabel,
   languageSummary,
   type VisitRequest,
@@ -16,8 +17,10 @@ import {
   validateVisitDraft,
   divisionGroup,
   OTHER_DIVISION,
+  needsSiteApproval,
+  type AdminSite,
 } from '@/lib/visit'
-import { StatusBadge, TourTag } from './status'
+import { SiteApprovals, StatusBadge, TourTag } from './status'
 import { ManualVisitModal, OpsFields } from './ManualVisitModal'
 import { opsFromRequest, opsToRequest } from './opsRecord'
 
@@ -27,6 +30,9 @@ const SchedulePicker = lazy(() =>
 )
 
 interface RequestModalProps {
+  site: AdminSite
+  /** 통합 관제: 보기만 한다 (상태 · 정보 · 메모 · 기록 변경 불가) */
+  readOnly?: boolean
   request: VisitRequest
   requests: VisitRequest[]
   onClose: () => void
@@ -45,7 +51,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate, onDelete }: RequestModalProps) {
+export function RequestModal({ site, readOnly, request, requests, onClose, onSetStatus, onUpdate, onDelete }: RequestModalProps) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<VisitRequest>(request)
@@ -93,6 +99,7 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
   if (editing && manual) {
     return (
       <ManualVisitModal
+        site={site}
         initial={request}
         onClose={() => setEditing(false)}
         onSubmit={(input) => onUpdate({ ...request, ...input, status: request.status })}
@@ -169,7 +176,9 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
 
   /** 현재 상태에서 바꿀 수 있는 상태 버튼 */
   const back = { label: '대기로 되돌리기', variant: 'outline' as const }
-  const actions = {
+  // 복합 투어를 우리 센터가 승인하고 상대 센터를 기다리는 중: 우리 결정만 되돌릴 수 있다.
+  const waiting = awaitingPartner(request, site)
+  const actions = (readOnly ? [] : waiting ? [{ status: 'pending', label: '우리 센터 승인 취소', variant: 'outline' }] : {
     pending: [
       { status: 'rejected', label: '거절', className: 'bg-[#868e96]' },
       { status: 'approved', label: '승인', className: 'bg-[#2f9e44]' },
@@ -188,7 +197,7 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
       { status: 'pending', ...back },
       { status: 'approved', label: '승인', className: 'bg-[#2f9e44]' },
     ],
-  }[request.status] as { status: VisitStatus; label: string; className?: string; variant?: 'outline' }[]
+  }[request.status]) as { status: VisitStatus; label: string; className?: string; variant?: 'outline' }[]
 
   return (
     <Modal
@@ -212,7 +221,9 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
         <div>
           <p className="font-mono text-[11px] text-warm-600">방문 일정</p>
           <p className="text-lg font-bold text-warm-800">
-            {formatDateLong(request.date)} · {formatSlot(request.slot)}
+            {formatDateLong(request.date)}
+            {TOUR_BY_ID[request.tour].legs ? <br /> : ' · '}
+            {formatSchedule(request.tour, request.slot)}
           </p>
         </div>
         <p className="text-right text-sm text-warm-600">
@@ -224,6 +235,14 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
           )}
         </p>
       </div>
+
+      {needsSiteApproval(request) && request.status === 'pending' && (
+        <div className="-mt-2 mb-5 flex flex-wrap items-center gap-2 border border-warm-300/50 bg-white px-4 py-2.5 text-[13px] text-warm-600">
+          <span className="font-semibold text-warm-800">센터별 승인</span>
+          <SiteApprovals request={request} site={site} />
+          <span>· 두 센터가 모두 승인하면 확정되고 신청자에게 확정 메일이 나갑니다. 한 곳이 거절하면 예약 전체가 거절됩니다.</span>
+        </div>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         <div>
@@ -271,7 +290,7 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
       <div className="mt-6">
         <SectionTitle
           aside={
-            !editingOps && (
+            !editingOps && !readOnly && (
               <button
                 type="button"
                 onClick={() => {
@@ -352,7 +371,7 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
       <div className="mt-6">
         <SectionTitle
           aside={
-            memo !== request.adminMemo && (
+            !readOnly && memo !== request.adminMemo && (
               <button
                 type="button"
                 onClick={() => run(() => onUpdate({ ...request, adminMemo: memo }))}
@@ -371,6 +390,7 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
           onChange={(e) => setMemo(e.target.value)}
           placeholder="거절 사유, 안내 사항 등 (신청자에게 노출되지 않습니다)"
           aria-label="관리자 메모"
+          readOnly={readOnly}
         />
       </div>
 
@@ -404,36 +424,38 @@ export function RequestModal({ request, requests, onClose, onSetStatus, onUpdate
         </div>
       )}
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-warm-300/40 pt-4">
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={startEdit}>
-            정보 수정
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={pending || confirmDelete}
-            onClick={() => setConfirmDelete(true)}
-            className="text-brand hover:text-brand"
-          >
-            삭제
-          </Button>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {actions.map((action) => (
-            <Button
-              key={action.status}
-              size="sm"
-              variant={action.variant}
-              disabled={pending}
-              onClick={() => run(() => onSetStatus(request.id, action.status))}
-              className={action.className}
-            >
-              {action.label}
+      {!readOnly && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-warm-300/40 pt-4">
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={startEdit}>
+              정보 수정
             </Button>
-          ))}
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={pending || confirmDelete}
+              onClick={() => setConfirmDelete(true)}
+              className="text-brand hover:text-brand"
+            >
+              삭제
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {actions.map((action) => (
+              <Button
+                key={action.status}
+                size="sm"
+                variant={action.variant}
+                disabled={pending}
+                onClick={() => run(() => onSetStatus(request.id, action.status))}
+                className={action.className}
+              >
+                {action.label}
+              </Button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </Modal>
   )
 }

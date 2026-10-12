@@ -1,4 +1,4 @@
-import { STATUS_LABEL, TOUR_BY_ID, type VisitRequest, type VisitStatus, type TourType, type Visitor } from '@/lib/visit'
+import { STATUS_LABEL, TOUR_BY_ID, type SiteApprovals, type VisitRequest, type VisitStatus, type TourType, type Visitor } from '@/lib/visit'
 
 /**
  * 서버(구글 시트)에서 온 예약 한 건을 화면이 기대하는 모양으로 정리한다.
@@ -54,7 +54,19 @@ export function normalizeRequest(value: unknown): VisitRequest {
     guides: text(r.guides),
     departments: list(r.departments),
     followUp: text(r.followUp),
+    approvals: approvals(r.approvals),
   }
+}
+
+/** 복합 투어의 센터별 승인 { main: 'approved', mtv: 'pending' } */
+function approvals(value: unknown): SiteApprovals | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const result: SiteApprovals = {}
+  for (const site of ['main', 'mtv'] as const) {
+    const decision = (value as Record<string, unknown>)[site]
+    if (decision === 'pending' || decision === 'approved' || decision === 'rejected') result[site] = decision
+  }
+  return Object.keys(result).length > 0 ? result : undefined
 }
 
 function wholeNumber(value: unknown) {

@@ -15,7 +15,7 @@ import { hasLanguageNote,
   firstProblem,
   internalCompanyName,
   formatDateLong,
-  formatSlot,
+  formatSchedule,
   isSlotBusy,
   languageSummary,
   missingFields,
@@ -253,7 +253,7 @@ export function ReservationForm({ busy, closedDays, scheduleLoading }: Reservati
               <dd className="font-semibold">{tour.label}</dd>
               <dt className="text-warm-600">일정</dt>
               <dd>
-                {formatDateLong(draft.date)} {formatSlot(draft.slot)}
+                {formatDateLong(draft.date)} {formatSchedule(draft.tour, draft.slot)}
               </dd>
               <dt className="text-warm-600">방문</dt>
               <dd>
@@ -290,7 +290,7 @@ export function ReservationForm({ busy, closedDays, scheduleLoading }: Reservati
   const summaryRows: [string, string | null][] = [
     ['투어', tour.label],
     ['날짜', draft.date ? formatDateLong(draft.date) : null],
-    ['시간', draft.slot ? formatSlot(draft.slot) : null],
+    ['시간', draft.slot ? formatSchedule(draft.tour, draft.slot) : null],
     ['인원', `${draft.visitors.length}명${hasLanguageNote(draft) ? ` · ${languageSummary(draft)}` : ''}`],
   ]
 
@@ -314,7 +314,7 @@ export function ReservationForm({ busy, closedDays, scheduleLoading }: Reservati
         {' · '}
         {draft.date ? formatDateLong(draft.date) : '날짜 미선택'}
         {' · '}
-        {draft.slot ? formatSlot(draft.slot) : '시간 미선택'}
+        {draft.slot ? formatSchedule(draft.tour, draft.slot) : '시간 미선택'}
         {' · '}방문자 {draft.visitors.length}명
         {hasLanguageNote(draft) && ` · ${languageSummary(draft)}`}
       </span>

@@ -1,5 +1,5 @@
 import { maskCompany, maskName } from './mask'
-import type { BusySegment, GuestbookTour, VisitDraft } from './visit'
+import type { AdminSite, BusySegment, GuestbookTour, VisitDraft } from './visit'
 
 export interface GuestbookEntry {
   id: string
@@ -204,7 +204,7 @@ export async function submitReservation(draft: VisitDraft): Promise<void> {
  * 관리자 페이지가 필요로 하는 서버(Apps Script) 기능 수준. apps-script/Code.gs 의 API_LEVEL 과 맞춘다.
  * 배포된 서버가 이보다 낮으면 Code.gs 를 새 버전으로 재배포해야 한다.
  */
-export const REQUIRED_API_LEVEL = 7
+export const REQUIRED_API_LEVEL = 8
 
 export interface ServerVersion {
   version: string
@@ -247,7 +247,19 @@ export const outdatedServerMessage = (server: ServerVersion) =>
   `연결된 주소: ${SERVER_URL} — 배포 관리에서 이 주소(배포 ID)의 배포를 연필로 열어 버전: 새 버전 → 배포 해 주세요. ` +
   '(주소 끝이 /dev 인 테스트 배포는 항상 최신 코드로 돌아가 테스트가 통과해도, 사이트가 쓰는 /exec 배포는 고른 버전에 고정됩니다)'
 
-/** 관리자 API는 Apps Script의 ADMIN_KEY 스크립트 속성과 같은 키를 요구합니다. */
+/**
+ * 이 관리자 페이지가 어느 곳의 것인지 (/admin/ = main, /admin-mtv/ = mtv, /admin-hq/ = hq).
+ * 서버는 관리자 키로 역할을 정하고, 키가 이 페이지의 것이 아니면 거부한다.
+ */
+let adminSite: AdminSite = 'main'
+export function setAdminSite(site: AdminSite) {
+  adminSite = site
+}
+
+/**
+ * 관리자 API는 Apps Script 스크립트 속성의 관리자 키를 요구합니다.
+ * ADMIN_KEY = 메가와이즈 · TDL Lab, MTV_ADMIN_KEY = 시화MTV, HQ_ADMIN_KEY = 통합 관제(보기 전용)
+ */
 export async function adminRequest<T>(key: string, action: string, params: Record<string, unknown> = {}) {
-  return post<T>({ type: 'admin', key, action, ...params })
+  return post<T>({ type: 'admin', key, action, site: adminSite, ...params })
 }

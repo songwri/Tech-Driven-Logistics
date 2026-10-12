@@ -6,13 +6,17 @@ import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Field'
 import {
   ADMIN_SCOPES,
+  ADMIN_SITE_LABEL,
+  awaitingPartner,
   formatDateShort,
   headcountOf,
   inAdminScope,
   isConfirmed,
   isCounted,
+  needsDecisionBy,
   toDateKey,
   type AdminScope,
+  type AdminSite,
   type VisitStatus,
 } from '@/lib/visit'
 import { SERVER_URL } from '@/lib/labApi'
@@ -30,6 +34,31 @@ import { ImportModal } from './ImportModal'
 import { downloadVisitRequests } from './importTemplate'
 
 type Tab = 'dashboard' | 'stats' | 'guestbook'
+
+/** 페이지별 머리 문구 · 로그인 키 안내 */
+const PAGE_TEXT: Record<AdminSite, { title: string; subtitle: string; keyHint: string }> = {
+  main: {
+    title: '메가와이즈 · TDL Lab 방문 예약 관리자',
+    subtitle: '예약 요청 확인 · 승인/거절 · 방문 통계 · 방명록',
+    keyHint: 'Apps Script 스크립트 속성 ADMIN_KEY 에 설정한 관리자 키를 입력하세요.',
+  },
+  mtv: {
+    title: '시화MTV 방문 예약 관리자',
+    subtitle: '시화MTV 가 들어간 예약 확인 · 승인/거절 · 방문 통계',
+    keyHint: 'Apps Script 스크립트 속성 MTV_ADMIN_KEY 에 설정한 시화MTV 관리자 키를 입력하세요.',
+  },
+  hq: {
+    title: '통합 관제 · 방문 통계',
+    subtitle: '3개 센터 예약 · 방문 통계 (보기 전용)',
+    keyHint: 'Apps Script 스크립트 속성 HQ_ADMIN_KEY 에 설정한 통합 관제 키를 입력하세요.',
+  },
+}
+
+const TABS: Record<AdminSite, Tab[]> = {
+  main: ['dashboard', 'stats', 'guestbook'],
+  mtv: ['dashboard', 'stats'],
+  hq: ['dashboard', 'stats'],
+}
 
 /** 메일의 '확인하고 승인 · 거절하기' 버튼이 여는 주소: /admin/?review=<예약 id> */
 function readReviewId() {
@@ -56,11 +85,13 @@ function LoginPanel({
   error,
   loading,
   fromMail,
+  site,
 }: {
   onLogin: (key: string) => void
   error: string | null
   loading: boolean
   fromMail: boolean
+  site: AdminSite
 }) {
   const [key, setKey] = useState('')
   return (
@@ -72,8 +103,8 @@ function LoginPanel({
       className="mx-auto mt-16 max-w-sm border border-warm-300/50 bg-white p-8"
     >
       <p className="font-mono text-xs uppercase tracking-[0.3em] text-brand">Admin</p>
-      <h2 className="mt-2 text-xl font-bold text-warm-800">관리자 로그인</h2>
-      <p className="mt-1 text-sm text-warm-600">Apps Script에 설정한 관리자 키를 입력하세요.</p>
+      <h2 className="mt-2 text-xl font-bold text-warm-800">{ADMIN_SITE_LABEL[site]} 관리자 로그인</h2>
+      <p className="mt-1 text-sm text-warm-600">{PAGE_TEXT[site].keyHint}</p>
       {fromMail && (
         <p className="mt-3 border-l-2 border-brand bg-cream px-3 py-2 text-[13px] text-warm-800">
           메일에서 연 예약은 로그인하면 바로 상세 화면으로 열립니다.
@@ -92,8 +123,10 @@ function LoginPanel({
   )
 }
 
-export default function AdminApp() {
-  const data = useAdminData()
+export default function AdminApp({ site }: { site: AdminSite }) {
+  const data = useAdminData(site)
+  const readOnly = data.readOnly
+  const scopes = ADMIN_SCOPES[site]
   const [tab, setTab] = useState<Tab>('dashboard')
   const [month, setMonth] = useState(() => {
     const now = new Date()
@@ -118,7 +151,7 @@ export default function AdminApp() {
     document.getElementById('request-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  // 센터 · Lab 담당 관리자가 각자 관련 투어만 볼 수 있게 한다. 기본은 전체.
+  // 센터 · Lab 담당 관리자(통합 관제는 센터별)가 각자 관련 투어만 볼 수 있게 한다. 기본은 전체.
   const [adminScope, setAdminScope] = useState<AdminScope>('all')
   const allRequests = data.requests
   const requests = useMemo(
@@ -132,15 +165,22 @@ export default function AdminApp() {
     const inMonth = requests.filter((request) => request.date.startsWith(monthPrefix))
     const upcomingApproved = requests.filter((request) => request.status === 'approved' && request.date >= today)
     const counted = inMonth.filter((request) => isCounted(request.status))
-    const pending = requests.filter((request) => request.status === 'pending')
+    // 이 센터가 이미 승인하고 상대 센터를 기다리는 복합 투어는 '처리할 일'에서 뺀다.
+    const pending = requests.filter((request) => (readOnly ? request.status === 'pending' : needsDecisionBy(request, site)))
     const overdue = pending.filter((request) => request.date < today).length
+    const waiting = requests.filter((request) => awaitingPartner(request, site) && request.date >= today).length
     return [
       {
         label: '승인 대기',
         value: pending.length - overdue,
         unit: '건',
         accent: 'text-[#c2410c]',
-        hint: overdue > 0 ? `방문일 지난 대기 ${overdue}건 별도` : '방문일이 남은 요청',
+        hint: [
+          overdue > 0 ? `방문일 지난 대기 ${overdue}건 별도` : '방문일이 남은 요청',
+          waiting > 0 ? `상대 센터 승인 대기 ${waiting}건` : '',
+        ]
+          .filter(Boolean)
+          .join(' · '),
         focus: ['upcoming', 'pending'] as const,
       },
       {
@@ -168,7 +208,7 @@ export default function AdminApp() {
         focus: ['month', 'approved'] as const,
       },
     ]
-  }, [requests, monthPrefix, month, today])
+  }, [requests, monthPrefix, month, today, readOnly, site])
 
   const tableRequests = useMemo(() => {
     if (selectedDate) return requests.filter((request) => request.date === selectedDate)
@@ -212,8 +252,8 @@ export default function AdminApp() {
           <div className="flex items-center gap-4">
             <Logo tone="light" className="h-8" />
             <div>
-              <h1 className="text-lg font-bold">방문 예약 관리자</h1>
-              <p className="text-[12px] text-white/60">예약 요청 확인 · 승인/거절 · 방문 통계 · 방명록</p>
+              <h1 className="text-lg font-bold">{PAGE_TEXT[site].title}</h1>
+              <p className="text-[12px] text-white/60">{PAGE_TEXT[site].subtitle}</p>
             </div>
           </div>
           {data.authenticated && (
@@ -256,7 +296,9 @@ export default function AdminApp() {
                 ['stats', '방문 통계', BarChart3],
                 ['guestbook', '방명록', MessageSquareText],
               ] as const
-            ).map(([id, label, Icon]) => (
+            )
+              .filter(([id]) => TABS[site].includes(id))
+              .map(([id, label, Icon]) => (
               <button
                 key={id}
                 type="button"
@@ -286,6 +328,7 @@ export default function AdminApp() {
           error={data.error}
           loading={data.loading}
           fromMail={Boolean(reviewId)}
+          site={site}
         />
       ) : (
         <main className="mx-auto max-w-7xl space-y-5 px-4 py-6 md:px-8">
@@ -316,11 +359,18 @@ export default function AdminApp() {
             </p>
           )}
 
-          {tab !== 'guestbook' && (
+          {readOnly && (
+            <p className="border border-warm-300/60 bg-white px-3 py-2 text-[13px] text-warm-600">
+              통합 관제는 <b className="text-warm-800">보기 전용</b>입니다. 승인 · 수정 · 일정 막기는 각 센터 관리자 페이지(메가와이즈 · TDL Lab /
+              시화MTV)에서 해 주세요.
+            </p>
+          )}
+
+          {tab !== 'guestbook' && scopes.length > 0 && (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2" role="radiogroup" aria-label="보기 범위">
               <span className="text-[13px] font-semibold text-warm-600">보기 범위</span>
               <div className="inline-flex border border-warm-300/60 bg-white">
-                {ADMIN_SCOPES.map((item) => (
+                {scopes.map((item) => (
                   <button
                     key={item.id}
                     type="button"
@@ -341,7 +391,7 @@ export default function AdminApp() {
                 ))}
               </div>
               <span className="text-[12px] text-warm-600">
-                {ADMIN_SCOPES.find((item) => item.id === adminScope)?.hint}
+                {scopes.find((item) => item.id === adminScope)?.hint}
                 {adminScope !== 'all' && ` · ${requests.length}건 (요약 · 달력 · 목록 · 통계에 모두 적용)`}
               </span>
             </div>
@@ -374,11 +424,12 @@ export default function AdminApp() {
 
               <div className="grid gap-5 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
                 <ActionPanel
+                  site={site}
                   requests={requests}
                   today={today}
                   busyId={busyId}
                   onOpen={setOpenId}
-                  onSetStatus={(id, status) => void setStatus(id, status)}
+                  onSetStatus={readOnly ? undefined : (id, status) => void setStatus(id, status)}
                   onShowAll={() => focusList('all', 'pending')}
                 />
                 <UpcomingPanel requests={requests} today={today} onOpen={setOpenId} />
@@ -390,10 +441,11 @@ export default function AdminApp() {
                   setMonth(next)
                   setSelectedDate(null)
                 }}
+                site={site}
                 requests={requests}
                 onOpen={setOpenId}
                 blocks={data.blocks}
-                onBlock={(start, end) => setBlockRange({ start, end })}
+                onBlock={readOnly ? undefined : (start, end) => setBlockRange({ start, end })}
               />
 
               <section id="request-list" className="scroll-mt-4">
@@ -401,20 +453,24 @@ export default function AdminApp() {
                   <div className="flex flex-wrap items-center gap-3">
                     <h2 className="text-lg font-bold text-warm-800">예약 요청 관리</h2>
                     <div className="flex gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setDialog('manual')}
-                        className="inline-flex items-center gap-1 border border-warm-300/60 bg-white px-2.5 py-1.5 text-[12px] font-semibold text-warm-600 transition hover:border-warm-800 hover:text-warm-800"
-                      >
-                        <Plus width={13} height={13} /> 수기 등록
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDialog('import')}
-                        className="inline-flex items-center gap-1 border border-warm-300/60 bg-white px-2.5 py-1.5 text-[12px] font-semibold text-warm-600 transition hover:border-warm-800 hover:text-warm-800"
-                      >
-                        <FileInput width={13} height={13} /> 기존 이력 가져오기
-                      </button>
+                      {!readOnly && (
+                        <button
+                          type="button"
+                          onClick={() => setDialog('manual')}
+                          className="inline-flex items-center gap-1 border border-warm-300/60 bg-white px-2.5 py-1.5 text-[12px] font-semibold text-warm-600 transition hover:border-warm-800 hover:text-warm-800"
+                        >
+                          <Plus width={13} height={13} /> 수기 등록
+                        </button>
+                      )}
+                      {site === 'main' && (
+                        <button
+                          type="button"
+                          onClick={() => setDialog('import')}
+                          className="inline-flex items-center gap-1 border border-warm-300/60 bg-white px-2.5 py-1.5 text-[12px] font-semibold text-warm-600 transition hover:border-warm-800 hover:text-warm-800"
+                        >
+                          <FileInput width={13} height={13} /> 기존 이력 가져오기
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => downloadVisitRequests(allRequests)}
@@ -471,10 +527,11 @@ export default function AdminApp() {
                   </p>
                 )}
                 <RequestTable
+                  site={site}
                   requests={tableRequests}
                   scopeLabel={scopeLabel}
                   onOpen={setOpenId}
-                  onSetStatus={(id, status) => void setStatus(id, status)}
+                  onSetStatus={readOnly ? undefined : (id, status) => void setStatus(id, status)}
                   busyId={busyId}
                   status={statusFilter}
                   onStatusChange={setStatusFilter}
@@ -482,7 +539,7 @@ export default function AdminApp() {
               </section>
             </>
           ) : tab === 'stats' ? (
-            <StatsView requests={requests} />
+            <StatsView requests={requests} site={site} />
           ) : (
             <GuestbookAdmin adminKey={data.adminKey} />
           )}
@@ -491,6 +548,7 @@ export default function AdminApp() {
 
       {dialog === 'manual' && (
         <ManualVisitModal
+          site={site}
           onClose={() => setDialog(null)}
           onSubmit={async (input) => {
             const created = await data.create(input)
@@ -500,10 +558,11 @@ export default function AdminApp() {
       )}
       {blockRange && (
         <BlockDialog
+          site={site}
           start={blockRange.start}
           end={blockRange.end}
           blocks={data.blocks}
-          requests={allRequests}
+          requests={data.allRequests}
           onClose={() => setBlockRange(null)}
           onAdd={async (input) => {
             await data.addBlocks(input)
@@ -516,14 +575,16 @@ export default function AdminApp() {
         />
       )}
       {dialog === 'import' && (
-        <ImportModal requests={allRequests} onClose={() => setDialog(null)} onImport={data.importMany} />
+        <ImportModal requests={data.allRequests} onClose={() => setDialog(null)} onImport={data.importMany} />
       )}
 
       {openRequest && (
         <RequestModal
           key={openRequest.id}
+          site={site}
+          readOnly={readOnly}
           request={openRequest}
-          requests={allRequests}
+          requests={data.allRequests}
           onClose={closeModal}
           onSetStatus={data.setStatus}
           onUpdate={data.update}

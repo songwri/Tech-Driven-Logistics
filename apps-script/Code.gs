@@ -11,23 +11,29 @@
  *   POST                        → { type: 'guestbook' | 'reservation' | 'admin', ... }
  *
  * 방명록의 실명·실제 소속과 예약자의 연락처는 시트에만 남고 공개 GET 으로는
- * 나가지 않습니다. 관리자 대시보드(/admin/)는 ADMIN_KEY 스크립트 속성과 같은
- * 키를 보내야 예약 목록을 볼 수 있습니다.
+ * 나가지 않습니다. 관리자 페이지는 스크립트 속성의 관리자 키를 보내야 예약 목록을 볼 수 있고,
+ * 키에 따라 볼 수 있는 예약이 다릅니다.
+ *   ADMIN_KEY     → /admin/     메가와이즈 센터 · TDL Lab 이 들어간 예약
+ *   MTV_ADMIN_KEY → /admin-mtv/ 시화MTV 가 들어간 예약
+ *   HQ_ADMIN_KEY  → /admin-hq/  전체 (보기 전용 통합 관제)
+ * 메가와이즈 + 시화MTV, 3개 센터 투어는 두 관리자 페이지에 함께 보이고, 두 곳이 모두 승인해야 확정된다.
  */
 
 /**
- * 알림 메일 수신자: 방문 예약 신청 알림을 투어 종류에 따라 두 담당자 그룹에 나눠 보낸다.
- *   종합 투어  → 센터 투어 담당자 + TDL 투어 담당자
- *   TDL Lab 투어 → TDL 투어 담당자
- *   센터 투어  → 센터 투어 담당자
+ * 알림 메일 수신자: 방문 예약 신청 알림을 투어가 들르는 곳의 담당자에게 보낸다.
+ *   TDL Lab 이 들어간 투어      → TDL 투어 담당자 (MAIL_TO)
+ *   메가와이즈 센터가 들어간 투어 → 센터 투어 담당자 (CENTER_MAIL_TO)
+ *   시화MTV 가 들어간 투어      → 시화MTV 담당자 (MTV_MAIL_TO)
+ * 복합 투어는 메가와이즈 · Lab 쪽과 시화MTV 쪽에 각자의 관리자 페이지 버튼이 든 메일을 따로 보낸다.
  * 방명록 등록은 메일을 보내지 않는다. (관리자 페이지 · 시트에서 확인)
  *
  * 이 저장소는 공개라 직원 메일 주소를 코드에 적지 않고, Apps Script 의 스크립트 속성에 둔다.
  *   프로젝트 설정(톱니바퀴) → 스크립트 속성
  *     MAIL_TO        = TDL 투어 담당자 a@lxpantos.com,b@lxpantos.com,...
  *     CENTER_MAIL_TO = 센터 투어 담당자 c@lxpantos.com,d@lxpantos.com,...
+ *     MTV_MAIL_TO    = 시화MTV 담당자 e@lxpantos.com,...
  * 쉼표 · 세미콜론 · 줄바꿈으로 여러 명을 구분한다. 속성은 저장 즉시 적용되어 재배포가 필요 없다.
- * MAIL_TO 가 비어 있으면 DEFAULT_MAIL_TO 로, CENTER_MAIL_TO 가 비어 있으면 TDL 담당자에게 대신 보낸다
+ * MAIL_TO 가 비어 있으면 DEFAULT_MAIL_TO 로, CENTER_MAIL_TO · MTV_MAIL_TO 가 비어 있으면 TDL 담당자에게 대신 보낸다
  * (알림이 아무에게도 가지 않는 일이 없게).
  * 신청자에게 가는 승인 · 거절 메일의 회신 주소는 그 예약의 알림을 받은 담당자들이다.
  */
@@ -35,36 +41,55 @@ var DEFAULT_MAIL_TO = 'daehyun.kim1@lxpantos.com';
 
 /**
  * 메일에 표시되는 보내는 사람 이름. 보내는 사람 '주소'는 스크립트를 소유한 구글 계정이라 바꿀 수 없고,
- * 이름만 바뀐다. (예: '메가와이즈 + TDL 방문관리 <계정 주소>')
+ * 이름만 바뀐다. (예: 'LX판토스 센터 방문관리 <계정 주소>')
  */
-var MAIL_SENDER_NAME = '메가와이즈 + TDL 방문관리';
+var MAIL_SENDER_NAME = 'LX판토스 센터 방문관리';
 
 function mailList_(property) {
   var raw = PropertiesService.getScriptProperties().getProperty(property) || '';
   return String(raw).split(/[,;\s]+/).filter(function (address) { return address; });
 }
 
-/** 투어 종류별 알림 수신자 (MailApp 의 to 에 그대로 쓰는 쉼표 구분 문자열, 중복 제거) */
-function mailTo_(tour) {
-  var tdl = mailList_('MAIL_TO');
-  if (!tdl.length) tdl = [DEFAULT_MAIL_TO];
-  var center = mailList_('CENTER_MAIL_TO');
-  if (!center.length) center = tdl;
-
-  var list = tour === 'combined' ? center.concat(tdl) : tour === 'center' ? center : tdl;
+function uniqueMails_(list) {
   var seen = {};
   return list.filter(function (address) {
     var key = address.toLowerCase();
     if (seen[key]) return false;
     seen[key] = true;
     return true;
-  }).join(',');
+  });
+}
+
+/** 투어의 한 관리 단위(main = 메가와이즈 · Lab, mtv = 시화MTV) 담당자 메일 목록 */
+function siteMailList_(tour, site) {
+  var tdl = mailList_('MAIL_TO');
+  if (!tdl.length) tdl = [DEFAULT_MAIL_TO];
+  var places = tour === 'other' ? ['lab'] : TOURS[tour].places;
+  var list = [];
+  if (site === 'main') {
+    if (places.indexOf('center') !== -1) {
+      var center = mailList_('CENTER_MAIL_TO');
+      list = list.concat(center.length ? center : tdl);
+    }
+    if (places.indexOf('lab') !== -1) list = list.concat(tdl);
+  } else if (places.indexOf('mtv') !== -1) {
+    var mtv = mailList_('MTV_MAIL_TO');
+    list = list.concat(mtv.length ? mtv : tdl);
+  }
+  return uniqueMails_(list);
+}
+
+/** 투어 종류별 알림 수신자 전체 (MailApp 의 to · replyTo 에 그대로 쓰는 쉼표 구분 문자열, 중복 제거) */
+function mailTo_(tour) {
+  return uniqueMails_(siteMailList_(tour, 'main').concat(siteMailList_(tour, 'mtv'))).join(',');
 }
 var SITE_URL = 'https://songwri.github.io/Tech-Driven-Logistics/';
 var ADMIN_URL = SITE_URL + 'admin/';
+/** 관리 단위별 관리자 페이지 (메일의 '확인하고 승인 · 거절하기' 버튼이 여는 곳) */
+var ADMIN_URLS = { main: ADMIN_URL, mtv: SITE_URL + 'admin-mtv/', hq: SITE_URL + 'admin-hq/' };
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-20.actual-headcount';
+var CODE_VERSION = '2026-10-12.multi-center';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -74,9 +99,10 @@ var CODE_VERSION = '2026-10-20.actual-headcount';
  *   5: 방명록 투어 구분 (투어 열 · guestbookSetTour)
  *   6: 일정 막기 (blocked 시트 대상 · id 열, list 응답의 blocks, blockAdd · blockRemove)
  *   7: 기존 이력 가져오기(import)에 별도 암호키(IMPORT_KEY 스크립트 속성) 필요
+ *   8: 시화MTV · 복합 투어, 관리자 키별 역할(ADMIN_KEY · MTV_ADMIN_KEY · HQ_ADMIN_KEY), 센터별승인 열, list 응답의 role
  *   (방명록 팀 열 · 0.5점 단위 평가는 공개 방명록 쓰기 변경이라 수준을 올리지 않는다)
  */
-var API_LEVEL = 7;
+var API_LEVEL = 8;
 var ADMIN_ACTIONS = [
   'list', 'health', 'delete', 'setStatus', 'update', 'create', 'import',
   'guestbookList', 'guestbookSetHidden', 'guestbookDelete', 'guestbookSetTour',
@@ -89,24 +115,79 @@ var BLOCKED_SHEET = 'blocked';
 var MESSAGE_LIMIT = 100;
 var MAX_VISITORS = 30;
 
-var OPEN_WEEKDAYS = [1, 3, 5]; // 월·수·금
+/** 공간별 운영 요일 (월·수·금). src/lib/visit.ts 의 PLACE_WEEKDAYS 와 같아야 합니다. */
+var PLACE_WEEKDAYS = { center: [1, 3, 5], lab: [1, 3, 5], mtv: [1, 3, 5] };
 /** 당일·익일 신청 불가 (오늘 +2일부터). src/lib/visit.ts 의 MIN_LEAD_DAYS 와 같아야 합니다. */
 var MIN_LEAD_DAYS = 2;
 
 /**
  * 투어 종류와 시간대. src/lib/visit.ts 의 TOURS 와 값이 같아야 합니다.
- * 종합 투어는 앞 1시간 센터 → 뒤 1시간 TDL Lab 을 씁니다.
+ * - combined(메가와이즈 + TDL Lab, 기존 '종합 투어'): 앞 1시간 센터 → 뒤 1시간 TDL Lab
+ * - center_mtv · all3: 떨어진 두 센터를 오전 · 오후로 나눠 방문. slots 는 하루 일정 전체이고 순서마다 값이 다르며,
+ *   legs 에 구간별 투어 · 시간이 있다.
+ * aliases: 이전 이름 (시트에 남은 '종합 투어' · '센터 투어' 를 읽기 위해)
  */
+var MTV_AM = '10:00-11:00';
+var MTV_PM = '14:00-15:00';
 var TOURS = {
-  combined: { label: '종합 투어', slots: ['09:30-11:30', '13:00-15:00'] },
+  lab: { label: 'TDL Lab 투어', slots: ['10:30-11:30', '14:00-15:00'], places: ['lab'] },
   center: {
-    label: '센터 투어',
+    label: '메가와이즈 센터 투어',
     slots: ['10:00-11:00', '13:00-14:00', '15:00-16:00'],
+    places: ['center'],
+    aliases: ['센터 투어', '센터'],
   },
-  lab: { label: 'TDL Lab 투어', slots: ['10:30-11:30', '14:00-15:00'] },
+  mtv: { label: '시화MTV 투어', slots: [MTV_AM, MTV_PM], places: ['mtv'] },
+  combined: {
+    label: '메가와이즈 + TDL Lab',
+    slots: ['09:30-11:30', '13:00-15:00'],
+    places: ['center', 'lab'],
+    aliases: ['종합 투어', '종합'],
+  },
+  center_mtv: {
+    label: '메가와이즈 + 시화MTV',
+    slots: ['10:00-15:00', '10:00-14:00'],
+    places: ['center', 'mtv'],
+    legs: {
+      '10:00-15:00': [{ tour: 'center', slot: '10:00-11:00' }, { tour: 'mtv', slot: MTV_PM }],
+      '10:00-14:00': [{ tour: 'mtv', slot: MTV_AM }, { tour: 'center', slot: '13:00-14:00' }],
+    },
+  },
+  all3: {
+    label: '3개 센터 전체',
+    slots: ['09:30-15:00', '10:00-15:00'],
+    places: ['center', 'lab', 'mtv'],
+    legs: {
+      '09:30-15:00': [{ tour: 'combined', slot: '09:30-11:30' }, { tour: 'mtv', slot: MTV_PM }],
+      '10:00-15:00': [{ tour: 'mtv', slot: MTV_AM }, { tour: 'combined', slot: '13:00-15:00' }],
+    },
+  },
   // 기존 방문 이력 · 관리자 수기 등록 전용 (예약 화면에서는 고를 수 없음). 시간 자유.
-  other: { label: '기타 방문', slots: [] },
+  other: { label: '기타 방문', slots: [], places: [] },
 };
+
+/** 구간 투어가 열리는 곳 (메일 표기) */
+var LEG_PLACE = { center: '메가와이즈 센터', lab: 'TDL Lab', combined: '메가와이즈 + TDL Lab', mtv: '시화MTV' };
+
+/** 투어를 관리하는 곳: main = 메가와이즈 · TDL Lab, mtv = 시화MTV. 기타 방문은 main. */
+function sitesOf_(tour) {
+  if (tour === 'other' || !TOURS[tour]) return ['main'];
+  var sites = [];
+  TOURS[tour].places.forEach(function (place) {
+    var site = place === 'mtv' ? 'mtv' : 'main';
+    if (sites.indexOf(site) === -1) sites.push(site);
+  });
+  return sites;
+}
+
+function inSite_(tour, role) {
+  return role === 'hq' || sitesOf_(tour).indexOf(role) !== -1;
+}
+
+/** 투어가 열리는 요일: 들르는 모든 공간이 운영하는 요일 */
+function tourOpenOn_(tour, weekday) {
+  return TOURS[tour].places.every(function (place) { return PLACE_WEEKDAYS[place].indexOf(weekday) !== -1; });
+}
 
 var STATUS_TEXT = { pending: '대기', approved: '승인', completed: '완료', rejected: '거절', cancelled: '취소' };
 var MAX_IMPORT = 500;
@@ -129,14 +210,14 @@ var VISIT_HEADERS = [
   '방문인원', '방문자명단', '요청사항', '개인정보동의', '관리자메모', '토큰', '수정일시', '방문자JSON',
   '투어언어', '외국어', '통역동반', '출처', '주요인원', '가이드', '유관부서', '후속진행',
   // 새 열은 기존 시트와 맞도록 맨 뒤에 붙인다 (시트를 열면 제목이 자동으로 추가된다).
-  '담당(실)', '통역언어', '실제방문인원',
+  '담당(실)', '통역언어', '실제방문인원', '센터별승인',
 ];
-var BLOCKED_HEADERS = ['날짜', '시간대(비우면 종일)', '사유', '대상(all/center/lab)', 'id'];
+var BLOCKED_HEADERS = ['날짜', '시간대(비우면 종일)', '사유', '대상(all/center/lab/mtv)', 'id'];
 
 var GUESTBOOK_HIDDEN_COL = 10; // 1-based
 var GUESTBOOK_TEAM_COL = 11; // 1-based
 var GUESTBOOK_TOUR_COL = 12; // 1-based
-var GUESTBOOK_TOURS = ['combined', 'lab', 'center'];
+var GUESTBOOK_TOURS = ['lab', 'center', 'mtv', 'combined', 'center_mtv', 'all3'];
 function guestbookTour_(value) {
   var tour = String(value == null ? '' : value);
   return GUESTBOOK_TOURS.indexOf(tour) === -1 ? '' : tour;
@@ -496,7 +577,9 @@ var PREP_MINUTES = 60;
 /**
  * 투어 한 건이 점유하는 공간·시간 구간 (src/lib/visit.ts 의 segmentsOf 와 같아야 한다)
  * - 종합 투어: 센터 1시간 → Lab. Lab 은 준비를 위해 종합 투어 시작부터 점유
+ * - 복합 투어(center_mtv · all3): 오전 · 오후 구간마다 위 규칙. 시간표 밖(수기 등록)이면 들르는 공간을 그 시간 내내
  * - manual(수기 등록): 모든 공간을 사용 시작 1시간 전부터 점유 (준비 여유)
+ * resource 'all' = 메가와이즈 센터 + TDL Lab (떨어진 시화MTV 는 포함하지 않는다)
  */
 function segmentsOf_(tour, date, slot, manual) {
   var range = String(slot || '').split('-');
@@ -504,7 +587,18 @@ function segmentsOf_(tour, date, slot, manual) {
   var start = toMinutes_(range[0]);
   var prep = function (minutes) { return fromMinutes_(Math.max(0, manual ? minutes - PREP_MINUTES : minutes)); };
   // 기타 방문은 어느 공간을 쓰는지 모르므로 그 시간의 센터 · Lab 을 모두 막는다.
-  if (tour === 'other') return [{ date: date, resource: 'all', from: prep(start), to: range[1] }];
+  if (tour === 'other' || !TOURS[tour]) return [{ date: date, resource: 'all', from: prep(start), to: range[1] }];
+  if (TOURS[tour].legs) {
+    var legs = TOURS[tour].legs[slot];
+    if (legs) {
+      var parts = [];
+      legs.forEach(function (leg) { parts = parts.concat(segmentsOf_(leg.tour, date, leg.slot, manual)); });
+      return parts;
+    }
+    return TOURS[tour].places.map(function (place) {
+      return { date: date, resource: place, from: prep(start), to: range[1] };
+    });
+  }
   if (tour === 'combined') {
     var handoff = start + 60;
     return [
@@ -515,9 +609,17 @@ function segmentsOf_(tour, date, slot, manual) {
   return [{ date: date, resource: tour, from: prep(start), to: range[1] }];
 }
 
+/** 'all'(센터 · Lab 전체)은 메가와이즈 센터 · TDL Lab 과 겹치고, 시화MTV 와는 겹치지 않는다. */
+function sameSpace_(a, b) {
+  if (a === b) return true;
+  if (a === 'all') return b !== 'mtv';
+  if (b === 'all') return a !== 'mtv';
+  return false;
+}
+
 function overlaps_(a, b) {
   if (a.date !== b.date) return false;
-  if (a.resource !== 'all' && b.resource !== 'all' && a.resource !== b.resource) return false;
+  if (!sameSpace_(a.resource, b.resource)) return false;
   return toMinutes_(a.from) < toMinutes_(b.to) && toMinutes_(b.from) < toMinutes_(a.to);
 }
 
@@ -531,9 +633,55 @@ function isBusy_(tour, date, slot, busy, manual) {
 function tourIdFromLabel_(value) {
   var text = String(value == null ? '' : value).trim();
   for (var id in TOURS) {
-    if (id === text || TOURS[id].label === text) return id;
+    if (id === text || TOURS[id].label === text || (TOURS[id].aliases || []).indexOf(text) !== -1) return id;
   }
   return '';
+}
+
+/* ------------------------------------------------- 복합 투어 센터별 승인 */
+
+/** '센터별승인' 열: 'main:approved,mtv:pending' ↔ { main: 'approved', mtv: 'pending' } */
+function approvalsFromText_(value) {
+  var approvals = {};
+  String(value == null ? '' : value).split(',').forEach(function (part) {
+    var pair = part.split(':');
+    var site = String(pair[0] || '').trim();
+    var decision = String(pair[1] || '').trim();
+    if ((site === 'main' || site === 'mtv') && ['pending', 'approved', 'rejected'].indexOf(decision) !== -1) {
+      approvals[site] = decision;
+    }
+  });
+  return approvals;
+}
+
+function approvalsText_(approvals) {
+  return ['main', 'mtv'].filter(function (site) { return approvals && approvals[site]; })
+    .map(function (site) { return site + ':' + approvals[site]; }).join(',');
+}
+
+/** 센터별 승인을 받는 예약: 두 관리 단위가 모두 들어간 웹 예약 */
+function needsSiteApproval_(request) {
+  return sitesOf_(request.tour).length > 1 && request.source !== 'manual';
+}
+
+/**
+ * 관리자가 상태를 바꿀 때의 결과 (src/lib/visit.ts 의 applyDecision 과 같아야 한다).
+ * 복합 투어의 승인 · 거절 · 대기는 그 관리자 센터의 결정으로 기록하고, 전체 상태는
+ * 한 곳이라도 거절 → 거절, 모두 승인 → 승인, 그 밖에는 대기. 거절 · 취소된 예약을 다시 열면 두 센터 모두 처음부터.
+ */
+function applyDecision_(request, role, status) {
+  var decision = status === 'pending' || status === 'approved' || status === 'rejected';
+  if (!needsSiteApproval_(request) || role === 'hq' || !decision) {
+    return { status: status, approvals: request.approvals || {} };
+  }
+  var reopened = request.status === 'rejected' || request.status === 'cancelled';
+  var approvals = {};
+  if (!reopened) for (var key in (request.approvals || {})) approvals[key] = request.approvals[key];
+  approvals[role] = status;
+  var decisions = sitesOf_(request.tour).map(function (site) { return approvals[site] || 'pending'; });
+  var next = decisions.indexOf('rejected') !== -1 ? 'rejected'
+    : decisions.every(function (item) { return item === 'approved'; }) ? 'approved' : 'pending';
+  return { status: next, approvals: approvals };
 }
 
 function statusFromText_(value) {
@@ -625,6 +773,7 @@ function rowToRequest_(row, col) {
     departments: splitList_(get('유관부서')),
     followUp: String(get('후속진행')),
     actualHeadcount: headcountFromCell_(get('실제방문인원')),
+    approvals: approvalsFromText_(get('센터별승인')),
   };
 }
 
@@ -730,6 +879,7 @@ function fillVisitRow_(values, col, request, extra) {
   set('유관부서', (request.departments || []).join(', '));
   set('후속진행', request.followUp || '');
   set('실제방문인원', typeof request.actualHeadcount === 'number' ? request.actualHeadcount : '');
+  set('센터별승인', needsSiteApproval_(request) ? approvalsText_(request.approvals) : '');
   for (var key in (extra || {})) set(key, extra[key]);
 }
 
@@ -748,7 +898,7 @@ function readBlocks_() {
       date: date,
       slot: normalizeSlot_(values[row][1]),
       reason: String(values[row][2] || ''),
-      resource: target === 'center' || target === 'lab' ? target : 'all',
+      resource: target === 'center' || target === 'lab' || target === 'mtv' ? target : 'all',
       _row: row + 1,
     });
   }
@@ -756,9 +906,14 @@ function readBlocks_() {
 }
 
 /** 관리자 화면용: id 가 없는 이전 행에 id 를 채워 돌려준다. */
-function adminBlocks_() {
+/** 막힌 일정을 관리하는 곳: 시화MTV 는 mtv, 나머지(센터 · Lab · 전체)는 main */
+function blockSite_(resource) {
+  return resource === 'mtv' ? 'mtv' : 'main';
+}
+
+function adminBlocks_(role) {
   var sheet = sheet_(BLOCKED_SHEET, BLOCKED_HEADERS);
-  var list = readBlocks_();
+  var list = readBlocks_().filter(function (block) { return role === 'hq' || blockSite_(block.resource) === role; });
   list.forEach(function (block) {
     if (!block.id) {
       block.id = Utilities.getUuid();
@@ -770,9 +925,10 @@ function adminBlocks_() {
   });
 }
 
-function addBlocks_(payload) {
+function addBlocks_(payload, role) {
   var resource = String(payload.resource || '');
-  if (['all', 'center', 'lab'].indexOf(resource) === -1) throw new Error('막을 대상을 선택해 주세요.');
+  if (['all', 'center', 'lab', 'mtv'].indexOf(resource) === -1) throw new Error('막을 대상을 선택해 주세요.');
+  if (blockSite_(resource) !== role) throw new Error('다른 센터의 일정은 막을 수 없습니다.');
   var dates = Array.isArray(payload.dates) ? payload.dates : [];
   if (dates.length === 0 || dates.length > 120) throw new Error('막을 날짜는 1~120일 사이여야 합니다.');
   var slot = normalizeSlot_(payload.slot);
@@ -798,11 +954,13 @@ function addBlocks_(payload) {
   });
 }
 
-function removeBlocks_(payload) {
+function removeBlocks_(payload, role) {
   var ids = (Array.isArray(payload.ids) ? payload.ids : [payload.id]).map(String);
   return withLock_(function () {
     var sheet = sheet_(BLOCKED_SHEET, BLOCKED_HEADERS);
-    var rows = readBlocks_().filter(function (block) { return ids.indexOf(block.id) !== -1; })
+    var rows = readBlocks_().filter(function (block) {
+      return ids.indexOf(block.id) !== -1 && blockSite_(block.resource) === role;
+    })
       .map(function (block) { return block._row; })
       .sort(function (a, b) { return b - a; });
     rows.forEach(function (row) { sheet.deleteRow(row); });
@@ -826,12 +984,13 @@ function busy_(excludeId, includePending) {
     busy = busy.concat(segmentsOf_(request.tour, request.date, request.slot, request.source === 'manual'));
   });
 
+  // 종일 막힘도 공간별 구간으로 보낸다 (센터 · Lab 전체 휴무여도 떨어진 시화MTV 투어는 신청할 수 있게).
+  // closedDays 는 이전 예약 화면과의 호환을 위해 응답에 빈 목록으로 남긴다.
   var closedDays = {};
   readBlocks_().forEach(function (block) {
     if (block.date < today) return;
     if (!block.slot) {
-      if (block.resource === 'all') closedDays[block.date] = true;
-      else busy.push({ date: block.date, resource: block.resource, from: '00:00', to: '24:00' });
+      busy.push({ date: block.date, resource: block.resource, from: '00:00', to: '24:00' });
       return;
     }
     var range = block.slot.split('-');
@@ -853,7 +1012,7 @@ function sanitizeVisit_(payload, requireConsent) {
   var slot = requireText_(payload.slot, '방문 시간', 11);
   if (TOURS[tour].slots.indexOf(slot) === -1) throw new Error('선택한 투어에서 운영하지 않는 시간입니다.');
   var weekday = new Date(date + 'T00:00:00').getDay();
-  if (OPEN_WEEKDAYS.indexOf(weekday) === -1) throw new Error('방문은 월·수·금만 가능합니다.');
+  if (!tourOpenOn_(tour, weekday)) throw new Error('선택한 투어는 그 요일에 운영하지 않습니다. (월·수·금)');
 
   var category = payload.category === 'internal' ? 'internal' : 'external';
   var clientType = category === 'external' ? (payload.clientType === 'new' ? 'new' : 'existing') : undefined;
@@ -931,6 +1090,8 @@ function addReservation_(payload) {
   request.id = Utilities.getUuid();
   request.status = 'pending';
   request.adminMemo = '';
+  request.source = 'web';
+  request.approvals = {};
   var token = Utilities.getUuid();
   var now = new Date().toISOString();
 
@@ -957,13 +1118,16 @@ function addReservation_(payload) {
     }
   });
 
-  MailApp.sendEmail({
-    to: mailTo_(request.tour),
-    name: MAIL_SENDER_NAME,
-    replyTo: request.host.email,
-    subject: mailBrand_(request.tour).tag + ' 방문 예약 신청 · ' + TOURS[request.tour].label + ' · ' + request.company + ' · '
-      + request.date + ' ' + request.slot,
-    htmlBody: reservationMailHtml_(request),
+  // 들르는 곳마다(메가와이즈 · Lab / 시화MTV) 그곳 관리자 페이지로 가는 버튼이 든 메일을 따로 보낸다.
+  sitesOf_(request.tour).forEach(function (site) {
+    MailApp.sendEmail({
+      to: siteMailList_(request.tour, site).join(','),
+      name: MAIL_SENDER_NAME,
+      replyTo: request.host.email,
+      subject: mailBrand_(request.tour).tag + ' 방문 예약 신청 · ' + TOURS[request.tour].label + ' · ' + request.company + ' · '
+        + request.date + ' ' + scheduleShort_(request),
+      htmlBody: reservationMailHtml_(request, site),
+    });
   });
 
   return { ok: true };
@@ -971,26 +1135,30 @@ function addReservation_(payload) {
 
 /**
  * 상태 변경. 승인은 다른 승인 건과 겹치면 거부한다.
- * 상태가 실제로 바뀌면 신청 담당자에게 결과 메일을 보낸다.
+ * 복합 투어는 role(관리자 센터)의 결정으로 기록하고, 두 센터가 모두 승인해야 확정된다 (applyDecision_).
+ * 전체 상태가 실제로 승인 · 거절로 바뀌면 신청 담당자에게 결과 메일을 보낸다.
  */
-function changeStatus_(found, status) {
+function changeStatus_(found, status, role) {
   var request = withLock_(function () {
     // 잠금을 기다리는 사이 행 위치가 바뀌었을 수 있어 id 로 다시 찾는다.
     var current = findVisit_(function (item) { return item.id === found.id; });
     if (!current) throw new Error('예약을 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.');
-    if (isConfirmed_(status) && !isConfirmed_(current.status) && current.source !== 'manual'
+    var next = applyDecision_(current, role, status);
+    if (isConfirmed_(next.status) && !isConfirmed_(current.status) && current.source !== 'manual'
       && isBusy_(current.tour, current.date, current.slot, busy_(current.id).busy, current.source === 'manual')) {
       throw new Error('이미 승인된 다른 예약과 시간이 겹쳐 승인할 수 없습니다.');
     }
     current._previous = current.status;
-    current.status = status;
+    current.status = next.status;
+    current.approvals = next.approvals;
     writeVisit_(current._row, current);
     return current;
   });
   // 신청 담당자에게는 웹 예약의 승인 · 거절만 알린다. (완료 · 취소 · 수기 등록 건은 메일 없음)
   var before = request._previous;
+  var after = request.status;
   var notify = request.source !== 'manual' && (
-    (status === 'approved' && !isConfirmed_(before)) || (status === 'rejected' && before !== 'rejected'));
+    (after === 'approved' && !isConfirmed_(before)) || (after === 'rejected' && before !== 'rejected'));
   if (notify) notifyHost_(request);
   return request;
 }
@@ -1172,28 +1340,67 @@ function findVisit_(predicate) {
 
 /* ------------------------------------------------------------ 관리자 API */
 
+/** 관리자 키 → 역할. main = 메가와이즈 · TDL Lab, mtv = 시화MTV, hq = 통합 관제(보기 전용) */
+var ADMIN_KEY_PROPERTIES = { main: 'ADMIN_KEY', mtv: 'MTV_ADMIN_KEY', hq: 'HQ_ADMIN_KEY' };
+var ROLE_LABEL = { main: '메가와이즈 · TDL Lab', mtv: '시화MTV', hq: '통합 관제' };
+
+function adminRole_(key) {
+  var props = PropertiesService.getScriptProperties();
+  var configured = false;
+  for (var role in ADMIN_KEY_PROPERTIES) {
+    var expected = props.getProperty(ADMIN_KEY_PROPERTIES[role]);
+    if (!expected) continue;
+    configured = true;
+    if (String(key || '') === expected) return role;
+  }
+  if (!configured) throw new Error('관리자 키(ADMIN_KEY)가 설정되지 않았습니다. apps-script/README.md 를 참고하세요.');
+  Utilities.sleep(1500); // 무차별 대입을 늦춘다.
+  throw new Error('관리자 키가 올바르지 않습니다.');
+}
+
+/** 통합 관제는 보기 전용, 방명록 · 기존 이력 가져오기는 메가와이즈 · TDL Lab 관리자만 */
+var READ_ACTIONS = ['list', 'health'];
+var MAIN_ONLY_ACTIONS = ['import', 'guestbookList', 'guestbookSetHidden', 'guestbookDelete', 'guestbookSetTour'];
+
 function admin_(payload) {
-  var expected = PropertiesService.getScriptProperties().getProperty('ADMIN_KEY');
-  if (!expected) throw new Error('관리자 키(ADMIN_KEY)가 설정되지 않았습니다. apps-script/README.md 를 참고하세요.');
-  if (String(payload.key || '') !== expected) {
-    Utilities.sleep(1500); // 무차별 대입을 늦춘다.
-    throw new Error('관리자 키가 올바르지 않습니다.');
+  var role = adminRole_(payload.key);
+  // 관리자 페이지는 자기 페이지(site)를 함께 보낸다. 다른 페이지의 키로는 로그인되지 않게 한다. (이전 화면은 site 없이 보낸다)
+  if (payload.site && payload.site !== role) {
+    throw new Error('이 페이지의 관리자 키가 아닙니다. 입력한 키는 ' + ROLE_LABEL[role] + ' 관리자 키입니다.');
   }
 
   if (ADMIN_ACTIONS.indexOf(String(payload.action)) === -1) {
     throw new Error('서버(Apps Script)가 모르는 관리자 요청입니다: ' + payload.action + ' (서버 버전 ' + CODE_VERSION + ')');
   }
+  if (role === 'hq' && READ_ACTIONS.indexOf(String(payload.action)) === -1) {
+    throw new Error('통합 관제는 보기 전용입니다. 변경은 각 센터 관리자 페이지에서 해 주세요.');
+  }
+  if (role !== 'main' && MAIN_ONLY_ACTIONS.indexOf(String(payload.action)) !== -1) {
+    throw new Error('메가와이즈 · TDL Lab 관리자 페이지에서만 할 수 있습니다.');
+  }
 
   if (payload.action === 'list') {
     // 버전 정보도 함께 돌려줘 관리자 화면이 따로 health 를 부르지 않아도 된다.
-    return { requests: readVisits_().map(publicRequest_), blocks: adminBlocks_(), version: CODE_VERSION, apiLevel: API_LEVEL };
+    // 다른 센터의 단독 예약 · 막힌 일정은 보내지 않는다 (복합 투어는 두 센터 모두에 보인다).
+    var visible = readVisits_().filter(function (item) { return inSite_(item.tour, role); });
+    return {
+      requests: visible.map(publicRequest_),
+      blocks: adminBlocks_(role),
+      role: role,
+      version: CODE_VERSION,
+      apiLevel: API_LEVEL,
+    };
   }
 
   // light: 버전 확인만 (시트를 읽지 않는다)
   if (payload.action === 'health') return payload.light === true ? { version: CODE_VERSION, apiLevel: API_LEVEL } : health_();
-  if (payload.action === 'blockAdd') return addBlocks_(payload);
-  if (payload.action === 'blockRemove') return removeBlocks_(payload);
-  if (payload.action === 'create') return createManual_(payload.request);
+  if (payload.action === 'blockAdd') return addBlocks_(payload, role);
+  if (payload.action === 'blockRemove') return removeBlocks_(payload, role);
+  if (payload.action === 'create') {
+    var manualTour = String((payload.request || {}).tour || 'other');
+    if (!inSite_(TOURS[manualTour] ? manualTour : 'other', role)) throw new Error('이 관리자 페이지에서 등록할 수 없는 투어입니다.');
+    return createManual_(payload.request);
+  }
   if (payload.action === 'import') return importManual_(payload.requests, payload.importKey);
 
   if (payload.action === 'guestbookList') return { entries: readGuestbookAdmin_() };
@@ -1205,7 +1412,7 @@ function admin_(payload) {
     // 예약을 시트에서 완전히 지운다 (되돌릴 수 없음). 잠금 안에서 id 로 다시 찾아 그 행만 삭제.
     return withLock_(function () {
       var target = findVisit_(function (item) { return item.id === String(payload.id); });
-      if (!target) throw new Error('예약을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.');
+      if (!target || !inSite_(target.tour, role)) throw new Error('예약을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.');
       visitSheet_().deleteRow(target._row);
       SpreadsheetApp.flush();
       return { deleted: target.id };
@@ -1213,18 +1420,20 @@ function admin_(payload) {
   }
 
   var request = findVisit_(function (item) { return item.id === String(payload.id); });
-  if (!request) throw new Error('예약을 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.');
+  // 다른 센터의 예약은 없는 것처럼 다룬다.
+  if (!request || !inSite_(request.tour, role)) throw new Error('예약을 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.');
 
   if (payload.action === 'setStatus') {
     var status = String(payload.status);
     if (!STATUS_TEXT[status]) throw new Error('알 수 없는 상태입니다.');
-    return { request: publicRequest_(changeStatus_(request, status)) };
+    return { request: publicRequest_(changeStatus_(request, status, role)) };
   }
 
   if (payload.action === 'update') {
     var input = payload.request || {};
     // 수기 등록 건은 완화된 규칙, 웹 예약은 예약 화면과 같은 규칙으로 검사한다.
     var next = request.source === 'manual' ? sanitizeManual_(input) : sanitizeVisit_(input, false);
+    if (!inSite_(next.tour, role)) throw new Error('이 관리자 페이지에서 다룰 수 없는 투어로는 바꿀 수 없습니다.');
     applyOpsFields_(next, input);
     next.source = request.source;
     next.consent = request.consent;
@@ -1235,6 +1444,7 @@ function admin_(payload) {
       var current = findVisit_(function (item) { return item.id === request.id; });
       if (!current) throw new Error('예약을 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.');
       next.status = current.status;
+      next.approvals = current.approvals;
       next._row = current._row;
       if (isConfirmed_(next.status) && next.source !== 'manual' && isBusy_(next.tour, next.date, next.slot, busy_(next.id).busy, next.source === 'manual')) {
         throw new Error('변경한 일정이 이미 승인된 다른 예약과 겹칩니다.');
@@ -1251,15 +1461,41 @@ function admin_(payload) {
 /* ----------------------------------------------------------- 메일 서식 */
 
 /**
- * 메일 머리 표기: 투어에 따라 장소 이름을 나눈다.
- * 'TDL Lab' 은 TDL Lab 만 가리키고, 건물(센터)은 '메가와이즈 청라' 로 부른다 (한글 표기만 쓴다).
+ * 메일 머리 표기: 투어가 들르는 곳의 이름을 잇는다.
+ * 'TDL Lab' 은 TDL Lab 만 가리키고, 건물(센터)은 '메가와이즈 청라', 떨어진 센터는 '시화MTV' 로 부른다 (한글 표기만 쓴다).
  */
+var PLACE_MAIL_NAME = { center: '메가와이즈 청라', lab: 'TDL Lab', mtv: '시화MTV' };
+
 function mailBrand_(tour) {
-  if (tour === 'center') return { tag: '[메가와이즈 청라]', label: '메가와이즈 청라', manager: '센터 투어 담당자님' };
-  if (tour === 'combined') {
-    return { tag: '[메가와이즈 청라 · TDL Lab]', label: '메가와이즈 청라 · TDL Lab', manager: '센터 · TDL Lab 투어 담당자님' };
-  }
-  return { tag: '[TDL Lab]', label: 'TDL LAB', manager: 'TDL Lab 담당자님' };
+  if (tour === 'lab' || tour === 'other' || !TOURS[tour]) return { tag: '[TDL Lab]', label: 'TDL LAB' };
+  var names = TOURS[tour].places.map(function (place) { return PLACE_MAIL_NAME[place]; }).join(' · ');
+  return { tag: '[' + names + ']', label: names };
+}
+
+/** 신청 알림 메일의 인사말 대상: 그 메일을 받는 곳(site)의 담당자 */
+function mailManager_(tour, site) {
+  if (site === 'mtv') return '시화MTV 담당자님';
+  var places = tour === 'other' ? ['lab'] : TOURS[tour].places;
+  var center = places.indexOf('center') !== -1;
+  var lab = places.indexOf('lab') !== -1;
+  if (center && lab) return '센터 · TDL Lab 투어 담당자님';
+  return center ? '센터 투어 담당자님' : 'TDL Lab 담당자님';
+}
+
+/** 복합 투어의 오전 · 오후 구간 (시간표 밖이면 null) */
+function legsOf_(r) {
+  return TOURS[r.tour] && TOURS[r.tour].legs ? TOURS[r.tour].legs[r.slot] || null : null;
+}
+
+function halfOf_(slot) {
+  return toMinutes_(String(slot).split('-')[0]) < 12 * 60 ? '오전' : '오후';
+}
+
+/** 메일 제목용: '10:00 메가와이즈 센터 → 14:00 시화MTV' 또는 '10:00-11:00' */
+function scheduleShort_(r) {
+  var legs = legsOf_(r);
+  if (!legs) return r.slot;
+  return legs.map(function (leg) { return leg.slot.split('-')[0] + ' ' + LEG_PLACE[leg.tour]; }).join(' → ');
 }
 
 function mailShell_(title, lead, bodyHtml, brand) {
@@ -1332,9 +1568,21 @@ function textOrNone_(value) {
 }
 
 /** 투어 색 (src/lib/visit.ts 의 TOURS color 와 같다) */
-var TOUR_MAIL_COLOR = { combined: '#dc2626', lab: '#7c5cc4', center: '#1a8fa0', other: '#8a8f98' };
+var TOUR_MAIL_COLOR = {
+  lab: '#7c5cc4', center: '#1a8fa0', mtv: '#3d5a80', combined: '#dc2626', center_mtv: '#9c6644', all3: '#343a40',
+  other: '#8a8f98',
+};
 
 function scheduleBox_(r) {
+  var legs = legsOf_(r);
+  // 복합 투어는 오전 · 오후 구간을 줄마다 적는다.
+  var schedule = legs
+    ? legs.map(function (leg) {
+      return '<div style="font-size:15px;font-weight:700;color:#3d3532;margin-top:6px;">'
+        + halfOf_(leg.slot) + ' ' + escapeHtml_(leg.slot.replace('-', ' – ')) + ' &nbsp;'
+        + '<span style="color:' + (TOUR_MAIL_COLOR[leg.tour] || BRAND) + ';">' + escapeHtml_(LEG_PLACE[leg.tour]) + '</span></div>';
+    }).join('')
+    : '';
   return [
     '<div style="border:1px solid #e3e0de;border-left:3px solid ', BRAND, ';',
     'background:#faf9f8;padding:16px 18px;margin-bottom:24px;">',
@@ -1343,8 +1591,8 @@ function scheduleBox_(r) {
     'background:', TOUR_MAIL_COLOR[r.tour] || TOUR_MAIL_COLOR.other, ';border-radius:3px;">',
     escapeHtml_(TOURS[r.tour].label), '</span>',
     '<div style="font-size:17px;font-weight:700;color:#3d3532;margin-top:10px;">',
-    escapeHtml_(formatDateKo_(r.date)), ' &nbsp;', escapeHtml_(r.slot.replace('-', ' – ')),
-    '</div></div>',
+    escapeHtml_(formatDateKo_(r.date)), legs ? '' : ' &nbsp;' + escapeHtml_(r.slot.replace('-', ' – ')),
+    '</div>', schedule, '</div>',
   ].join('');
 }
 
@@ -1364,9 +1612,9 @@ function visitorsTable_(visitors) {
   return html.join('');
 }
 
-/** 관리자 페이지에서 해당 예약 상세를 바로 여는 주소 */
-function reviewUrl_(id) {
-  return ADMIN_URL + '?review=' + encodeURIComponent(id);
+/** 관리자 페이지에서 해당 예약 상세를 바로 여는 주소 (site: 메일을 받는 곳의 관리자 페이지) */
+function reviewUrl_(id, site) {
+  return (ADMIN_URLS[site] || ADMIN_URL) + '?review=' + encodeURIComponent(id);
 }
 
 /**
@@ -1374,15 +1622,20 @@ function reviewUrl_(id) {
  * - 관리자 키가 있어야 승인되므로 메일이 전달되거나 보안 스캐너가 링크를 열어도 자동 승인되지 않는다.
  * - 관리자 페이지는 사이트가 쓰는 웹앱 주소로만 요청하므로 배포 주소가 여러 개여도 어긋나지 않는다.
  */
-function reservationMailHtml_(r) {
-  var review = reviewUrl_(r.id);
+function reservationMailHtml_(r, site) {
+  var review = reviewUrl_(r.id, site);
+  var partner = sitesOf_(r.tour).length > 1 ? ROLE_LABEL[site === 'mtv' ? 'main' : 'mtv'] : '';
 
   var lead = [
-    '안녕하세요, ', mailBrand_(r.tour).manager, '.<br>',
+    '안녕하세요, ', mailManager_(r.tour, site), '.<br>',
     '<b style="color:#3d3532;">', escapeHtml_([r.host.division, r.host.org].filter(Boolean).join(' ')), ' ',
     escapeHtml_(r.host.name), ' ',
     escapeHtml_(r.host.title), '</b> 님으로부터 방문 예약이 도착하였습니다.<br>',
     '아래 내용을 확인하시고 일정을 승인해 주시기 바랍니다.',
+    partner
+      ? '<br><b style="color:' + BRAND + ';">' + escapeHtml_(partner) + ' 방문이 함께 있는 복합 투어</b>로, '
+        + '두 센터가 모두 승인해야 확정됩니다.'
+      : '',
   ].join('');
 
   var detail = rows_([
@@ -1409,7 +1662,9 @@ function reservationMailHtml_(r) {
     '</div>',
     '<p style="margin:14px 0 0;font-size:12px;color:#aca8a7;line-height:1.7;">',
     '버튼을 누르면 관리자 페이지에서 이 예약의 상세 화면이 열립니다. (관리자 키로 로그인)<br>',
-    '승인하면 해당 시간대는 예약 화면에서 자동으로 선택 불가 처리되고, 신청 담당자에게 확정 메일이 발송됩니다.<br>',
+    (partner
+      ? '두 센터가 모두 승인하면 해당 시간대는 예약 화면에서 선택 불가 처리되고, 신청 담당자에게 확정 메일이 발송됩니다.<br>'
+      : '승인하면 해당 시간대는 예약 화면에서 자동으로 선택 불가 처리되고, 신청 담당자에게 확정 메일이 발송됩니다.<br>'),
     '신청 담당자와의 문의 · 일정 조율은 위 연락처 · 이메일로 직접 소통해 주세요.',
     '</p>',
   ].join('');
@@ -1438,7 +1693,20 @@ var VISIT_GUIDE = {
   labMeeting: '주차 후 1번 게이트 앞에서 담당자가 TDL Lab 까지 안내해 드립니다.',
 };
 
-function visitGuideHtml_(r) {
+/**
+ * 시화MTV 오시는 길 · 주차. 확정되면 여기만 채운다 (address 가 비어 있으면 '담당자가 따로 안내' 문구만 나간다).
+ * mapImage 는 사이트 public/media/ 에 지도 이미지를 올린 뒤 SITE_URL + 'media/파일이름' 으로 적는다.
+ */
+var VISIT_GUIDE_MTV = {
+  address: '',
+  mapUrl: '',
+  mapImage: '',
+  parking: '',
+  meeting: '',
+};
+
+/** 메가와이즈 청라(센터 · TDL Lab) 오시는 길 */
+function megawiseGuideHtml_(r, titled) {
   var pairs = [
     ['위치', escapeHtml_(VISIT_GUIDE.address) + '<br><a href="' + VISIT_GUIDE.mapUrl
       + '" style="color:' + BRAND + ';font-size:13px;font-weight:700;">네이버 지도에서 보기 →</a>'],
@@ -1446,14 +1714,53 @@ function visitGuideHtml_(r) {
   ];
   if (r.tour === 'lab') pairs.push(['미팅 장소', escapeHtml_(VISIT_GUIDE.labMeeting)]);
   return [
-    '<div style="margin-top:26px;font-size:15px;font-weight:700;color:#3d3532;">오시는 길</div>',
+    '<div style="margin-top:26px;font-size:15px;font-weight:700;color:#3d3532;">오시는 길',
+    titled ? ' · 메가와이즈 청라' : '', '</div>',
     rows_(pairs),
     '<a href="', VISIT_GUIDE.mapUrl, '" style="display:block;margin-top:14px;">',
     '<img src="', VISIT_GUIDE.mapImage, '" alt="주차 위치 안내 지도 (1층 출입구 옆 1번 게이트, G1-1 도크 앞)" width="504" ',
     'style="display:block;width:100%;max-width:504px;height:auto;border:1px solid #e3e0de;"></a>',
+  ].join('');
+}
+
+/** 시화MTV 오시는 길 (주소가 아직 없으면 담당자 안내 문구) */
+function mtvGuideHtml_(titled) {
+  var title = '<div style="margin-top:26px;font-size:15px;font-weight:700;color:#3d3532;">오시는 길'
+    + (titled ? ' · 시화MTV' : '') + '</div>';
+  var guide = VISIT_GUIDE_MTV;
+  if (!guide.address) {
+    return title + rows_([['위치 · 주차', '시화MTV 위치와 주차 안내는 담당자가 별도로 안내드립니다.']]);
+  }
+  var pairs = [
+    ['위치', escapeHtml_(guide.address) + (guide.mapUrl
+      ? '<br><a href="' + guide.mapUrl + '" style="color:' + BRAND + ';font-size:13px;font-weight:700;">지도에서 보기 →</a>'
+      : '')],
+  ];
+  if (guide.parking) pairs.push(['주차', escapeHtml_(guide.parking)]);
+  if (guide.meeting) pairs.push(['미팅 장소', escapeHtml_(guide.meeting)]);
+  return title + rows_(pairs) + (guide.mapImage
+    ? '<img src="' + guide.mapImage + '" alt="시화MTV 주차 위치 안내 지도" width="504" '
+      + 'style="display:block;width:100%;max-width:504px;height:auto;border:1px solid #e3e0de;margin-top:14px;">'
+    : '');
+}
+
+function visitGuideHtml_(r) {
+  var places = TOURS[r.tour] ? TOURS[r.tour].places : [];
+  var megawise = places.indexOf('center') !== -1 || places.indexOf('lab') !== -1 || places.length === 0;
+  var mtv = places.indexOf('mtv') !== -1;
+  var both = megawise && mtv;
+  // 두 센터를 오가는 투어는 오전에 가는 곳의 안내를 먼저 적는다.
+  var legs = legsOf_(r);
+  var mtvFirst = both && legs && legs[0].tour === 'mtv';
+  var guides = [];
+  if (megawise) guides.push(megawiseGuideHtml_(r, both));
+  if (mtv) guides[mtvFirst ? 'unshift' : 'push'](mtvGuideHtml_(both));
+  return [
+    guides.join(''),
     '<div style="margin-top:22px;background:#faf9f8;border:1px solid #eeecea;padding:14px 16px;',
     'font-size:13px;color:#534a47;line-height:1.8;">',
     '· 원활한 진행을 위해 투어 시작 <b>', VISIT_GUIDE.arriveBefore, '분 전</b>까지 도착해 주시기 바랍니다.<br>',
+    both ? '· 두 센터는 떨어져 있어, 오전 투어가 끝나면 오후 투어 장소로 이동해 주셔야 합니다. (점심 · 이동 시간 포함 일정)<br>' : '',
     '· 문의나 일정 변경 · 취소는 <b>최소 1일 전</b>까지 담당자와 직접 소통해 주시기 바랍니다.',
     '</div>',
   ].join('');
@@ -1472,7 +1779,7 @@ function notifyHost_(r) {
     to: r.host.email,
     name: MAIL_SENDER_NAME,
     replyTo: mailTo_(r.tour),
-    subject: mailBrand_(r.tour).tag + ' 방문 예약 ' + (approved ? '확정' : '불가') + ' 안내 · ' + r.date + ' ' + r.slot,
+    subject: mailBrand_(r.tour).tag + ' 방문 예약 ' + (approved ? '확정' : '불가') + ' 안내 · ' + r.date + ' ' + scheduleShort_(r),
     htmlBody: mailShell_(approved ? '방문 일정 확정' : '방문 예약 결과 안내', lead, scheduleBox_(r) + rows_([
       [r.category === 'internal' ? '방문 조직' : '업체명', escapeHtml_(r.company)],
       ['투어 언어', languageText_(r)],
@@ -1582,7 +1889,7 @@ function doGet(e) {
       var found = id
         ? findVisit_(function (item) { return item.id === id; })
         : token ? findVisit_(function (item) { return item._token === token; }) : null;
-      var target = found ? reviewUrl_(found.id) : ADMIN_URL;
+      var target = found ? reviewUrl_(found.id, sitesOf_(found.tour)[0]) : ADMIN_URL;
       return resultPage_('관리자 페이지에서 처리해 주세요',
         '보안을 위해 메일 링크로는 바로 승인 · 거절되지 않습니다.<br>'
         + '아래 버튼으로 관리자 페이지에서 예약을 확인하고 처리해 주세요.<br><br>'

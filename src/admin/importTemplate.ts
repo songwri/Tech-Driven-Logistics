@@ -1,5 +1,5 @@
 import { downloadWorkbook, type CellValue, type Sheet } from '@/lib/xlsx'
-import { TOUR_BY_ID, toDateKey, type VisitRequest, type VisitStatus } from '@/lib/visit'
+import { TOUR_BY_ID, approvalsText, toDateKey, type VisitRequest, type VisitStatus } from '@/lib/visit'
 import { SYSTEM_COLUMNS, VISIT_SHEET_HEADERS } from './importLegacy'
 
 type Header = (typeof VISIT_SHEET_HEADERS)[number]
@@ -9,7 +9,10 @@ const GUIDE: Record<Header, [string, string]> = {
   id: ['비워 두세요 (자동)', ''],
   신청일시: ['비워 두세요 (자동)', ''],
   상태: ['대기 / 승인 / 완료 / 거절 / 취소 — 비우면 승인. 거절 · 취소는 통계 제외', '완료'],
-  투어: ['종합 투어 / TDL Lab 투어 / 센터 투어 / 기타 방문 — 비우면 기타 방문', '기타 방문'],
+  투어: [
+    'TDL Lab 투어 / 메가와이즈 센터 투어 / 시화MTV 투어 / 메가와이즈 + TDL Lab / 메가와이즈 + 시화MTV / 3개 센터 전체 / 기타 방문 — 비우면 기타 방문 (이전 이름 종합 투어 · 센터 투어도 됩니다)',
+    '기타 방문',
+  ],
   방문일: ['필수. 2026-07-27 형식 (엑셀 날짜 서식도 가능)', '2026-07-27'],
   시간: ['시작-종료. 비우면 시간 미정', '13:00-14:00'],
   방문구분: ['내부 방문 / 고객 방문', '고객 방문'],
@@ -42,6 +45,7 @@ const GUIDE: Record<Header, [string, string]> = {
   후속진행: ['', 'PoC 논의'],
   통역언어: ['통역 동반일 때 방문객 사용 언어 (선택)', ''],
   실제방문인원: ['단체 방문 등 명단과 다른 실제 인원 (비우면 명단 · 방문인원)', ''],
+  센터별승인: ['비워 두세요 (복합 투어 웹 예약의 센터별 승인, 자동)', ''],
 }
 
 const WIDTHS: Partial<Record<Header, number>> = {
@@ -115,6 +119,7 @@ function toSheetRow(request: VisitRequest): CellValue[] {
     '담당(실)': request.host.division,
     후속진행: request.followUp ?? '',
     실제방문인원: request.actualHeadcount ?? '',
+    센터별승인: approvalsText(request.approvals),
   }
   return VISIT_SHEET_HEADERS.map((header) => values[header])
 }

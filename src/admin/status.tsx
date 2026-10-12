@@ -1,7 +1,18 @@
 import type { CSSProperties } from 'react'
 import { Ban, CheckCheck, CheckCircle2, CircleDashed, XCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { STATUS_LABEL, TOUR_BY_ID, type TourType, type VisitStatus } from '@/lib/visit'
+import {
+  SITES,
+  STATUS_LABEL,
+  TOUR_BY_ID,
+  needsSiteApproval,
+  siteDecision,
+  sitesOf,
+  type AdminSite,
+  type TourType,
+  type VisitRequest,
+  type VisitStatus,
+} from '@/lib/visit'
 import { STATUS_TONE } from './statusTone'
 
 const STATUS_ICON = { pending: CircleDashed, approved: CheckCircle2, completed: CheckCheck, rejected: XCircle, cancelled: Ban }
@@ -46,4 +57,47 @@ export function tourTint(tour: TourType): CSSProperties {
   const color = TOUR_BY_ID[tour].color
   // 흰 바탕 위에 투어 색을 얹어, 행의 상태 배경색(초록 · 회색 등)과 섞여 탁해지지 않게 한다.
   return { backgroundColor: '#fff', backgroundImage: `linear-gradient(${color}26, ${color}26)`, borderLeft: `5px solid ${color}` }
+}
+
+const DECISION_TEXT = { pending: '승인 대기', approved: '승인', rejected: '거절' } as const
+const DECISION_TONE = {
+  pending: 'border-[#ffc078] text-[#c2410c]',
+  approved: 'border-[#8ce99a] text-[#2b8a3e]',
+  rejected: 'border-warm-300 text-warm-600',
+} as const
+
+/**
+ * 복합 투어(메가와이즈 · Lab + 시화MTV)의 센터별 승인 현황. 두 곳이 모두 승인해야 확정된다.
+ * 대기 중일 때만 보여준다 (확정 · 거절 뒤에는 전체 상태 배지로 충분하다).
+ */
+export function SiteApprovals({
+  request,
+  site,
+  className,
+}: {
+  request: VisitRequest
+  site: AdminSite
+  className?: string
+}) {
+  if (!needsSiteApproval(request) || request.status !== 'pending') return null
+  return (
+    <span className={cn('inline-flex flex-wrap gap-1', className)}>
+      {sitesOf(request.tour).map((each) => {
+        const decision = siteDecision(request, each)
+        return (
+          <span
+            key={each}
+            className={cn(
+              'inline-flex items-center whitespace-nowrap border bg-white px-1.5 text-[10.5px] font-semibold leading-[18px]',
+              DECISION_TONE[decision],
+              each === site && 'ring-1 ring-warm-800/30',
+            )}
+            title={each === site ? '이 페이지(우리 센터)의 결정' : '상대 센터의 결정'}
+          >
+            {SITES[each].label} {DECISION_TEXT[decision]}
+          </span>
+        )
+      })}
+    </span>
+  )
 }

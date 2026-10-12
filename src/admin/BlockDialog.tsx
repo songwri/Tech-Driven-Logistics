@@ -14,10 +14,11 @@ import {
   blockSegment,
   blockTargetLabel,
   formatDateShort,
-  formatSlot,
+  formatScheduleShort,
   isSlotBusy,
   parseDateKey,
   toDateKey,
+  type AdminSite,
   type BlockTarget,
   type TourBlock,
   type VisitRequest,
@@ -25,6 +26,8 @@ import {
 import type { BlockInput } from './useAdminData'
 
 interface BlockDialogProps {
+  /** 막을 수 있는 대상: 메가와이즈 · Lab 페이지는 센터 · Lab · 전체, 시화MTV 페이지는 시화MTV */
+  site: AdminSite
   /** 처음 채워 둘 기간 (달력에서 끌어 고른 범위 · 선택한 날짜) */
   start: string
   end: string
@@ -53,10 +56,11 @@ export function bookableDatesBetween(start: string, end: string) {
   return dates
 }
 
-export function BlockDialog({ start: initialStart, end: initialEnd, blocks, requests, onAdd, onRemove, onClose }: BlockDialogProps) {
+export function BlockDialog({ site, start: initialStart, end: initialEnd, blocks, requests, onAdd, onRemove, onClose }: BlockDialogProps) {
+  const targets = BLOCK_TARGETS.filter((item) => item.site === site)
   const [start, setStart] = useState(initialStart)
   const [end, setEnd] = useState(initialEnd)
-  const [target, setTarget] = useState<BlockTarget>('center')
+  const [target, setTarget] = useState<BlockTarget>(targets[0]?.id ?? 'center')
   const [allDay, setAllDay] = useState(true)
   const [from, setFrom] = useState('09:30')
   const [to, setTo] = useState('16:00')
@@ -145,7 +149,7 @@ export function BlockDialog({ start: initialStart, end: initialEnd, blocks, requ
         <div>
           <p className="mb-2 text-[13px] font-semibold text-warm-800">막을 대상</p>
           <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="막을 대상">
-            {BLOCK_TARGETS.map((item) => (
+            {targets.map((item) => (
               <button
                 key={item.id}
                 type="button"
@@ -230,7 +234,7 @@ export function BlockDialog({ start: initialStart, end: initialEnd, blocks, requ
               {affected.map((request) => (
                 <li key={request.id} className="flex flex-wrap items-center gap-x-2">
                   <span className="font-mono">{formatDateShort(request.date)}</span>
-                  <span className="font-mono">{formatSlot(request.slot)}</span>
+                  <span className="font-mono">{formatScheduleShort(request.tour, request.slot)}</span>
                   <span>{TOUR_BY_ID[request.tour].short}</span>
                   <span className="font-semibold">{request.company}</span>
                   <span className="rounded-sm bg-white/70 px-1 text-[11px] font-bold">{STATUS_LABEL[request.status]}</span>
