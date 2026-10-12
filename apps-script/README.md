@@ -178,7 +178,10 @@ Apps Script 편집기에서 **배포 → 배포 관리 → 편집(연필) → �
 `visit_requests` 의 `센터별승인` 열(예: `main:approved,mtv:pending`)에 남습니다.
 
 **당일 · 익일 신청은 받지 않습니다** (오늘 +2일부터 선택 가능). 기준을 바꾸려면 `Code.gs` 의
-`MIN_LEAD_DAYS` 와 `src/lib/visit.ts` 의 `MIN_LEAD_DAYS` 를 함께 수정하세요. 관리자 대시보드에서
+`MIN_LEAD_DAYS` 와 `src/lib/visit.ts` 의 `MIN_LEAD_DAYS` 를 함께 수정하세요.
+**시화MTV 가 들어간 투어**(시화MTV · 메가와이즈 + 시화MTV · 3개 센터)는 **방문일 3영업일 전까지만** 신청받습니다
+(주말 · 공휴일은 영업일이 아님. 예: 월요일 신청 → 목요일부터, 금요일 신청 → 다음 주 수요일부터).
+`Code.gs` · `src/lib/visit.ts` 의 `MTV_LEAD_BUSINESS_DAYS` 로 바꿉니다. 관리자 대시보드에서
 일정을 수정할 때는 이 제한이 적용되지 않습니다.
 
 센터 · TDL Lab · 시화MTV는 각각 한 번에 한 팀만 받는다고 보고 **공간 단위로 겹침을 판정**합니다.

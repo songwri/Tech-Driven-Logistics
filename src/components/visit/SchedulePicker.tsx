@@ -6,7 +6,10 @@ import { Calendar } from '../ui/Calendar'
 import { FieldLabel, GroupError } from './VisitFields'
 import {
   MIN_LEAD_DAYS,
-  earliestBookableDate,
+  MTV_LEAD_BUSINESS_DAYS,
+  earliestDateFor,
+  formatDateShort,
+  includesMtv,
   BOOKABLE_TOURS,
   LEG_PLACE,
   TOUR_BY_ID,
@@ -28,8 +31,9 @@ const TOUR_GROUPS: { id: 'single' | 'multi'; label: string }[] = [
 
 /** 투어 카드 아래 시간 안내: 복합 투어(오전 · 오후)는 순서를 고른다는 안내 */
 function slotHint(item: TourDefinition) {
-  if (item.legs) return `${item.duration} · 오전 · 오후 순서 선택`
-  return `${item.duration} · ${item.slots.map((slot) => slot.slice(0, 5)).join(' / ')} 시작`
+  const lead = includesMtv(item.id) ? ` · ${MTV_LEAD_BUSINESS_DAYS}영업일 전까지 신청` : ''
+  if (item.legs) return `${item.duration} · 오전 · 오후 순서 선택${lead}`
+  return `${item.duration} · ${item.slots.map((slot) => slot.slice(0, 5)).join(' / ')} 시작${lead}`
 }
 
 const halfLabel = (slot: string) => (Number(slot.slice(0, 2)) < 12 ? '오전' : '오후')
@@ -64,7 +68,8 @@ export function SchedulePicker({
   wide,
   loading,
 }: SchedulePickerProps) {
-  const earliest = useMemo(() => earliestBookableDate(leadDays), [leadDays])
+  // 시화MTV 가 들어간 투어는 3영업일 전까지만 신청받아 고를 수 있는 첫날이 더 늦다.
+  const earliest = useMemo(() => earliestDateFor(tour, leadDays), [tour, leadDays])
   const definition = TOUR_BY_ID[tour]
 
   // 선택한 투어의 모든 시간대가 막힌 날은 달력에서 고를 수 없게 한다.
@@ -86,7 +91,9 @@ export function SchedulePicker({
   const chooseTour = (next: TourType) => {
     const keepSlot = TOUR_BY_ID[next].slots.includes(slot) && !isSlotBusy(next, date, slot, busy)
     // 새 투어가 열리지 않는 요일이면 날짜도 비운다 (센터마다 운영 요일이 다를 수 있다).
-    const keepDate = !date || tourWeekdays(next).includes(parseDateKey(date).getDay())
+    const keepDate =
+      !date ||
+      (tourWeekdays(next).includes(parseDateKey(date).getDay()) && date >= toDateKey(earliestDateFor(next, leadDays)))
     onChange({ tour: next, date: keepDate ? date : '', slot: keepSlot && keepDate ? slot : '' })
   }
 
@@ -174,7 +181,9 @@ export function SchedulePicker({
               {date
                 ? `${formatDateLong(date)} 선택됨`
                 : leadDays > 0
-                  ? '월 · 수 · 금 · 당일 · 익일은 신청 불가'
+                  ? includesMtv(tour)
+                    ? `월 · 수 · 금 · 시화MTV 는 ${MTV_LEAD_BUSINESS_DAYS}영업일 전까지 신청 (${formatDateShort(toDateKey(earliest))}부터)`
+                    : '월 · 수 · 금 · 당일 · 익일은 신청 불가'
                   : '월 · 수 · 금만 선택 가능'}
             </p>
           </div>

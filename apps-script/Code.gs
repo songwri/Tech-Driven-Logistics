@@ -89,7 +89,7 @@ var ADMIN_URL = SITE_URL + 'admin/';
 var ADMIN_URLS = { main: ADMIN_URL, mtv: SITE_URL + 'admin-mtv/', hq: SITE_URL + 'admin-hq/' };
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-12.multi-center';
+var CODE_VERSION = '2026-10-12.mtv-lead-days';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -119,6 +119,23 @@ var MAX_VISITORS = 30;
 var PLACE_WEEKDAYS = { center: [1, 3, 5], lab: [1, 3, 5], mtv: [1, 3, 5] };
 /** 당일·익일 신청 불가 (오늘 +2일부터). src/lib/visit.ts 의 MIN_LEAD_DAYS 와 같아야 합니다. */
 var MIN_LEAD_DAYS = 2;
+/**
+ * 시화MTV 가 들어간 투어는 방문일 3영업일 전까지만 신청받는다. src/lib/visit.ts 의 MTV_LEAD_BUSINESS_DAYS 와 같아야 합니다.
+ * 서버는 주말만 영업일에서 빼고, 공휴일은 예약 화면 달력이 막는다 (서버가 더 느슨한 쪽이라 화면에서 고른 날짜는 항상 통과한다).
+ */
+var MTV_LEAD_BUSINESS_DAYS = 3;
+
+/** 오늘부터 영업일(주말 제외)로 days 만큼 뒤의 날짜 'yyyy-MM-dd' */
+function businessDaysLaterKey_(days) {
+  var date = new Date();
+  var left = days;
+  while (left > 0) {
+    date.setDate(date.getDate() + 1);
+    var weekday = Number(Utilities.formatDate(date, Session.getScriptTimeZone(), 'u')) % 7;
+    if (weekday !== 0 && weekday !== 6) left -= 1;
+  }
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+}
 
 /**
  * 투어 종류와 시간대. src/lib/visit.ts 의 TOURS 와 값이 같아야 합니다.
@@ -1085,6 +1102,13 @@ function addReservation_(payload) {
   var earliestKey = Utilities.formatDate(earliest, Session.getScriptTimeZone(), 'yyyy-MM-dd');
   if (request.date < earliestKey) {
     throw new Error('당일 · 익일 방문은 신청할 수 없습니다. ' + formatDateKo_(earliestKey) + ' 이후 날짜를 선택해 주세요.');
+  }
+  if (TOURS[request.tour].places.indexOf('mtv') !== -1) {
+    var mtvKey = businessDaysLaterKey_(MTV_LEAD_BUSINESS_DAYS);
+    if (request.date < mtvKey) {
+      throw new Error('시화MTV 가 들어간 투어는 방문일 ' + MTV_LEAD_BUSINESS_DAYS + '영업일 전까지 신청할 수 있습니다. '
+        + formatDateKo_(mtvKey) + ' 이후 날짜를 선택해 주세요.');
+    }
   }
 
   request.id = Utilities.getUuid();
