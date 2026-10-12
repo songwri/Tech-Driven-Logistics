@@ -1,0 +1,814 @@
+# scrMy — 내 신청 (신청자 본인 것만)
+# 1) 새 화면(빈 화면) → 이름 scrMy, 화면 Fill = cBg
+#    OnVisible = Refresh(VisitRequests); UpdateContext({locCancelArm: false})
+# 2) 이 파일 내용을 전부 복사 → 트리 뷰에서 scrMy 오른쪽 클릭 → '붙여넣기'
+- hdrMBar:
+    Control: Rectangle@2.3.0
+    Properties:
+      X: =0
+      Y: =0
+      Width: =1366
+      Height: =56
+      Fill: =cSurface
+- hdrMLine:
+    Control: Rectangle@2.3.0
+    Properties:
+      X: =0
+      Y: =55
+      Width: =1366
+      Height: =1
+      Fill: =cLine
+- hdrMMark:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="TDL"
+      X: =24
+      Y: =16
+      Width: =24
+      Height: =24
+      Font: =fnt
+      Size: =7
+      Color: =cSurface
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      FontWeight: =FontWeight.Bold
+      Align: =Align.Center
+      Fill: =cBrand
+- hdrMTitle:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="TDL 방문 예약"
+      X: =58
+      Y: =16
+      Width: =200
+      Height: =24
+      Font: =fnt
+      Size: =12
+      Color: =cInk
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      FontWeight: =FontWeight.Semibold
+- hdrMNavBook:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="방문 신청"
+      X: =520
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrBook, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =true
+- hdrMNavMy:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="내 신청"
+      X: =624
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrMy, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrMy, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrMy, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrMy, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =true
+- hdrMNavAdmin:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="관리자"
+      X: =728
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrAdmin, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrAdmin, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrAdmin, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrAdmin, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =!IsBlank(gAdminSite)
+- hdrMUser:
+    Control: Label@2.5.1
+    Properties:
+      Text: =gMe.displayName & If(IsBlank(gMe.department), "", " · " & gMe.department)
+      X: =1042
+      Y: =18
+      Width: =300
+      Height: =20
+      Font: =fnt
+      Size: =9.75
+      Color: =cInk2
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      Align: =Align.Right
+- conMyList:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      X: =24
+      Y: =72
+      Width: =520
+      Height: =680
+      Fill: =cSurface
+      BorderColor: =cLine
+      BorderThickness: =1
+      DropShadow: =DropShadow.None
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+    Children:
+      - lblMyTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="내 신청"
+            X: =20
+            Y: =16
+            Width: =100
+            Height: =24
+            Font: =fnt
+            Size: =11.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblMySort:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="방문일 최근 순"
+            X: =90
+            Y: =19
+            Width: =200
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk3
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - galMy:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Items: =SortByColumns(Filter(VisitRequests, ApplicantEmail = Lower(User().Email)), "VisitDate", SortOrder.Descending)
+            X: =20
+            Y: =52
+            Width: =480
+            Height: =612
+            TemplateSize: =90
+            TemplatePadding: =0
+            ShowScrollbar: =false
+            BorderThickness: =0
+            Fill: =Color.Transparent
+            OnSelect: |-
+              =UpdateContext({locCancelArm: false})
+          Children:
+            - btnMyItem:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  Text: =""
+                  X: =0
+                  Y: =0
+                  Width: =480
+                  Height: =86
+                  OnSelect: =Select(Parent)
+                  Fill: =If(ThisItem.ID = galMy.Selected.ID, cSoft, cSurface)
+                  HoverFill: =cSoft
+                  PressedFill: =cSoft
+                  BorderThickness: =0
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+            - lblMyCompany:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.Company
+                  X: =16
+                  Y: =14
+                  Width: =360
+                  Height: =24
+                  Font: =fnt
+                  Size: =11.25
+                  Color: =cInk
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  FontWeight: =FontWeight.Semibold
+                  OnSelect: =Select(Parent)
+            - lblMyInfo:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =Text(DateValue(ThisItem.DateKey), "mm/dd") & " (" & Text(DateValue(ThisItem.DateKey), "ddd", "ko-KR") & ") " & Left(ThisItem.Slot, 5) & " · " & ThisItem.TourName
+                  X: =16
+                  Y: =42
+                  Width: =440
+                  Height: =20
+                  Font: =fnt
+                  Size: =9
+                  Color: =cInk2
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  OnSelect: =Select(Parent)
+            - lblMyAtt:
+                Control: Label@2.5.1
+                Properties:
+                  Text: ="참석자 " & ThisItem.AttendeeCount & " / " & ThisItem.ExpectedHeadcount & "명 제출"
+                  X: =16
+                  Y: =62
+                  Width: =440
+                  Height: =20
+                  Font: =fnt
+                  Size: =9
+                  Color: =cInk3
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  OnSelect: =Select(Parent)
+            - tagMyStatus:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  Text: =ThisItem.Status
+                  X: =404
+                  Y: =14
+                  Width: =56
+                  Height: =22
+                  DisplayMode: =DisplayMode.View
+                  Font: =fnt
+                  Size: =8
+                  FontWeight: =FontWeight.Semibold
+                  Fill: =LookUp(StatusStyle, S = ThisItem.Status, Bg)
+                  Color: =LookUp(StatusStyle, S = ThisItem.Status, Fg)
+                  BorderThickness: =0
+                  RadiusTopLeft: =11
+                  RadiusTopRight: =11
+                  RadiusBottomLeft: =11
+                  RadiusBottomRight: =11
+                  OnSelect: =false
+            - rctMyLine:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =0
+                  Y: =89
+                  Width: =480
+                  Height: =1
+                  Fill: =cLine
+      - lblMyEmpty:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="아직 신청한 방문이 없습니다."
+            X: =20
+            Y: =80
+            Width: =480
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk3
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            Visible: =IsEmpty(galMy.AllItems)
+- conMyDetail:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      X: =560
+      Y: =72
+      Width: =782
+      Height: =680
+      Fill: =cSurface
+      BorderColor: =cLine
+      BorderThickness: =1
+      DropShadow: =DropShadow.None
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+      Visible: =!IsBlank(galMy.Selected)
+    Children:
+      - lblMyNo:
+          Control: Label@2.5.1
+          Properties:
+            Text: =galMy.Selected.Title
+            X: =28
+            Y: =24
+            Width: =400
+            Height: =20
+            Font: =Font.Consolas
+            Size: =9
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - lblMyDetailCompany:
+          Control: Label@2.5.1
+          Properties:
+            Text: =galMy.Selected.Company
+            X: =28
+            Y: =44
+            Width: =560
+            Height: =32
+            Font: =fnt
+            Size: =16.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+            AutoHeight: =false
+      - tagMyDetailStatus:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: =galMy.Selected.Status
+            X: =650
+            Y: =50
+            Width: =56
+            Height: =22
+            DisplayMode: =DisplayMode.View
+            Font: =fnt
+            Size: =8
+            FontWeight: =FontWeight.Semibold
+            Fill: =LookUp(StatusStyle, S = galMy.Selected.Status, Bg)
+            Color: =LookUp(StatusStyle, S = galMy.Selected.Status, Fg)
+            BorderThickness: =0
+            RadiusTopLeft: =11
+            RadiusTopRight: =11
+            RadiusBottomLeft: =11
+            RadiusBottomRight: =11
+            OnSelect: =false
+      - lblMyDetailWhen:
+          Control: Label@2.5.1
+          Properties:
+            Text: =galMy.Selected.TourName & " · " & Text(DateValue(galMy.Selected.DateKey), "yyyy년 m월 d일") & " (" & Text(DateValue(galMy.Selected.DateKey), "ddd", "ko-KR") & ") " & galMy.Selected.ScheduleText
+            X: =28
+            Y: =84
+            Width: =726
+            Height: =22
+            Font: =fnt
+            Size: =10.5
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - rctMyLine1:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =28
+            Y: =124
+            Width: =726
+            Height: =1
+            Fill: =cLine
+      - lblMyAttTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="참석자 정보 제출 현황"
+            X: =28
+            Y: =144
+            Width: =300
+            Height: =24
+            Font: =fnt
+            Size: =11.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblMyAttCount:
+          Control: Label@2.5.1
+          Properties:
+            Text: =galMy.Selected.AttendeeCount & " / " & galMy.Selected.ExpectedHeadcount & "명"
+            X: =28
+            Y: =174
+            Width: =300
+            Height: =40
+            Font: =fnt
+            Size: =21
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - rctMyBarBg:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =28
+            Y: =222
+            Width: =726
+            Height: =8
+            Fill: =cSoft
+      - rctMyBar:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =28
+            Y: =222
+            Width: =726 * Min(1, galMy.Selected.AttendeeCount / Max(1, galMy.Selected.ExpectedHeadcount))
+            Height: =8
+            Fill: =cPrimary
+      - lblMyAttHint:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="참석자 이름 · 연락처는 개인정보 보호를 위해 센터 담당자만 볼 수 있습니다."
+            X: =28
+            Y: =240
+            Width: =726
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk3
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - lblMyLink:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="참석자 정보 입력 링크"
+            X: =28
+            Y: =280
+            Width: =400
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - txtMyLink:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            Default: =galMy.Selected.FormsLink
+            HintText: =""
+            X: =28
+            Y: =302
+            Width: =600
+            Height: =36
+            Font: =Font.Consolas
+            Size: =9
+            Color: =cInk
+            Fill: =cSurface
+            BorderColor: =cLine
+            HoverBorderColor: =cInk3
+            FocusedBorderColor: =cInk
+            BorderThickness: =1
+            FocusedBorderThickness: =1
+            PaddingLeft: =10
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            DisplayMode: =DisplayMode.View
+      - btnMyCopy:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="링크 복사"
+            X: =642
+            Y: =300
+            Width: =112
+            Height: =40
+            OnSelect: |-
+              =Copy(galMy.Selected.FormsLink);
+              Notify("링크를 복사했습니다.", NotificationType.Success)
+            Font: =fnt
+            Size: =10.5
+            FontWeight: =FontWeight.Semibold
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            Fill: =cPrimary
+            Color: =cSurface
+            HoverFill: =cPrimaryHover
+            PressedFill: =cPrimaryHover
+            HoverColor: =cSurface
+            PressedColor: =cSurface
+            BorderThickness: =0
+            DisabledFill: =cSoft
+            DisabledColor: =cInk3
+      - rctMyLine2:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =28
+            Y: =368
+            Width: =726
+            Height: =1
+            Fill: =cLine
+      - lblMyInfoTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="신청 내용"
+            X: =28
+            Y: =388
+            Width: =300
+            Height: =24
+            Font: =fnt
+            Size: =11.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - rowMyHostKey:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="신청 담당자"
+            X: =28
+            Y: =420
+            Width: =130
+            Height: =34
+            Font: =fnt
+            Size: =9.75
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - rowMyHostVal:
+          Control: Label@2.5.1
+          Properties:
+            Text: =galMy.Selected.HostName & " " & galMy.Selected.HostTitle & " · " & galMy.Selected.HostDivision & " " & galMy.Selected.HostOrg
+            X: =158
+            Y: =420
+            Width: =596
+            Height: =34
+            Font: =fnt
+            Size: =10.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - rowMyHostLine:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =28
+            Y: =454
+            Width: =726
+            Height: =1
+            Fill: =cLine
+      - rowMyCatKey:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="방문 유형"
+            X: =28
+            Y: =454
+            Width: =130
+            Height: =34
+            Font: =fnt
+            Size: =9.75
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - rowMyCatVal:
+          Control: Label@2.5.1
+          Properties:
+            Text: =galMy.Selected.Category & If(IsBlank(galMy.Selected.ClientType), "", " · " & galMy.Selected.ClientType)
+            X: =158
+            Y: =454
+            Width: =596
+            Height: =34
+            Font: =fnt
+            Size: =10.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - rowMyCatLine:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =28
+            Y: =488
+            Width: =726
+            Height: =1
+            Fill: =cLine
+      - rowMyPurposeKey:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="업종 · 목적"
+            X: =28
+            Y: =488
+            Width: =130
+            Height: =34
+            Font: =fnt
+            Size: =9.75
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - rowMyPurposeVal:
+          Control: Label@2.5.1
+          Properties:
+            Text: =If(IsBlank(galMy.Selected.Industries), "", galMy.Selected.Industries & " · ") & galMy.Selected.Purposes
+            X: =158
+            Y: =488
+            Width: =596
+            Height: =34
+            Font: =fnt
+            Size: =10.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - rowMyPurposeLine:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =28
+            Y: =522
+            Width: =726
+            Height: =1
+            Fill: =cLine
+      - rowMyLangKey:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="언어"
+            X: =28
+            Y: =522
+            Width: =130
+            Height: =34
+            Font: =fnt
+            Size: =9.75
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - rowMyLangVal:
+          Control: Label@2.5.1
+          Properties:
+            Text: =galMy.Selected.Language & If(galMy.Selected.Interpreter = "Y", " · 통역 동반" & If(IsBlank(galMy.Selected.InterpreterLanguage), "", "(" & galMy.Selected.InterpreterLanguage & ")"), "")
+            X: =158
+            Y: =522
+            Width: =596
+            Height: =34
+            Font: =fnt
+            Size: =10.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - rowMyLangLine:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =28
+            Y: =556
+            Width: =726
+            Height: =1
+            Fill: =cLine
+      - rowMyMemoKey:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="담당자 안내"
+            X: =28
+            Y: =556
+            Width: =130
+            Height: =34
+            Font: =fnt
+            Size: =9.75
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - rowMyMemoVal:
+          Control: Label@2.5.1
+          Properties:
+            Text: =Coalesce(galMy.Selected.AdminMemo, "-")
+            X: =158
+            Y: =556
+            Width: =596
+            Height: =34
+            Font: =fnt
+            Size: =10.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - rowMyMemoLine:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =28
+            Y: =590
+            Width: =726
+            Height: =1
+            Fill: =cLine
+      - lblMyCancelHint:
+          Control: Label@2.5.1
+          Properties:
+            Text: =If(galMy.Selected.Status = "승인", "승인된 방문의 취소 · 변경은 센터 담당자에게 메일로 알려 주세요.", "")
+            X: =28
+            Y: =624
+            Width: =560
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk3
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - btnMyCancel:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: =If(locCancelArm, "한 번 더 누르면 취소됩니다", "신청 취소")
+            X: =554
+            Y: =612
+            Width: =200
+            Height: =40
+            OnSelect: |-
+              =If(
+                  locCancelArm,
+                  Patch(VisitRequests, LookUp(VisitRequests, ID = galMy.Selected.ID), {Status: "취소"});
+                  UpdateContext({locCancelArm: false});
+                  Notify("신청을 취소했습니다.", NotificationType.Success),
+                  UpdateContext({locCancelArm: true})
+              )
+            Font: =fnt
+            Size: =10.5
+            FontWeight: =FontWeight.Semibold
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            Fill: =cSurface
+            Color: =cRed
+            HoverFill: =cSoft
+            PressedFill: =cSoft
+            HoverColor: =cRed
+            PressedColor: =cRed
+            BorderColor: =cLine
+            HoverBorderColor: =cInk3
+            BorderThickness: =1
+            DisabledFill: =cSurface
+            DisabledColor: =cInk3
+            DisabledBorderColor: =cLine
+            Visible: =galMy.Selected.Status = "대기"

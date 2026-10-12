@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TDL 방문 예약 · Power Apps 화면 설계</title>
+<style>
+  /* Power Apps 앱과 같은 값: 3-powerapps/App.Formulas.txt 의 디자인 토큰 */
+  :root {
+    --bg: #F7F6F3; --surface: #FFFFFF; --line: #EAEAEA; --soft: #F1F0EC;
+    --ink: #2F3437; --ink2: #787774; --ink3: #A3A29E;
+    --primary: #111111; --primary-hover: #333333; --brand: #A72B2B;
+    --red-bg: #FDEBEC; --red: #9F2F2D; --blue-bg: #E1F3FE; --blue: #1F6C9F;
+    --green-bg: #EDF3EC; --green: #346538; --yellow-bg: #FBF3DB; --yellow: #956400;
+    --gray-bg: #EFEFED; --gray: #5F5E5B;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #DAD9D4; font-family: "Segoe UI", "Malgun Gothic", sans-serif; color: var(--ink); word-break: keep-all; }
+  .toolbar { position: sticky; top: 0; z-index: 10; background: #fff; border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .toolbar b { font-size: 13px; margin-right: 8px; }
+  .toolbar button { font: inherit; font-size: 13px; padding: 6px 12px; border: 1px solid var(--line); background: #fff; border-radius: 6px; cursor: pointer; color: var(--ink); }
+  .toolbar button.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .toolbar .note { font-size: 12px; color: var(--ink2); margin-left: auto; }
+  .stage { padding: 16px; }
+  html, body { overflow-x: hidden; }
+  .scaler { transform-origin: 0 0; width: 1366px; height: 768px; }
+  /* 1366 x 768 앱 캔버스. 모든 좌표는 Power Apps 의 X · Y · Width · Height 와 같다. */
+  .app { position: relative; width: 1366px; height: 768px; background: var(--bg); overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  .abs { position: absolute; }
+  .screen { display: none; } .screen.on { display: block; }
+  .hdr { left: 0; top: 0; width: 1366px; height: 56px; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .mark { left: 24px; top: 16px; width: 24px; height: 24px; background: var(--brand); border-radius: 4px; color: #fff; font: 700 11px/24px "Segoe UI"; text-align: center; }
+  .apptitle { left: 58px; top: 16px; font-size: 16px; font-weight: 600; line-height: 24px; }
+  .nav { top: 12px; height: 32px; width: 96px; border-radius: 6px; font-size: 14px; line-height: 32px; text-align: center; color: var(--ink2); }
+  .nav.on { background: var(--soft); color: var(--ink); font-weight: 600; }
+  .user { right: 24px; top: 18px; font-size: 13px; color: var(--ink2); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+  .h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+  .h3 { font-size: 15px; font-weight: 600; }
+  .lbl { font-size: 12px; color: var(--ink2); }
+  .hint { font-size: 12px; color: var(--ink3); }
+  .input { height: 36px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font-size: 14px; line-height: 34px; padding: 0 10px; color: var(--ink); }
+  .input.ph { color: var(--ink3); }
+  .btn { height: 40px; border-radius: 6px; font-size: 14px; font-weight: 600; text-align: center; line-height: 40px; }
+  .btn.pri { background: var(--primary); color: #fff; }
+  .btn.sec { background: #fff; color: var(--ink); border: 1px solid var(--line); line-height: 38px; }
+  .seg { height: 36px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; line-height: 34px; text-align: center; background: #fff; }
+  .seg.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .chip { height: 30px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; line-height: 28px; text-align: center; background: #fff; }
+  .chip.on { background: var(--soft); border-color: var(--ink); font-weight: 600; }
+  .tag { height: 22px; padding: 0 10px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: .05em; line-height: 22px; display: inline-block; }
+  .t-yellow { background: var(--yellow-bg); color: var(--yellow); } .t-green { background: var(--green-bg); color: var(--green); }
+  .t-blue { background: var(--blue-bg); color: var(--blue); } .t-red { background: var(--red-bg); color: var(--red); } .t-gray { background: var(--gray-bg); color: var(--gray); }
+  .step { top: 76px; width: 160px; height: 28px; font-size: 13px; line-height: 28px; color: var(--ink3); }
+  .step i { display: inline-block; width: 22px; height: 22px; border-radius: 999px; border: 1px solid var(--line); text-align: center; line-height: 20px; font-style: normal; font-size: 12px; margin-right: 8px; background: #fff; }
+  .step.on { color: var(--ink); font-weight: 600; } .step.on i { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .step.done { color: var(--ink2); } .step.done i { background: var(--soft); }
+  .footer { left: 0; top: 704px; width: 1366px; height: 64px; background: #fff; border-top: 1px solid var(--line); }
+  .tour { left: 12px; width: 376px; height: 80px; border-radius: 6px; border: 1px solid var(--line); background: #fff; }
+  .tour.on { border-color: var(--ink); background: var(--soft); }
+  .tour .bar { left: 0; top: 0; width: 4px; height: 78px; border-radius: 6px 0 0 6px; }
+  .tour .n { left: 18px; top: 14px; font-size: 15px; font-weight: 600; }
+  .tour .d { left: 18px; top: 42px; font-size: 12px; color: var(--ink2); }
+  .tour .m { right: 12px; top: 14px; }
+  .cal { width: 62px; height: 52px; border-radius: 6px; font-size: 14px; text-align: center; padding-top: 7px; }
+  .cal small { display: block; font-size: 10px; margin-top: 1px; }
+  .cal.ok { border: 1px solid var(--line); background: #fff; } .cal.ok small { color: var(--green); }
+  .cal.full { background: var(--soft); color: var(--ink3); } .cal.full small { color: var(--red); }
+  .cal.off { color: #CFCDC8; } .cal.out { visibility: hidden; }
+  .cal.sel { background: var(--primary); color: #fff; } .cal.sel small { color: #fff; }
+  .slot { left: 12px; width: 342px; height: 84px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+  .slot.on { border-color: var(--ink); background: var(--soft); }
+  .slot.busy { background: var(--soft); color: var(--ink3); }
+  .slot .t { left: 16px; top: 14px; font-size: 15px; font-weight: 600; }
+  .slot .d { left: 16px; top: 44px; font-size: 12px; color: var(--ink2); }
+  .slot .s { right: 12px; top: 14px; }
+  .row { left: 20px; width: 612px; height: 34px; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 34px; }
+  .row span { display: inline-block; width: 130px; color: var(--ink2); font-size: 13px; }
+  .num { width: 24px; height: 24px; border-radius: 999px; background: var(--soft); font-size: 12px; font-weight: 600; text-align: center; line-height: 24px; }
+  .li { left: 20px; width: 400px; height: 86px; border-bottom: 1px solid var(--line); }
+  .li.on { background: var(--soft); border-radius: 6px; }
+  .mono { font-family: Consolas, "Cascadia Mono", monospace; }
+  .th { font-size: 12px; color: var(--ink2); font-weight: 600; }
+  .td { font-size: 13px; }
+  .bar2 { height: 8px; border-radius: 4px; background: var(--soft); overflow: hidden; } .bar2 b { display: block; height: 8px; background: var(--ink); }
+  .chk { width: 18px; height: 18px; border: 1px solid var(--ink); border-radius: 4px; background: var(--primary); color: #fff; font-size: 12px; text-align: center; line-height: 16px; }
+  .chk.off { background: #fff; }
+  .toggle { width: 44px; height: 24px; border-radius: 999px; background: var(--primary); } .toggle b { position: absolute; right: 3px; top: 3px; width: 18px; height: 18px; border-radius: 999px; background: #fff; }
+  .scrim { left: 0; top: 0; width: 1366px; height: 768px; background: rgba(17,17,17,.35); }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <b>TDL 방문 예약 · Power Apps 화면 설계 (1366 × 768)</b>
+  <button data-s="b1" class="on">1 투어 · 일정</button>
+  <button data-s="b2">2 신청 정보</button>
+  <button data-s="b3">3 확인 · 제출</button>
+  <button data-s="done">신청 완료</button>
+  <button data-s="my">내 신청</button>
+  <button data-s="adm">관리자</button>
+  <button data-s="blk">일정 막기 창</button>
+  <span class="note">좌표는 Power Apps 컨트롤의 X · Y 와 같습니다</span>
+</div>
+<div class="stage"><div class="scaler" id="scaler"><div class="app" id="app">
+
+  <!-- 공통 헤더 (header.yaml) -->
+  <div class="abs hdr"></div>
+  <div class="abs mark">TDL</div>
+  <div class="abs apptitle">TDL 방문 예약</div>
+  <div class="abs nav" id="n1" style="left:520px">방문 신청</div>
+  <div class="abs nav" id="n2" style="left:624px">내 신청</div>
+  <div class="abs nav" id="n3" style="left:728px">관리자</div>
+  <div class="abs user">김서연 책임 · CL운영담당</div>
+
+  <!-- ============ 신청 1단계 ============ -->
+  <div class="screen on" id="s-b1">
+    <div class="abs h2" style="left:24px;top:72px">방문 신청</div>
+    <div class="abs step on" style="left:846px"><i>1</i>투어 · 일정</div>
+    <div class="abs step" style="left:1012px"><i>2</i>신청 정보</div>
+    <div class="abs step" style="left:1178px"><i>3</i>확인 · 제출</div>
+
+    <div class="abs card" style="left:24px;top:120px;width:400px;height:568px">
+      <div class="abs h3" style="left:20px;top:16px">투어 선택</div>
+      <div class="abs hint" style="left:110px;top:19px">한 곳 · 여러 곳 6가지</div>
+      <div class="abs tour" style="top:52px"><div class="abs bar" style="background:#7C5CC4"></div><div class="abs n">TDL Lab 투어</div><div class="abs d">TDL Lab만 · 약 1시간</div></div>
+      <div class="abs tour on" style="top:136px"><div class="abs bar" style="background:#1A8FA0"></div><div class="abs n">메가와이즈 센터 투어</div><div class="abs d">메가와이즈 물류센터만 · 약 1시간</div></div>
+      <div class="abs tour" style="top:220px"><div class="abs bar" style="background:#3D5A80"></div><div class="abs n">시화MTV 투어</div><div class="abs d">시화MTV 센터만 · 약 1시간 · 3영업일 전까지</div></div>
+      <div class="abs tour" style="top:304px"><div class="abs bar" style="background:#DC2626"></div><div class="abs n">메가와이즈 + TDL Lab</div><div class="abs d">메가와이즈 센터 → TDL Lab · 약 2시간</div><span class="abs m tag t-gray">여러 곳</span></div>
+      <div class="abs tour" style="top:388px"><div class="abs bar" style="background:#9C6644"></div><div class="abs n">메가와이즈 + 시화MTV</div><div class="abs d">오전 · 오후로 나눠 두 센터 방문</div><span class="abs m tag t-gray">여러 곳</span></div>
+      <div class="abs tour" style="top:472px"><div class="abs bar" style="background:#343A40"></div><div class="abs n">3개 센터 전체</div><div class="abs d">메가와이즈 + TDL Lab + 시화MTV</div><span class="abs m tag t-gray">여러 곳</span></div>
+    </div>
+
+    <div class="abs card" style="left:440px;top:120px;width:520px;height:568px">
+      <div class="abs h3" style="left:20px;top:16px">방문일</div>
+      <div class="abs" style="left:200px;top:14px;font-size:16px;font-weight:600">2026년 10월</div>
+      <div class="abs seg" style="left:420px;top:12px;width:36px;height:32px;line-height:30px">‹</div>
+      <div class="abs seg" style="left:464px;top:12px;width:36px;height:32px;line-height:30px">›</div>
+      <div id="cal"></div>
+      <div class="abs" style="left:22px;top:452px;font-size:12px;color:var(--ink2)">
+        <span class="tag t-green">가능</span>&nbsp; 빈 시간 있음 &nbsp;&nbsp; <span class="tag t-red">마감</span>&nbsp; 모두 예약됨 &nbsp;&nbsp; 흐린 날짜 · 운영 안 함
+      </div>
+      <div class="abs hint" style="left:22px;top:486px;width:476px;line-height:1.6">월 · 수 · 금 운영 · 당일 · 익일 신청 불가 · 공휴일 제외<br>시화MTV 가 들어간 투어는 방문일 3영업일 전까지 신청</div>
+    </div>
+
+    <div class="abs card" style="left:976px;top:120px;width:366px;height:568px">
+      <div class="abs h3" style="left:20px;top:16px">시간 선택</div>
+      <div class="abs lbl" style="left:20px;top:44px">2026년 10월 21일 (수) · 메가와이즈 센터 투어</div>
+      <div class="abs slot" style="top:76px"><div class="abs t">10:00 – 11:00</div><div class="abs d">메가와이즈 센터</div><span class="abs s tag t-green">가능</span></div>
+      <div class="abs slot on" style="top:168px"><div class="abs t">13:00 – 14:00</div><div class="abs d">메가와이즈 센터</div><span class="abs s tag t-green">선택됨</span></div>
+      <div class="abs slot busy" style="top:260px"><div class="abs t">15:00 – 16:00</div><div class="abs d">메가와이즈 센터</div><span class="abs s tag t-red">마감</span></div>
+      <div class="abs" style="left:12px;top:440px;width:342px;height:112px;background:var(--bg);border-radius:6px"></div>
+      <div class="abs lbl" style="left:28px;top:456px">선택한 일정</div>
+      <div class="abs" style="left:28px;top:478px;font-size:15px;font-weight:600">10월 21일 (수) 13:00 – 14:00</div>
+      <div class="abs hint" style="left:28px;top:506px">메가와이즈 센터 투어 · 약 1시간</div>
+    </div>
+
+    <div class="abs footer"></div>
+    <div class="abs" style="left:24px;top:726px;font-size:13px;color:var(--ink2)">메가와이즈 센터 투어 · 2026.10.21 (수) · 13:00 – 14:00</div>
+    <div class="abs btn sec" style="left:1090px;top:716px;width:120px;opacity:.4">이전</div>
+    <div class="abs btn pri" style="left:1222px;top:716px;width:120px">다음</div>
+  </div>
+
+  <!-- ============ 신청 2단계 ============ -->
+  <div class="screen" id="s-b2">
+    <div class="abs h2" style="left:24px;top:72px">방문 신청</div>
+    <div class="abs step done" style="left:846px"><i>1</i>투어 · 일정</div>
+    <div class="abs step on" style="left:1012px"><i>2</i>신청 정보</div>
+    <div class="abs step" style="left:1178px"><i>3</i>확인 · 제출</div>
+
+    <div class="abs card" style="left:24px;top:120px;width:652px;height:568px">
+      <div class="abs h3" style="left:20px;top:16px">신청 담당자</div>
+      <div class="abs hint" style="left:116px;top:19px">회사 계정 정보로 미리 채웠습니다. 다르면 고쳐 주세요.</div>
+      <div class="abs lbl" style="left:20px;top:56px">성함 *</div><div class="abs input" style="left:20px;top:76px;width:296px">김서연</div>
+      <div class="abs lbl" style="left:336px;top:56px">직책 *</div><div class="abs input" style="left:336px;top:76px;width:296px">책임</div>
+      <div class="abs lbl" style="left:20px;top:124px">담당(실) *</div><div class="abs input" style="left:20px;top:144px;width:296px">CL운영담당</div>
+      <div class="abs lbl" style="left:336px;top:124px">조직명(팀) *</div><div class="abs input" style="left:336px;top:144px;width:296px">운영혁신팀</div>
+      <div class="abs lbl" style="left:20px;top:192px">연락처 *</div><div class="abs input" style="left:20px;top:212px;width:296px">010-2345-6789</div>
+      <div class="abs lbl" style="left:336px;top:192px">이메일 *</div><div class="abs input" style="left:336px;top:212px;width:296px">seoyeon.kim@company.com</div>
+      <div class="abs" style="left:20px;top:272px;width:612px;height:1px;background:var(--line)"></div>
+      <div class="abs h3" style="left:20px;top:288px">방문 기관</div>
+      <div class="abs lbl" style="left:20px;top:324px">방문 유형 *</div>
+      <div class="abs seg" style="left:20px;top:346px;width:140px">내부 방문</div>
+      <div class="abs seg on" style="left:168px;top:346px;width:140px">고객 방문</div>
+      <div class="abs lbl" style="left:336px;top:324px">고객 유형 *</div>
+      <div class="abs seg" style="left:336px;top:346px;width:140px">기존 고객사</div>
+      <div class="abs seg on" style="left:484px;top:346px;width:140px">신규 고객사</div>
+      <div class="abs lbl" style="left:20px;top:398px">업체명 *</div><div class="abs input" style="left:20px;top:420px;width:612px">한빛식품</div>
+      <div class="abs lbl" style="left:20px;top:472px">예상 방문 인원 *</div><div class="abs input" style="left:20px;top:494px;width:140px">5</div>
+      <div class="abs hint" style="left:172px;top:504px">참석자 개인정보는 신청 후 Forms 링크로 각자 입력합니다.</div>
+    </div>
+
+    <div class="abs card" style="left:690px;top:120px;width:652px;height:568px">
+      <div class="abs h3" style="left:20px;top:16px">업종 · 방문 목적</div>
+      <div class="abs lbl" style="left:20px;top:52px">업종 * (여러 개 선택)</div>
+      <div id="ind"></div>
+      <div class="abs input ph" style="left:20px;top:188px;width:300px;height:32px;line-height:30px">기타 업종 (직접 입력)</div>
+      <div class="abs lbl" style="left:20px;top:232px">방문 목적 * (여러 개 선택)</div>
+      <div class="abs chip on" style="left:20px;top:254px;width:150px">기존 고객사 Lock-in</div>
+      <div class="abs chip on" style="left:178px;top:254px;width:110px">신규 영업</div>
+      <div class="abs chip" style="left:296px;top:254px;width:80px">교육</div>
+      <div class="abs chip" style="left:384px;top:254px;width:80px">투어</div>
+      <div class="abs lbl" style="left:20px;top:304px">투어 진행 언어 *</div>
+      <div class="abs seg on" style="left:20px;top:326px;width:96px">한국어</div>
+      <div class="abs seg" style="left:122px;top:326px;width:96px">영어</div>
+      <div class="abs seg" style="left:224px;top:326px;width:96px">중국어</div>
+      <div class="abs lbl" style="left:356px;top:304px">고객사 통역 동반</div>
+      <div class="abs toggle" style="left:356px;top:332px"></div>
+      <div class="abs input" style="left:412px;top:326px;width:220px">베트남어</div>
+      <div class="abs lbl" style="left:20px;top:378px">담당자 의견 (선택)</div>
+      <div class="abs input" style="left:20px;top:400px;width:612px;height:140px;line-height:1.6;padding-top:8px">신규 식품 물류 수주 건. 저온 구역과 AMR 피킹 라인 위주로 보고 싶어합니다.</div>
+    </div>
+
+    <div class="abs footer"></div>
+    <div class="abs" style="left:24px;top:726px;font-size:13px;color:var(--ink2)">메가와이즈 센터 투어 · 2026.10.21 (수) · 13:00 – 14:00</div>
+    <div class="abs btn sec" style="left:1090px;top:716px;width:120px">이전</div>
+    <div class="abs btn pri" style="left:1222px;top:716px;width:120px">다음</div>
+  </div>
+
+  <!-- ============ 신청 3단계 ============ -->
+  <div class="screen" id="s-b3">
+    <div class="abs h2" style="left:24px;top:72px">방문 신청</div>
+    <div class="abs step done" style="left:846px"><i>1</i>투어 · 일정</div>
+    <div class="abs step done" style="left:1012px"><i>2</i>신청 정보</div>
+    <div class="abs step on" style="left:1178px"><i>3</i>확인 · 제출</div>
+
+    <div class="abs card" style="left:24px;top:120px;width:652px;height:568px">
+      <div class="abs h3" style="left:20px;top:16px">신청 내용 확인</div>
+      <div id="sum"></div>
+    </div>
+
+    <div class="abs card" style="left:690px;top:120px;width:652px;height:568px">
+      <div class="abs h3" style="left:20px;top:16px">참석자 정보는 Forms 로 받습니다</div>
+      <div class="abs num" style="left:20px;top:56px">1</div><div class="abs" style="left:56px;top:58px;font-size:14px;width:576px">신청하면 참석자 정보 입력용 <b>Forms 링크</b>가 신청 담당자 메일로 갑니다.</div>
+      <div class="abs num" style="left:20px;top:96px">2</div><div class="abs" style="left:56px;top:98px;font-size:14px;width:576px">링크를 참석자에게 전달하면, 참석자가 <b>직접</b> 이름 · 소속 · 연락처를 쓰고 동의합니다.</div>
+      <div class="abs num" style="left:20px;top:136px">3</div><div class="abs" style="left:56px;top:138px;font-size:14px;width:576px">제출된 정보는 자동으로 모이고, 담당자가 승인하면 확정 메일이 갑니다.</div>
+      <div class="abs lbl" style="left:20px;top:192px">참석자 이메일 (선택) · 입력하면 각자에게 링크를 바로 보냅니다</div>
+      <div class="abs input ph" style="left:20px;top:214px;width:612px;height:80px;line-height:1.6;padding-top:8px">kim@hanbitfood.co.kr; lee@hanbitfood.co.kr</div>
+      <div class="abs hint" style="left:20px;top:300px">세미콜론(;)으로 구분 · 메일 발송에만 쓰고 저장하지 않습니다.</div>
+      <div class="abs" style="left:20px;top:340px;width:612px;height:1px;background:var(--line)"></div>
+      <div class="abs chk" style="left:20px;top:360px">✓</div>
+      <div class="abs" style="left:48px;top:358px;font-size:14px;font-weight:600">[필수] 신청 담당자 본인의 개인정보 수집 · 이용에 동의합니다</div>
+      <div class="abs" style="left:20px;top:392px;width:612px;height:150px;background:var(--bg);border-radius:6px;padding:14px 16px;font-size:12px;line-height:1.7;color:var(--ink2)">
+        수집 항목 · 성함, 직책, 담당(실), 조직명, 연락처, 이메일<br>
+        이용 목적 · 방문 일정 조율, 승인 · 확정 안내<br>
+        보관 · 회사 SharePoint (사내 Microsoft 365) · 방문일로부터 1년 뒤 삭제<br>
+        참석자 개인정보는 참석자 본인이 Forms 에서 따로 동의하고 입력합니다.
+      </div>
+    </div>
+
+    <div class="abs footer"></div>
+    <div class="abs" style="left:24px;top:726px;font-size:13px;color:var(--ink2)">메가와이즈 센터 투어 · 2026.10.21 (수) · 13:00 – 14:00</div>
+    <div class="abs btn sec" style="left:1090px;top:716px;width:120px">이전</div>
+    <div class="abs btn pri" style="left:1222px;top:716px;width:120px">신청하기</div>
+  </div>
+
+  <!-- ============ 신청 완료 ============ -->
+  <div class="screen" id="s-done">
+    <div class="abs card" style="left:323px;top:96px;width:720px;height:600px">
+      <div class="abs" style="left:328px;top:36px;width:64px;height:64px;border-radius:999px;background:var(--green-bg);color:var(--green);font-size:30px;text-align:center;line-height:64px">✓</div>
+      <div class="abs" style="left:0;top:120px;width:720px;text-align:center;font-size:22px;font-weight:600">신청이 접수되었습니다</div>
+      <div class="abs" style="left:0;top:158px;width:720px;text-align:center;font-size:14px;color:var(--ink2)">신청번호 <span class="mono" style="color:var(--ink)">V261012-143015</span> · 메가와이즈 센터 투어 · 10월 21일 (수) 13:00 – 14:00</div>
+      <div class="abs lbl" style="left:40px;top:206px">참석자 정보 입력 링크 (Forms)</div>
+      <div class="abs input mono" style="left:40px;top:228px;width:520px;font-size:12px;overflow:hidden;white-space:nowrap">https://forms.office.com/r/aB3dEf9GhJ?r8f2c=V261012-143015</div>
+      <div class="abs btn pri" style="left:572px;top:226px;width:108px">링크 복사</div>
+      <div class="abs hint" style="left:40px;top:274px">같은 링크가 신청 담당자 메일로도 발송되었습니다.</div>
+      <div class="abs" style="left:40px;top:308px;width:640px;height:1px;background:var(--line)"></div>
+      <div class="abs h3" style="left:40px;top:326px">다음 단계</div>
+      <div class="abs num" style="left:40px;top:362px">1</div><div class="abs" style="left:76px;top:364px;font-size:14px">참석자에게 링크를 전달해 주세요</div>
+      <div class="abs num" style="left:40px;top:402px">2</div><div class="abs" style="left:76px;top:404px;font-size:14px">참석자가 직접 정보를 입력합니다 · 제출 현황은 [내 신청]에서 확인</div>
+      <div class="abs num" style="left:40px;top:442px">3</div><div class="abs" style="left:76px;top:444px;font-size:14px">센터 담당자가 승인하면 확정 메일이 갑니다</div>
+      <div class="abs btn sec" style="left:228px;top:516px;width:128px">새 신청</div>
+      <div class="abs btn pri" style="left:364px;top:516px;width:128px">내 신청 보기</div>
+    </div>
+  </div>
+
+  <!-- ============ 내 신청 ============ -->
+  <div class="screen" id="s-my">
+    <div class="abs card" style="left:24px;top:72px;width:520px;height:680px">
+      <div class="abs h3" style="left:20px;top:16px">내 신청</div>
+      <div class="abs hint" style="left:90px;top:19px">최근 순</div>
+      <div class="abs li on" style="top:52px;width:480px"><div class="abs" style="left:16px;top:14px;font-size:15px;font-weight:600">한빛식품</div><div class="abs lbl" style="left:16px;top:42px">10/21 (수) 13:00 · 메가와이즈 센터 투어</div><div class="abs hint" style="left:16px;top:62px">참석자 3 / 5명 제출</div><span class="abs tag t-yellow" style="right:16px;top:14px">대기</span></div>
+      <div class="abs li" style="top:142px;width:480px"><div class="abs" style="left:16px;top:14px;font-size:15px;font-weight:600">CL운영담당 운영혁신팀</div><div class="abs lbl" style="left:16px;top:42px">10/16 (금) 10:30 · TDL Lab 투어</div><div class="abs hint" style="left:16px;top:62px">참석자 8 / 8명 제출</div><span class="abs tag t-green" style="right:16px;top:14px">승인</span></div>
+      <div class="abs li" style="top:232px;width:480px"><div class="abs" style="left:16px;top:14px;font-size:15px;font-weight:600">대성전자</div><div class="abs lbl" style="left:16px;top:42px">09/23 (수) 09:30 · 메가와이즈 + TDL Lab</div><div class="abs hint" style="left:16px;top:62px">참석자 6 / 6명 제출</div><span class="abs tag t-blue" style="right:16px;top:14px">완료</span></div>
+    </div>
+    <div class="abs card" style="left:560px;top:72px;width:782px;height:680px">
+      <div class="abs lbl mono" style="left:28px;top:24px">V261012-143015</div>
+      <div class="abs" style="left:28px;top:44px;font-size:22px;font-weight:600">한빛식품</div>
+      <span class="abs tag t-yellow" style="left:150px;top:51px">대기</span>
+      <div class="abs" style="left:28px;top:84px;font-size:14px;color:var(--ink2)">메가와이즈 센터 투어 · 2026년 10월 21일 (수) 13:00 – 14:00</div>
+      <div class="abs" style="left:28px;top:124px;width:726px;height:1px;background:var(--line)"></div>
+      <div class="abs h3" style="left:28px;top:144px">참석자 정보 제출 현황</div>
+      <div class="abs" style="left:28px;top:176px;font-size:28px;font-weight:600">3 <span style="font-size:15px;color:var(--ink2);font-weight:400">/ 5명</span></div>
+      <div class="abs bar2" style="left:28px;top:222px;width:726px"><b style="width:60%"></b></div>
+      <div class="abs hint" style="left:28px;top:240px">참석자 이름 · 연락처는 개인정보 보호를 위해 센터 담당자만 볼 수 있습니다.</div>
+      <div class="abs lbl" style="left:28px;top:280px">참석자 정보 입력 링크</div>
+      <div class="abs input mono" style="left:28px;top:302px;width:600px;font-size:12px;overflow:hidden;white-space:nowrap">https://forms.office.com/r/aB3dEf9GhJ?r8f2c=V261012-143015</div>
+      <div class="abs btn pri" style="left:642px;top:300px;width:112px">링크 복사</div>
+      <div class="abs" style="left:28px;top:368px;width:726px;height:1px;background:var(--line)"></div>
+      <div class="abs h3" style="left:28px;top:388px">신청 내용</div>
+      <div class="abs row" style="left:28px;top:420px;width:726px"><span>신청 담당자</span>김서연 책임 · CL운영담당 운영혁신팀</div>
+      <div class="abs row" style="left:28px;top:454px;width:726px"><span>방문 유형</span>고객 방문 · 신규 고객사</div>
+      <div class="abs row" style="left:28px;top:488px;width:726px"><span>업종 · 목적</span>식품 · 기존 고객사 Lock-in, 신규 영업</div>
+      <div class="abs row" style="left:28px;top:522px;width:726px"><span>언어</span>한국어 · 통역 동반(베트남어)</div>
+      <div class="abs btn sec" style="left:614px;top:612px;width:140px;color:var(--red)">신청 취소</div>
+    </div>
+  </div>
+
+  <!-- ============ 관리자 ============ -->
+  <div class="screen" id="s-adm">
+    <div class="abs card" style="left:24px;top:72px;width:440px;height:680px">
+      <div class="abs h3" style="left:20px;top:16px">예약 요청</div>
+      <div class="abs hint" style="left:100px;top:19px">메가와이즈 · TDL Lab</div>
+      <div class="abs btn sec" style="left:320px;top:10px;width:100px;height:32px;line-height:30px;font-size:13px">일정 막기</div>
+      <div class="abs seg on" style="left:20px;top:52px;width:96px;height:32px;line-height:30px;font-size:13px">대기 4</div>
+      <div class="abs seg" style="left:122px;top:52px;width:96px;height:32px;line-height:30px;font-size:13px">승인</div>
+      <div class="abs seg" style="left:224px;top:52px;width:96px;height:32px;line-height:30px;font-size:13px">전체</div>
+      <div class="abs input ph" style="left:20px;top:96px;width:400px">업체명 · 신청자 · 신청번호 검색</div>
+      <div class="abs li on" style="top:144px"><div class="abs" style="left:16px;top:14px;font-size:15px;font-weight:600">한빛식품</div><div class="abs lbl" style="left:16px;top:42px">10/21 (수) 13:00 · 메가와이즈 센터 투어</div><div class="abs hint" style="left:16px;top:62px">김서연 책임 · 참석자 3/5</div><span class="abs tag t-yellow" style="right:16px;top:14px">대기</span></div>
+      <div class="abs li" style="top:234px"><div class="abs" style="left:16px;top:14px;font-size:15px;font-weight:600">대한화학</div><div class="abs lbl" style="left:16px;top:42px">10/23 (금) 10:00 · 메가와이즈 + 시화MTV</div><div class="abs hint" style="left:16px;top:62px">박준호 선임 · 참석자 0/4 · 시화MTV 승인 대기</div><span class="abs tag t-yellow" style="right:16px;top:14px">대기</span></div>
+      <div class="abs li" style="top:324px"><div class="abs" style="left:16px;top:14px;font-size:15px;font-weight:600">CL전자담당 기획팀</div><div class="abs lbl" style="left:16px;top:42px">10/26 (월) 14:00 · TDL Lab 투어</div><div class="abs hint" style="left:16px;top:62px">이도윤 책임 · 참석자 2/3</div><span class="abs tag t-yellow" style="right:16px;top:14px">대기</span></div>
+      <div class="abs li" style="top:414px"><div class="abs" style="left:16px;top:14px;font-size:15px;font-weight:600">서진유통</div><div class="abs lbl" style="left:16px;top:42px">10/28 (수) 09:30 · 3개 센터 전체</div><div class="abs hint" style="left:16px;top:62px">정하은 매니저 · 참석자 5/7</div><span class="abs tag t-yellow" style="right:16px;top:14px">대기</span></div>
+    </div>
+    <div class="abs card" style="left:480px;top:72px;width:862px;height:680px">
+      <div class="abs lbl mono" style="left:28px;top:24px">V261012-143015 · 2026.10.12 신청</div>
+      <div class="abs" style="left:28px;top:44px;font-size:22px;font-weight:600">한빛식품</div>
+      <span class="abs tag t-yellow" style="left:150px;top:51px">대기</span>
+      <div class="abs btn sec" style="left:598px;top:40px;width:110px;color:var(--red)">거절</div>
+      <div class="abs btn pri" style="left:720px;top:40px;width:110px">승인</div>
+      <div class="abs row" style="left:28px;top:96px;width:396px"><span style="width:90px">일정</span>10/21 (수) 13:00 – 14:00</div>
+      <div class="abs row" style="left:434px;top:96px;width:396px"><span style="width:90px">투어</span>메가와이즈 센터 투어</div>
+      <div class="abs row" style="left:28px;top:130px;width:396px"><span style="width:90px">신청자</span>김서연 책임 · 010-2345-6789</div>
+      <div class="abs row" style="left:434px;top:130px;width:396px"><span style="width:90px">소속</span>CL운영담당 운영혁신팀</div>
+      <div class="abs row" style="left:28px;top:164px;width:396px"><span style="width:90px">방문 유형</span>고객 · 신규</div>
+      <div class="abs row" style="left:434px;top:164px;width:396px"><span style="width:90px">언어</span>한국어 · 통역 동반(베트남어)</div>
+      <div class="abs row" style="left:28px;top:198px;width:802px"><span style="width:90px">업종 · 목적</span>식품 · 기존 고객사 Lock-in, 신규 영업</div>
+      <div class="abs row" style="left:28px;top:232px;width:802px;height:52px;line-height:1.5;padding-top:7px"><span style="width:90px;vertical-align:top">의견</span>신규 식품 물류 수주 건. 저온 구역과 AMR 피킹 라인 위주로 보고 싶어합니다.</div>
+      <div class="abs h3" style="left:28px;top:304px">참석자 <span style="color:var(--ink2);font-weight:400">3 / 5명 제출 · Forms</span></div>
+      <div class="abs" style="left:28px;top:336px;width:802px;height:32px;background:var(--bg);border-radius:6px"></div>
+      <div class="abs th" style="left:40px;top:344px">성함</div><div class="abs th" style="left:150px;top:344px">직책</div><div class="abs th" style="left:250px;top:344px">소속</div><div class="abs th" style="left:380px;top:344px">이메일</div><div class="abs th" style="left:600px;top:344px">차량번호</div><div class="abs th" style="left:710px;top:344px">제출</div>
+      <div id="att"></div>
+      <div class="abs lbl" style="left:28px;top:500px">관리자 메모 (거절 시 사유는 신청자 메일에 들어갑니다)</div>
+      <div class="abs input ph" style="left:28px;top:522px;width:690px;height:80px;line-height:1.6;padding-top:8px">안내 가이드 · 특이사항</div>
+      <div class="abs btn sec" style="left:730px;top:522px;width:100px">메모 저장</div>
+      <div class="abs hint" style="left:28px;top:620px">승인하면 해당 시간이 예약 달력에서 마감 처리되고, 신청자에게 확정 메일이 갑니다.</div>
+    </div>
+  </div>
+
+  <!-- ============ 일정 막기 ============ -->
+  <div class="screen" id="s-blk">
+    <div class="abs card" style="left:24px;top:72px;width:440px;height:680px"></div>
+    <div class="abs card" style="left:480px;top:72px;width:862px;height:680px"></div>
+    <div class="abs scrim"></div>
+    <div class="abs card" style="left:443px;top:154px;width:480px;height:460px">
+      <div class="abs h3" style="left:24px;top:20px">일정 막기</div>
+      <div class="abs hint" style="left:24px;top:46px">휴무 · 행사 등으로 투어를 받을 수 없는 시간을 막습니다.</div>
+      <div class="abs lbl" style="left:24px;top:84px">날짜</div><div class="abs input" style="left:24px;top:104px;width:200px">2026-10-30</div>
+      <div class="abs lbl" style="left:24px;top:156px">공간</div>
+      <div class="abs seg on" style="left:24px;top:176px;width:104px;font-size:13px">메가와이즈</div>
+      <div class="abs seg" style="left:132px;top:176px;width:104px;font-size:13px">TDL Lab</div>
+      <div class="abs seg" style="left:240px;top:176px;width:104px;font-size:13px">센터 · Lab</div>
+      <div class="abs seg" style="left:348px;top:176px;width:104px;font-size:13px">시화MTV</div>
+      <div class="abs lbl" style="left:24px;top:228px">시간</div>
+      <div class="abs seg on" style="left:24px;top:248px;width:140px;font-size:13px">종일</div>
+      <div class="abs seg" style="left:170px;top:248px;width:140px;font-size:13px">오전</div>
+      <div class="abs seg" style="left:316px;top:248px;width:136px;font-size:13px">오후</div>
+      <div class="abs lbl" style="left:24px;top:300px">사유</div><div class="abs input" style="left:24px;top:320px;width:428px">센터 정기 점검</div>
+      <div class="abs btn sec" style="left:236px;top:392px;width:104px">닫기</div>
+      <div class="abs btn pri" style="left:348px;top:392px;width:104px">막기</div>
+    </div>
+  </div>
+
+</div></div></div>
+<script>
+  // 달력 (2026년 10월, 일요일 시작 6주)
+  (function () {
+    const host = document.getElementById('cal')
+    const wd = ['일','월','화','수','목','금','토']
+    let html = wd.map((w, i) => `<div class="abs lbl" style="left:${22 + i * 68}px;top:64px;width:68px;text-align:center">${w}</div>`).join('')
+    const start = new Date(2026, 8, 27)
+    const full = ['2026-10-16', '2026-10-30'], hol = ['2026-10-05', '2026-10-09']
+    for (let n = 0; n < 42; n++) {
+      const d = new Date(start); d.setDate(start.getDate() + n)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const inMonth = d.getMonth() === 9, open = [1, 3, 5].includes(d.getDay()) && key >= '2026-10-14' && !hol.includes(key)
+      let cls = 'off', sub = ''
+      if (!inMonth) cls = 'out'
+      else if (open && full.includes(key)) { cls = 'full'; sub = '마감' }
+      else if (open) { cls = 'ok'; sub = '가능' }
+      if (key === '2026-10-21') { cls = 'sel'; sub = '선택' }
+      html += `<div class="abs cal ${cls}" style="left:${25 + (n % 7) * 68}px;top:${91 + Math.floor(n / 7) * 58}px">${d.getDate()}<small>${sub}</small></div>`
+    }
+    host.innerHTML = html
+  })()
+  // 업종 칩 (5열)
+  ;(function () {
+    const items = ['제조','전자','가전','자동차','화학','식품','화장품','의류','제약/헬스케어','가구/인테리어','유통','이커머스','CVS/편의점','물류']
+    document.getElementById('ind').innerHTML = items.map((t, i) =>
+      `<div class="abs chip ${t === '식품' ? 'on' : ''}" style="left:${20 + (i % 5) * 123}px;top:${74 + Math.floor(i / 5) * 36}px;width:117px">${t}</div>`).join('')
+  })()
+  // 확인 표
+  ;(function () {
+    const rows = [['투어','메가와이즈 센터 투어'],['일정','2026년 10월 21일 (수) 13:00 – 14:00'],['신청 담당자','김서연 책임'],['소속','CL운영담당 운영혁신팀'],['연락처','010-2345-6789 · seoyeon.kim@company.com'],['방문 유형','고객 방문 · 신규 고객사'],['업체명','한빛식품'],['업종','식품'],['방문 목적','기존 고객사 Lock-in, 신규 영업'],['진행 언어','한국어 · 통역 동반(베트남어)'],['예상 인원','5명'],['담당자 의견','신규 식품 물류 수주 건. 저온 구역과 AMR 피킹…']]
+    document.getElementById('sum').innerHTML = rows.map((r, i) => `<div class="abs row" style="top:${56 + i * 36}px"><span>${r[0]}</span>${r[1]}</div>`).join('')
+      + '<div class="abs hint" style="left:20px;top:500px">고칠 내용이 있으면 [이전]으로 돌아가세요.</div>'
+  })()
+  // 참석자 표
+  ;(function () {
+    const rows = [['최민준','부장','한빛식품 물류기획팀','mj.choi@hanbitfood.co.kr','12가 3456','10/13 09:12'],['한지우','차장','한빛식품 SCM팀','jw.han@hanbitfood.co.kr','-','10/13 10:40'],['오세린','과장','한빛식품 구매팀','sr.oh@hanbitfood.co.kr','-','10/13 14:05']]
+    document.getElementById('att').innerHTML = rows.map((r, i) => {
+      const y = 376 + i * 36, xs = [40, 150, 250, 380, 600, 710]
+      return r.map((c, j) => `<div class="abs td" style="left:${xs[j]}px;top:${y + 8}px">${c}</div>`).join('') + `<div class="abs" style="left:28px;top:${y + 35}px;width:802px;height:1px;background:var(--line)"></div>`
+    }).join('')
+  })()
+  // 화면 전환 · 크기 맞춤
+  const navOf = { b1: 'n1', b2: 'n1', b3: 'n1', done: 'n1', my: 'n2', adm: 'n3', blk: 'n3' }
+  document.querySelectorAll('.toolbar button').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('.toolbar button').forEach((x) => x.classList.toggle('on', x === b))
+    document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('on', s.id === 's-' + b.dataset.s))
+    document.querySelectorAll('.nav').forEach((n) => n.classList.toggle('on', n.id === navOf[b.dataset.s]))
+  }))
+  document.getElementById('n1').classList.add('on')
+  function fit() {
+    const s = Math.min(1, (window.innerWidth - 32) / 1366)
+    const el = document.getElementById('scaler'); el.style.transform = `scale(${s})`; el.style.marginBottom = (768 * s - 768) + "px"
+  }
+  window.addEventListener('resize', fit); fit()
+  const start = document.querySelector(`.toolbar button[data-s="${location.hash.slice(1)}"]`)
+  if (start) start.click()
+</script>
+</body>
+</html>

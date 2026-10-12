@@ -1,0 +1,33 @@
+// =====================================================================
+//  App.OnStart  (트리 뷰 → App 선택 → 속성 드롭다운 'OnStart' 에 붙여넣기)
+//  앱이 열릴 때 한 번 실행됩니다. 붙여넣은 뒤 App 의 '...' → 'OnStart 실행' 을 눌러 주세요.
+// =====================================================================
+
+// 로그인한 사람의 회사 계정 정보 (신청 담당자 칸을 미리 채움)
+Set(gMe, Office365Users.MyProfileV2());
+
+// 관리자 여부: TourAdmins 목록에 있으면 "main" · "mtv" · "hq", 없으면 빈 값
+Set(gAdminSite, LookUp(TourAdmins, Title = Lower(User().Email), Site));
+
+// 신청 화면 상태
+Set(gStep, 1);
+Set(gTour, First(Tours));
+Set(gMonth, Date(Year(EarliestBase), Month(EarliestBase), 1));
+Set(gDate, Blank());
+Set(gSlot, Blank());
+Set(gCategory, "external");
+Set(gClientType, "");
+Set(gLang, "ko");
+Set(gNeedReset, false);
+Set(gShowBlock, false);
+Set(gAdminFilter, "대기");
+Set(gSel, Blank());
+Set(gBlockTarget, "메가와이즈");
+Set(gBlockTime, "종일");
+
+// 다중 선택 칩: 형식만 잡고 비운다
+ClearCollect(colIndustries, {Value: ""}); Clear(colIndustries);
+ClearCollect(colPurposes, {Value: ""}); Clear(colPurposes);
+
+// 이번 달 예약 점유 · 막힌 일정 (개인정보 없음)
+ClearCollect(colBusy, Filter(TourBusy, MonthKey = Text(gMonth, "yyyy-mm")))
