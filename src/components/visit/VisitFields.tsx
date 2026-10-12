@@ -19,6 +19,7 @@ import {
   type VisitDraft,
   type VisitHost,
   type Visitor,
+  MTV_ENABLED,
 } from '@/lib/visit'
 
 type Patch = (patch: Partial<VisitDraft>) => void
@@ -341,8 +342,9 @@ export function PrivacyConsent({
         </p>
         <p className="mt-2 font-semibold text-warm-800">4. 제3자 제공</p>
         <p>
-          수집한 개인정보는 위 목적 외로 이용하거나 제3자에게 제공하지 않습니다. 방문 센터(메가와이즈 · TDL Lab ·
-          시화MTV)는 모두 LX Pantos가 운영하며, 해당 센터의 담당자만 예약 정보를 확인합니다.
+          수집한 개인정보는 위 목적 외로 이용하거나 제3자에게 제공하지 않습니다. 방문 센터(
+          {MTV_ENABLED ? '메가와이즈 · TDL Lab · 시화MTV' : '메가와이즈 · TDL Lab'})는 모두 LX Pantos가 운영하며, 해당 센터의
+          담당자만 예약 정보를 확인합니다.
         </p>
         <p className="mt-2 font-semibold text-warm-800">5. 동의 거부 권리 및 불이익</p>
         <p>

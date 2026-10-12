@@ -154,6 +154,11 @@ Apps Script 편집기에서 **배포 → 배포 관리 → 편집(연필) → �
 
 ## 방문 예약 규칙
 
+> **시화MTV 는 현재 닫혀 있습니다.** `Code.gs` 와 `src/lib/visit.ts` 의 `MTV_ENABLED = false` 라서 예약 화면 · 방명록 ·
+> 관리자 화면에 시화MTV 가 들어간 투어가 나오지 않고, `/admin-mtv/` · `/admin-hq/` 는 '준비 중' 안내만 보여줍니다.
+> 서버도 시화MTV 투어 신청과 `MTV_ADMIN_KEY` · `HQ_ADMIN_KEY` 로그인을 받지 않습니다. 열 때는 두 파일의 값을 `true` 로
+> 바꾸고 Apps Script 를 재배포하면 아래 시화MTV 관련 규칙이 모두 그대로 동작합니다.
+
 투어 종류와 시간은 `Code.gs` 상단 `TOURS` 와 `src/lib/visit.ts` 의 `TOURS` 에 같은 값으로
 정의되어 있습니다. 바꿀 때는 **두 곳을 함께** 수정하세요.
 

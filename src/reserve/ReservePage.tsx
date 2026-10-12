@@ -4,6 +4,7 @@ import { Logo } from '@/components/ui/Logo'
 import { ReservationForm } from '@/components/visit/ReservationForm'
 import { fetchSchedule, isLiveBackend, readCachedSchedule, type Schedule } from '@/lib/labApi'
 import { GUESTBOOK_URL, RESERVE_URL } from '@/lib/routes'
+import { MTV_ENABLED } from '@/lib/visit'
 
 const STEPS = [
   { icon: Send, title: '예약 신청', text: '투어 · 일정 · 방문자 정보를 입력합니다.' },
@@ -63,7 +64,10 @@ export default function ReservePage() {
             <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-brand">Center · TDL Lab · Visit Reservation</p>
             <h1 className="mt-2 text-3xl font-bold text-warm-800 md:text-4xl">센터 · TDL Lab 방문 예약</h1>
             <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-warm-600">
-              <span className="block">메가와이즈 · 시화MTV 물류센터와 TDL Lab에서 검증된 물류 기술을 직접 확인하세요.</span>
+              <span className="block">
+                {MTV_ENABLED ? '메가와이즈 · 시화MTV 물류센터' : '메가와이즈 물류센터'}와 TDL Lab에서 검증된 물류 기술을 직접
+                확인하세요.
+              </span>
               <span className="block">
                 방문은 <b className="text-warm-800">월 · 수 · 금</b>에 운영됩니다.
               </span>
