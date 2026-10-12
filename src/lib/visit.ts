@@ -445,6 +445,8 @@ export interface VisitDraft {
   visitors: Visitor[]
   note: string
   consent: boolean
+  /** 신청자가 방문자 명단의 분들께 안내하고 동의를 받았음을 확인 (웹 예약 필수, 이전 기록 · 수기 등록에는 없다) */
+  visitorConsent?: boolean
 }
 
 export interface VisitRequest extends VisitDraft {
@@ -860,7 +862,11 @@ export function sectionProblems(draft: VisitDraft): Record<FormSection, string |
     company,
     purpose,
     visitors,
-    consent: draft.consent ? null : '개인정보 수집 · 이용에 동의해 주세요.',
+    consent: !draft.consent
+      ? '개인정보 수집 · 이용에 동의해 주세요.'
+      : !draft.visitorConsent
+        ? '방문자 분들께 안내하고 동의를 받았음을 확인해 주세요.'
+        : null,
   }
 }
 
@@ -877,7 +883,7 @@ export function firstProblem(draft: VisitDraft): { section: FormSection; message
 /**
  * 비어 있거나 형식이 틀린 입력 칸 목록. 제출을 시도한 뒤 칸마다 빨간 테두리를 그리는 데 쓴다.
  * 키: date · slot · host.name … · clientType · company · industries · purposes · language
- *     · visitor.<번호>.name|title|org|email · consent
+ *     · visitor.<번호>.name|title|org|email · consent · visitorConsent
  */
 export function missingFields(draft: VisitDraft): Set<string> {
   const missing = new Set<string>()
@@ -903,6 +909,7 @@ export function missingFields(draft: VisitDraft): Set<string> {
     mark(`visitor.${index}.email`, !EMAIL.test(visitor.email.trim()))
   })
   mark('consent', !draft.consent)
+  mark('visitorConsent', !draft.visitorConsent)
   return missing
 }
 

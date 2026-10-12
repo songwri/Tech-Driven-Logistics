@@ -87,6 +87,7 @@ export function RequestModal({ site, readOnly, request, requests, onClose, onSet
     const problem = validateVisitDraft({
       ...draft,
       consent: true,
+      visitorConsent: true,
       host: { ...draft.host, division: draft.host.division || '-' },
     })
     if (problem) {

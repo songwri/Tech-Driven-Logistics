@@ -89,7 +89,7 @@ var ADMIN_URL = SITE_URL + 'admin/';
 var ADMIN_URLS = { main: ADMIN_URL, mtv: SITE_URL + 'admin-mtv/', hq: SITE_URL + 'admin-hq/' };
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-12.mtv-lead-days';
+var CODE_VERSION = '2026-10-12.visitor-consent';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -227,7 +227,7 @@ var VISIT_HEADERS = [
   '방문인원', '방문자명단', '요청사항', '개인정보동의', '관리자메모', '토큰', '수정일시', '방문자JSON',
   '투어언어', '외국어', '통역동반', '출처', '주요인원', '가이드', '유관부서', '후속진행',
   // 새 열은 기존 시트와 맞도록 맨 뒤에 붙인다 (시트를 열면 제목이 자동으로 추가된다).
-  '담당(실)', '통역언어', '실제방문인원', '센터별승인',
+  '담당(실)', '통역언어', '실제방문인원', '센터별승인', '방문자동의확인',
 ];
 var BLOCKED_HEADERS = ['날짜', '시간대(비우면 종일)', '사유', '대상(all/center/lab/mtv)', 'id'];
 
@@ -782,6 +782,7 @@ function rowToRequest_(row, col) {
     visitors: visitors,
     note: String(get('요청사항')),
     consent: String(get('개인정보동의')).trim() !== '',
+    visitorConsent: String(get('방문자동의확인')).trim() !== '',
     adminMemo: String(get('관리자메모')),
     source: String(get('출처')).trim() === '수기' ? 'manual' : 'web',
     headcount: headcountFromCell_(get('방문인원')),
@@ -1132,7 +1133,14 @@ function addReservation_(payload) {
     // 잠금 안에서 계산해야 동시에 들어온 예약끼리 같은 행을 덮어쓰지 않는다.
     var rowNumber = target.getLastRow() + 1;
     if (rowNumber > target.getMaxRows()) target.insertRowsAfter(target.getMaxRows(), 1);
-    writeVisit_(rowNumber, request, { '신청일시': now, '토큰': token, '개인정보동의': now });
+    // 신청자가 '방문자 분들께 안내하고 동의를 받았음'을 확인한 시각도 남긴다 (대리 입력 동의의 확인 기록).
+    // 이전 예약 화면은 이 값을 보내지 않으므로 신청을 막지는 않고, 확인한 경우에만 기록한다.
+    writeVisit_(rowNumber, request, {
+      '신청일시': now,
+      '토큰': token,
+      '개인정보동의': now,
+      '방문자동의확인': payload.visitorConsent === true ? now : '',
+    });
 
     // 저장이 실제로 됐는지 확인한다. 실패했는데 메일만 나가는 일이 없도록.
     SpreadsheetApp.flush();
