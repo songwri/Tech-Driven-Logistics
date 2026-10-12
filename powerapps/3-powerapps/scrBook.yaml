@@ -302,10 +302,10 @@
       - lblToursHint:
           Control: Label@2.5.1
           Properties:
-            Text: ="한 곳 · 여러 곳 6가지"
+            Text: =If(MtvEnabled, "한 곳 · 여러 곳 6가지", "시화MTV 투어는 준비 중입니다")
             X: =110
             Y: =19
-            Width: =200
+            Width: =270
             Height: =20
             Font: =fnt
             Size: =9
@@ -318,7 +318,7 @@
           Control: Gallery@2.15.0
           Variant: Vertical
           Properties:
-            Items: =Tours
+            Items: =OpenTours
             X: =12
             Y: =52
             Width: =376
@@ -732,7 +732,7 @@
       - lblCalRule:
           Control: Label@2.5.1
           Properties:
-            Text: ="월 · 수 · 금 운영 · 당일 · 익일 신청 불가 · 공휴일 제외" & Char(10) & "시화MTV 가 들어간 투어는 방문일 3영업일 전까지 신청"
+            Text: ="월 · 수 · 금 운영 · 당일 · 익일 신청 불가 · 공휴일 제외" & If(MtvEnabled, Char(10) & "시화MTV 가 들어간 투어는 방문일 3영업일 전까지 신청", "")
             X: =22
             Y: =486
             Width: =476

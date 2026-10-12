@@ -1530,7 +1530,7 @@
                         RadiusTopRight: =6
                         RadiusBottomLeft: =6
                         RadiusBottomRight: =6
-                        DisplayMode: =If(gAdminSite = "mtv" && ThisItem.Value <> "시화MTV" || gAdminSite = "main" && ThisItem.Value = "시화MTV", DisplayMode.Disabled, DisplayMode.Edit)
+                        DisplayMode: =If(gAdminSite = "mtv" && ThisItem.Value <> "시화MTV" || gAdminSite = "main" && ThisItem.Value = "시화MTV" || !MtvEnabled && ThisItem.Value = "시화MTV", DisplayMode.Disabled, DisplayMode.Edit)
             - lblBlockTime:
                 Control: Label@2.5.1
                 Properties:

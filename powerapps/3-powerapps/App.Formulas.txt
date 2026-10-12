@@ -8,6 +8,11 @@
 // 예) "https://forms.office.com/Pages/ResponsePage.aspx?id=AbCd...&r1a2b3c4d=REQNO"
 FormsPrefillUrl = "https://forms.office.com/Pages/ResponsePage.aspx?id=여기에_폼ID&r여기에_질문ID=REQNO";
 
+// 시화MTV 예약을 열지 여부. 웹 버전(src/lib/visit.ts · apps-script/Code.gs)의 MTV_ENABLED 와 같은 스위치입니다.
+// false: 시화MTV 가 들어간 투어 3종을 신청 화면에서 숨기고, 시화MTV · 통합 관제(mtv · hq) 관리자는 들어올 수 없습니다.
+// 열 때는 true 로만 바꾸면 시간표 · 3영업일 규칙 · 센터별 승인이 모두 그대로 동작합니다.
+MtvEnabled = false;
+
 // ---------- 2. 디자인 토큰 (색 · 글꼴) ----------
 cBg = ColorValue("#F7F6F3");          // 화면 바탕 (따뜻한 오프화이트)
 cSurface = ColorValue("#FFFFFF");     // 카드
@@ -45,6 +50,9 @@ Tours = Table(
     {Id: "center_mtv", Name: "메가와이즈 + 시화MTV", Desc: "오전 · 오후로 나눠 두 센터 방문", Multi: true, Main: true, Mtv: true, Color: ColorValue("#9C6644")},
     {Id: "all3", Name: "3개 센터 전체", Desc: "메가와이즈 + TDL Lab + 시화MTV", Multi: true, Main: true, Mtv: true, Color: ColorValue("#343A40")}
 );
+
+// 신청 화면에 보이는 투어 (시화MTV 를 닫아 두면 TDL Lab · 메가와이즈 · 메가와이즈 + TDL Lab 3종)
+OpenTours = Filter(Tours, MtvEnabled || !Mtv);
 
 // ---------- 4. 투어별 시간대와 공간 점유 ----------
 // 시간은 '자정부터 몇 분' 으로 적습니다 (600 = 10:00). -1 = 그 공간을 쓰지 않음.

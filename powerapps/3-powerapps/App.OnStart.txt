@@ -7,7 +7,8 @@
 Set(gMe, Office365Users.MyProfileV2());
 
 // 관리자 여부: TourAdmins 목록에 있으면 "main" · "mtv" · "hq", 없으면 빈 값
-Set(gAdminSite, LookUp(TourAdmins, Title = Lower(User().Email), Site));
+// 시화MTV 를 닫아 두면(MtvEnabled = false) 시화MTV · 통합 관제 관리자는 아직 들어올 수 없다 (웹의 '준비 중' 과 같음)
+Set(gAdminSite, With({site: LookUp(TourAdmins, Title = Lower(User().Email), Site)}, If(MtvEnabled || site = "main", site, Blank())));
 
 // 신청 화면 상태
 Set(gStep, 1);
