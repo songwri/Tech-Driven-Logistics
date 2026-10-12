@@ -46,6 +46,7 @@ const initialDraft = (): VisitDraft => ({
   visitors: [emptyVisitor()],
   note: '',
   consent: false,
+  visitorConsent: false,
 })
 
 function trimDraft(draft: VisitDraft): VisitDraft {
@@ -428,6 +429,9 @@ export function ReservationForm({ busy, closedDays, scheduleLoading }: Reservati
           checked={draft.consent}
           onChange={(consent) => patch({ consent })}
           invalid={Boolean(errors?.has('consent'))}
+          visitorChecked={Boolean(draft.visitorConsent)}
+          onVisitorChange={(visitorConsent) => patch({ visitorConsent })}
+          visitorInvalid={Boolean(errors?.has('visitorConsent'))}
         />
         <p className="mt-4 border-l-2 border-brand bg-cream px-4 py-3 text-[13px] text-warm-800">
           예약 신청 시 담당자에게 승인 요청이 전달되며, 일정 확정 후 입력하신 이메일로 확정 안내가 발송됩니다.

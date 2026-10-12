@@ -258,19 +258,68 @@ export function HostFields({
 
 /* ---------------------------------------------------- 개인정보 동의 */
 
-export function PrivacyConsent({
+/** 동의 체크 한 줄 (필수) */
+function ConsentCheck({
   checked,
   onChange,
   invalid,
+  children,
 }: {
   checked: boolean
   onChange: (checked: boolean) => void
   invalid?: boolean
+  children: ReactNode
+}) {
+  return (
+    <label
+      className={cn(
+        'flex cursor-pointer items-center gap-3 border px-4 py-3.5 text-[15px] text-warm-800 transition',
+        checked
+          ? 'border-brand bg-brand/5'
+          : invalid
+            ? 'border-brand/70 bg-brand/[0.03]'
+            : 'border-warm-300/70 bg-white hover:border-warm-600/60',
+      )}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        aria-invalid={invalid || undefined}
+        className="h-5 w-5 shrink-0 accent-[var(--color-brand)]"
+      />
+      <span>
+        {children}
+        <span className="text-brand"> *</span>
+      </span>
+    </label>
+  )
+}
+
+/**
+ * 개인정보 수집 · 이용 동의.
+ * 신청자가 방문자 여러 명의 정보를 대신 입력하므로, 신청자 본인 동의와 별도로
+ * '방문자 분들께 안내하고 동의를 받았음'을 따로 확인받는다 (확인 시각은 시트에 남는다).
+ */
+export function PrivacyConsent({
+  checked,
+  onChange,
+  invalid,
+  visitorChecked,
+  onVisitorChange,
+  visitorInvalid,
+}: {
+  checked: boolean
+  onChange: (checked: boolean) => void
+  invalid?: boolean
+  visitorChecked: boolean
+  onVisitorChange: (checked: boolean) => void
+  visitorInvalid?: boolean
 }) {
   return (
     <div>
       <div
-        className="h-40 overflow-y-auto border border-warm-300/60 bg-cream/60 px-4 py-3 text-[12px] leading-relaxed text-warm-600"
+        className="h-48 overflow-y-auto border border-warm-300/60 bg-cream/60 px-4 py-3 text-[12px] leading-relaxed text-warm-600"
         tabIndex={0}
         aria-label="개인정보 수집·이용 동의 내용"
       >
@@ -281,7 +330,7 @@ export function PrivacyConsent({
         <p className="mt-2 font-semibold text-warm-800">1. 수집 항목</p>
         <p>
           · 담당자: 성함, 직책, 조직명, 연락처, 이메일
-          <br />· 방문자: 성함, 직책, 조직명, 이메일, 방문 차량번호, 직무 구분
+          <br />· 방문자: 성함, 직책, 조직명, 이메일, 방문 차량번호(선택), 직무 구분(선택)
         </p>
         <p className="mt-2 font-semibold text-warm-800">2. 수집 · 이용 목적</p>
         <p>방문 예약 접수 및 일정 확정 안내, 출입 등록 및 주차 등록, 방문 현황 통계(개인 식별 불가 형태)</p>
@@ -291,38 +340,35 @@ export function PrivacyConsent({
           동안 보관합니다.
         </p>
         <p className="mt-2 font-semibold text-warm-800">4. 제3자 제공</p>
-        <p>수집한 개인정보는 위 목적 외로 이용하거나 제3자에게 제공하지 않습니다.</p>
+        <p>
+          수집한 개인정보는 위 목적 외로 이용하거나 제3자에게 제공하지 않습니다. 방문 센터(메가와이즈 · TDL Lab ·
+          시화MTV)는 모두 LX Pantos가 운영하며, 해당 센터의 담당자만 예약 정보를 확인합니다.
+        </p>
         <p className="mt-2 font-semibold text-warm-800">5. 동의 거부 권리 및 불이익</p>
         <p>
           개인정보 수집 · 이용에 대한 동의를 거부할 권리가 있습니다. 다만 필수 항목에 동의하지 않으시면 방문 예약
-          신청이 제한됩니다.
+          신청이 제한됩니다. 선택 항목은 입력하지 않아도 신청할 수 있습니다.
         </p>
-        <p className="mt-2">
-          담당자는 방문자 정보를 입력하기 전에 방문자 본인에게 위 내용을 안내하고 동의를 받았음을 확인합니다.
+        <p className="mt-2 font-semibold text-warm-800">6. 개인정보 처리 위탁 및 국외 이전</p>
+        <p>
+          예약 정보 저장 및 알림 메일 발송을 위해 Google LLC(미국 등)의 클라우드 서비스(Google Workspace)에 처리를
+          위탁하여 보관합니다. 이전 항목은 위 수집 항목 전체이며, 예약 신청 시 네트워크를 통해 전송되고 위 보유 기간
+          동안 보관됩니다.
+        </p>
+        <p className="mt-2 font-semibold text-warm-800">7. 방문자 정보의 수집 출처</p>
+        <p>
+          방문자 정보는 신청 담당자가 입력한 것입니다. 방문자 본인이 요청하면 수집 출처, 처리 목적, 처리 정지를
+          요구할 권리를 안내해 드립니다.
         </p>
       </div>
-      <label
-        className={cn(
-          'mt-3 flex cursor-pointer items-center gap-3 border px-4 py-3.5 text-[15px] text-warm-800 transition',
-          checked
-            ? 'border-brand bg-brand/5'
-            : invalid
-              ? 'border-brand/70 bg-brand/[0.03]'
-              : 'border-warm-300/70 bg-white hover:border-warm-600/60',
-        )}
-      >
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
-          aria-invalid={invalid || undefined}
-          className="h-5 w-5 shrink-0 accent-[var(--color-brand)]"
-        />
-        <span>
+      <div className="mt-3 space-y-2">
+        <ConsentCheck checked={checked} onChange={onChange} invalid={invalid}>
           위 개인정보 수집 · 이용에 <b>동의합니다</b>
-          <span className="text-brand"> *</span>
-        </span>
-      </label>
+        </ConsentCheck>
+        <ConsentCheck checked={visitorChecked} onChange={onVisitorChange} invalid={visitorInvalid}>
+          방문자 명단에 입력한 분들께 위 내용을 안내하고 <b>개인정보 제공 동의를 받았음을 확인합니다</b>
+        </ConsentCheck>
+      </div>
     </div>
   )
 }

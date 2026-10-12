@@ -46,6 +46,7 @@ export function normalizeRequest(value: unknown): VisitRequest {
     visitors: Array.isArray(r.visitors) ? r.visitors.map(visitor) : [],
     note: text(r.note),
     consent: r.consent === true,
+    visitorConsent: r.visitorConsent === true,
     adminMemo: text(r.adminMemo),
     source: r.source === 'manual' ? 'manual' : 'web',
     headcount: r.headcount === null || r.headcount === undefined || r.headcount === '' || !Number.isFinite(headcount) ? undefined : headcount,

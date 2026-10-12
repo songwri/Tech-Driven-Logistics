@@ -1,3 +1,5 @@
+import { isHoliday } from './holidays'
+
 /**
  * 방문 예약 도메인 — 투어 종류, 시간대, 중복 판정, 입력 항목 목록.
  * 예약 화면과 관리자 대시보드가 같은 규칙을 쓰도록 한곳에 모았습니다.
@@ -362,6 +364,39 @@ export function earliestBookableDate(leadDays = MIN_LEAD_DAYS) {
   return date
 }
 
+/**
+ * 시화MTV 가 들어간 투어는 준비 기간이 더 필요해 방문일 3영업일 전까지만 신청받는다 (주말 · 공휴일은 영업일이 아님).
+ * 예) 월요일 신청 → 목요일부터, 금요일 신청 → 다음 주 수요일부터. apps-script/Code.gs 의 MTV_LEAD_BUSINESS_DAYS 와 같아야 합니다.
+ */
+export const MTV_LEAD_BUSINESS_DAYS = 3
+
+/** from 에서 영업일(주말 · 공휴일 제외)로 days 만큼 뒤의 날짜 */
+export function addBusinessDays(from: Date, days: number) {
+  const date = new Date(from.getFullYear(), from.getMonth(), from.getDate())
+  let left = days
+  while (left > 0) {
+    date.setDate(date.getDate() + 1)
+    if (date.getDay() !== 0 && date.getDay() !== 6 && !isHoliday(date)) left -= 1
+  }
+  return date
+}
+
+/** 시화MTV 가 들어간 투어인지 (신청 기한이 다르다) */
+export const includesMtv = (tour: TourType) => TOUR_BY_ID[tour].places.includes('mtv')
+
+/**
+ * 투어별 신청 가능한 가장 이른 날짜. leadDays 가 0 이면(관리자 수정) 제한하지 않는다.
+ * 시화MTV 가 들어간 투어는 기본 기한(당일 · 익일 불가)과 3영업일 중 더 늦은 날부터.
+ */
+export function earliestDateFor(tour: TourType, leadDays = MIN_LEAD_DAYS) {
+  const base = earliestBookableDate(leadDays)
+  if (leadDays === 0 || !includesMtv(tour)) return base
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const mtv = addBusinessDays(today, MTV_LEAD_BUSINESS_DAYS)
+  return mtv > base ? mtv : base
+}
+
 export const MAX_VISITORS = 30
 export const OTHER = '기타'
 
@@ -410,6 +445,8 @@ export interface VisitDraft {
   visitors: Visitor[]
   note: string
   consent: boolean
+  /** 신청자가 방문자 명단의 분들께 안내하고 동의를 받았음을 확인 (웹 예약 필수, 이전 기록 · 수기 등록에는 없다) */
+  visitorConsent?: boolean
 }
 
 export interface VisitRequest extends VisitDraft {
@@ -772,8 +809,10 @@ const blank = (value: string) => !value.trim()
 export function sectionProblems(draft: VisitDraft): Record<FormSection, string | null> {
   const schedule = !draft.date
     ? '방문 희망일을 선택해 주세요. (월 · 수 · 금, 당일 · 익일 제외)'
-    : draft.date < toDateKey(earliestBookableDate())
-      ? '당일 · 익일 방문은 신청할 수 없습니다. 모레 이후 날짜를 선택해 주세요.'
+    : draft.date < toDateKey(earliestDateFor(draft.tour))
+      ? includesMtv(draft.tour)
+        ? `시화MTV 가 들어간 투어는 방문일 ${MTV_LEAD_BUSINESS_DAYS}영업일 전까지 신청할 수 있습니다. ${formatDateShort(toDateKey(earliestDateFor(draft.tour)))} 이후 날짜를 선택해 주세요.`
+        : '당일 · 익일 방문은 신청할 수 없습니다. 모레 이후 날짜를 선택해 주세요.'
       : !draft.slot
       ? '방문 시간을 선택해 주세요.'
       : null
@@ -823,7 +862,11 @@ export function sectionProblems(draft: VisitDraft): Record<FormSection, string |
     company,
     purpose,
     visitors,
-    consent: draft.consent ? null : '개인정보 수집 · 이용에 동의해 주세요.',
+    consent: !draft.consent
+      ? '개인정보 수집 · 이용에 동의해 주세요.'
+      : !draft.visitorConsent
+        ? '방문자 분들께 안내하고 동의를 받았음을 확인해 주세요.'
+        : null,
   }
 }
 
@@ -840,12 +883,12 @@ export function firstProblem(draft: VisitDraft): { section: FormSection; message
 /**
  * 비어 있거나 형식이 틀린 입력 칸 목록. 제출을 시도한 뒤 칸마다 빨간 테두리를 그리는 데 쓴다.
  * 키: date · slot · host.name … · clientType · company · industries · purposes · language
- *     · visitor.<번호>.name|title|org|email · consent
+ *     · visitor.<번호>.name|title|org|email · consent · visitorConsent
  */
 export function missingFields(draft: VisitDraft): Set<string> {
   const missing = new Set<string>()
   const mark = (key: string, bad: boolean) => bad && missing.add(key)
-  mark('date', !draft.date || draft.date < toDateKey(earliestBookableDate()))
+  mark('date', !draft.date || draft.date < toDateKey(earliestDateFor(draft.tour)))
   mark('slot', !draft.slot)
   mark('host.name', blank(draft.host.name))
   mark('host.title', blank(draft.host.title))
@@ -866,6 +909,7 @@ export function missingFields(draft: VisitDraft): Set<string> {
     mark(`visitor.${index}.email`, !EMAIL.test(visitor.email.trim()))
   })
   mark('consent', !draft.consent)
+  mark('visitorConsent', !draft.visitorConsent)
   return missing
 }
 
