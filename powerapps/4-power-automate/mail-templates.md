@@ -47,7 +47,7 @@
     <tr><td style="padding:8px 0;border-bottom:1px solid #EAEAEA;color:#787774;width:110px">방문 기관</td><td style="padding:8px 0;border-bottom:1px solid #EAEAEA">{{Company}} ({{Category}} {{ClientType}})</td></tr>
     <tr><td style="padding:8px 0;border-bottom:1px solid #EAEAEA;color:#787774">일정</td><td style="padding:8px 0;border-bottom:1px solid #EAEAEA">{{TourName}} · {{DateKey}} {{ScheduleText}}</td></tr>
     <tr><td style="padding:8px 0;border-bottom:1px solid #EAEAEA;color:#787774">신청자</td><td style="padding:8px 0;border-bottom:1px solid #EAEAEA">{{HostName}} {{HostTitle}} · {{HostDivision}} {{HostOrg}}</td></tr>
-    <tr><td style="padding:8px 0;border-bottom:1px solid #EAEAEA;color:#787774">목적 · 언어</td><td style="padding:8px 0;border-bottom:1px solid #EAEAEA">{{Purposes}} · {{Language}}</td></tr>
+    <tr><td style="padding:8px 0;border-bottom:1px solid #EAEAEA;color:#787774">목적 · 언어</td><td style="padding:8px 0;border-bottom:1px solid #EAEAEA">{{Purpose}} · {{Language}}</td></tr>
   </table>
   <p style="margin:20px 0 0"><a href="{{앱주소}}?requestNo={{Title}}" style="display:inline-block;background:#111111;color:#FFFFFF;text-decoration:none;padding:10px 18px;border-radius:6px">관리자 화면에서 열기</a></p>
 </div>

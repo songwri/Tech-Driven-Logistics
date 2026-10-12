@@ -933,7 +933,7 @@
       - infoPurposeVal:
           Control: Label@2.5.1
           Properties:
-            Text: =If(IsBlank(gSel.Industries), "", gSel.Industries & " · ") & gSel.Purposes
+            Text: =If(IsBlank(gSel.Industry), "", gSel.Industry & " · ") & gSel.Purpose
             X: =118
             Y: =198
             Width: =712

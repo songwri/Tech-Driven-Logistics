@@ -25,9 +25,9 @@ Set(gSel, Blank());
 Set(gBlockTarget, "메가와이즈");
 Set(gBlockTime, "종일");
 
-// 다중 선택 칩: 형식만 잡고 비운다
-ClearCollect(colIndustries, {Value: ""}); Clear(colIndustries);
-ClearCollect(colPurposes, {Value: ""}); Clear(colPurposes);
+// 업종 · 방문 목적: 통계를 위해 하나씩만 고른다
+Set(gIndustry, "");
+Set(gPurpose, "");
 
 // 이번 달 예약 점유 · 막힌 일정 (개인정보 없음)
 ClearCollect(colBusy, Filter(TourBusy, MonthKey = Text(gMonth, "yyyy-mm")))

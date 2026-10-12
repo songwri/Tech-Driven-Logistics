@@ -660,7 +660,7 @@
       - rowMyPurposeVal:
           Control: Label@2.5.1
           Properties:
-            Text: =If(IsBlank(galMy.Selected.Industries), "", galMy.Selected.Industries & " · ") & galMy.Selected.Purposes
+            Text: =If(IsBlank(galMy.Selected.Industry), "", galMy.Selected.Industry & " · ") & galMy.Selected.Purpose
             X: =158
             Y: =488
             Width: =596

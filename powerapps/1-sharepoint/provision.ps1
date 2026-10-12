@@ -36,7 +36,7 @@ New-ListWithFields 'VisitRequests' (@(
     @('Tour','Text'),@('TourName','Text'),@('VisitDate','Date'),@('DateKey','Text'),@('Slot','Text'),@('ScheduleText','Text')
 ) + $segments + @(
     @('ForMain','Text'),@('ForMtv','Text'),@('ApproveMain','Text'),@('ApproveMtv','Text'),@('Status','Text'),
-    @('Category','Text'),@('ClientType','Text'),@('Company','Text'),@('Industries','Text'),@('Purposes','Text'),
+    @('Category','Text'),@('ClientType','Text'),@('Company','Text'),@('Industry','Text'),@('Purpose','Text'),
     @('Language','Text'),@('Interpreter','Text'),@('InterpreterLanguage','Text'),
     @('HostName','Text'),@('HostTitle','Text'),@('HostDivision','Text'),@('HostOrg','Text'),@('HostPhone','Text'),
     @('HostEmail','Text'),@('ApplicantEmail','Text'),@('HostComment','Note'),

@@ -432,8 +432,8 @@
               Set(gCategory, "external");
               Set(gClientType, "");
               Set(gLang, "ko");
-              Clear(colIndustries);
-              Clear(colPurposes);
+              Set(gIndustry, "");
+              Set(gPurpose, "");
               Set(gNeedReset, true);
               Navigate(scrBook, ScreenTransition.Fade)
             Font: =fnt
@@ -467,8 +467,8 @@
               =Set(gStep, 1);
               Set(gDate, Blank());
               Set(gSlot, Blank());
-              Clear(colIndustries);
-              Clear(colPurposes);
+              Set(gIndustry, "");
+              Set(gPurpose, "");
               Set(gNeedReset, true);
               Navigate(scrMy, ScreenTransition.Fade)
             Font: =fnt
