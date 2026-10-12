@@ -63,6 +63,16 @@ export interface TourDefinition {
   aliases?: string[]
 }
 
+/**
+ * 시화MTV 예약을 열지 여부. false 면 예약 화면 · 방명록 · 관리자 화면에서 시화MTV 가 들어간 투어를 숨기고,
+ * 시화MTV · 통합 관제 관리자 페이지는 '준비 중' 안내만 보여준다. 코드는 그대로 두고 이 값만 true 로 바꾸면 다시 열린다.
+ * apps-script/Code.gs 의 MTV_ENABLED 도 함께 바꾼다.
+ */
+export const MTV_ENABLED = false
+
+/** 지금 운영하는 투어인지 (시화MTV 를 닫아 두면 시화MTV 가 들어간 투어는 운영하지 않는다) */
+export const isTourOpen = (tour: Pick<TourDefinition, 'places'>) => MTV_ENABLED || !tour.places.includes('mtv')
+
 /** 시화MTV 투어 시작 시간 (오전 · 오후). 바꿀 때는 apps-script/Code.gs 의 TOURS 도 같이 고친다. */
 const MTV_AM = '10:00-11:00'
 const MTV_PM = '14:00-15:00'
@@ -214,7 +224,7 @@ export const isCrossSite = (tour: TourType) => sitesOf(tour).length > 1
 /** 이 관리자 페이지에서 보고 다룰 수 있는 투어인지 (통합 관제는 전체) */
 export const inSite = (tour: TourType, site: AdminSite) => site === 'hq' || sitesOf(tour).includes(site)
 
-export const toursForSite = (site: AdminSite) => TOURS.filter((tour) => inSite(tour.id, site))
+export const toursForSite = (site: AdminSite) => TOURS.filter((tour) => isTourOpen(tour) && inSite(tour.id, site))
 
 /**
  * 관리자 보기 범위.
@@ -247,12 +257,14 @@ export const inAdminScope = (tour: TourType, scope: AdminScope) => {
 
 /** 방명록에서 방문자가 고르는 투어 (기타 방문 제외) */
 export type GuestbookTour = Exclude<TourType, 'other'>
-export const GUESTBOOK_TOURS: GuestbookTour[] = ['lab', 'center', 'mtv', 'combined', 'center_mtv', 'all3']
+const ALL_GUESTBOOK_TOURS: GuestbookTour[] = ['lab', 'center', 'mtv', 'combined', 'center_mtv', 'all3']
+/** 방명록에서 고를 수 있는 투어 (운영 중인 투어만) */
+export const GUESTBOOK_TOURS = ALL_GUESTBOOK_TOURS.filter((id) => isTourOpen(TOURS.find((tour) => tour.id === id)!))
 export const isGuestbookTour = (value: unknown): value is GuestbookTour =>
-  GUESTBOOK_TOURS.includes(value as GuestbookTour)
+  ALL_GUESTBOOK_TOURS.includes(value as GuestbookTour)
 
 /** 예약 페이지에서 고를 수 있는 투어 (기타 방문 제외) */
-export const BOOKABLE_TOURS = TOURS.filter((tour) => tour.id !== 'other')
+export const BOOKABLE_TOURS = TOURS.filter((tour) => tour.id !== 'other' && isTourOpen(tour))
 
 export const TOUR_BY_ID = Object.fromEntries(TOURS.map((tour) => [tour.id, tour])) as Record<
   TourType,

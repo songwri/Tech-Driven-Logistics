@@ -89,7 +89,7 @@ var ADMIN_URL = SITE_URL + 'admin/';
 var ADMIN_URLS = { main: ADMIN_URL, mtv: SITE_URL + 'admin-mtv/', hq: SITE_URL + 'admin-hq/' };
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-12.visitor-consent';
+var CODE_VERSION = '2026-10-12.mtv-closed';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -144,6 +144,16 @@ function businessDaysLaterKey_(days) {
  *   legs 에 구간별 투어 · 시간이 있다.
  * aliases: 이전 이름 (시트에 남은 '종합 투어' · '센터 투어' 를 읽기 위해)
  */
+/**
+ * 시화MTV 예약을 열지 여부. src/lib/visit.ts 의 MTV_ENABLED 와 같아야 합니다.
+ * false 면 시화MTV 가 들어간 투어 신청 · 수기 등록을 받지 않고, 시화MTV · 통합 관제 관리자 키로는 로그인되지 않는다.
+ */
+var MTV_ENABLED = false;
+
+function tourOpen_(tour) {
+  return MTV_ENABLED || !TOURS[tour] || TOURS[tour].places.indexOf('mtv') === -1;
+}
+
 var MTV_AM = '10:00-11:00';
 var MTV_PM = '14:00-15:00';
 var TOURS = {
@@ -237,7 +247,7 @@ var GUESTBOOK_TOUR_COL = 12; // 1-based
 var GUESTBOOK_TOURS = ['lab', 'center', 'mtv', 'combined', 'center_mtv', 'all3'];
 function guestbookTour_(value) {
   var tour = String(value == null ? '' : value);
-  return GUESTBOOK_TOURS.indexOf(tour) === -1 ? '' : tour;
+  return GUESTBOOK_TOURS.indexOf(tour) === -1 || !tourOpen_(tour) ? '' : tour;
 }
 
 /* ------------------------------------------------------------------ 공통 */
@@ -1026,6 +1036,7 @@ function optionalText_(value, max) {
 function sanitizeVisit_(payload, requireConsent) {
   var tour = String(payload.tour || '');
   if (!TOURS[tour] || tour === 'other') throw new Error('투어 종류를 선택해 주세요.');
+  if (!tourOpen_(tour)) throw new Error('시화MTV 투어는 아직 신청을 받지 않습니다.');
   var date = requireText_(payload.date, '방문 희망일', 10);
   var slot = requireText_(payload.slot, '방문 시간', 11);
   if (TOURS[tour].slots.indexOf(slot) === -1) throw new Error('선택한 투어에서 운영하지 않는 시간입니다.');
@@ -1396,6 +1407,7 @@ var MAIN_ONLY_ACTIONS = ['import', 'guestbookList', 'guestbookSetHidden', 'guest
 
 function admin_(payload) {
   var role = adminRole_(payload.key);
+  if (role !== 'main' && !MTV_ENABLED) throw new Error('시화MTV · 통합 관제 관리자 페이지는 아직 열리지 않았습니다.');
   // 관리자 페이지는 자기 페이지(site)를 함께 보낸다. 다른 페이지의 키로는 로그인되지 않게 한다. (이전 화면은 site 없이 보낸다)
   if (payload.site && payload.site !== role) {
     throw new Error('이 페이지의 관리자 키가 아닙니다. 입력한 키는 ' + ROLE_LABEL[role] + ' 관리자 키입니다.');
@@ -1431,6 +1443,7 @@ function admin_(payload) {
   if (payload.action === 'create') {
     var manualTour = String((payload.request || {}).tour || 'other');
     if (!inSite_(TOURS[manualTour] ? manualTour : 'other', role)) throw new Error('이 관리자 페이지에서 등록할 수 없는 투어입니다.');
+    if (!tourOpen_(manualTour)) throw new Error('시화MTV 투어는 아직 운영하지 않습니다.');
     return createManual_(payload.request);
   }
   if (payload.action === 'import') return importManual_(payload.requests, payload.importKey);
@@ -1466,6 +1479,7 @@ function admin_(payload) {
     // 수기 등록 건은 완화된 규칙, 웹 예약은 예약 화면과 같은 규칙으로 검사한다.
     var next = request.source === 'manual' ? sanitizeManual_(input) : sanitizeVisit_(input, false);
     if (!inSite_(next.tour, role)) throw new Error('이 관리자 페이지에서 다룰 수 없는 투어로는 바꿀 수 없습니다.');
+    if (next.tour !== request.tour && !tourOpen_(next.tour)) throw new Error('시화MTV 투어는 아직 운영하지 않습니다.');
     applyOpsFields_(next, input);
     next.source = request.source;
     next.consent = request.consent;

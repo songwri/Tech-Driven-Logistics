@@ -7,6 +7,7 @@ import { Field, Input } from '@/components/ui/Field'
 import {
   ADMIN_SCOPES,
   ADMIN_SITE_LABEL,
+  MTV_ENABLED,
   awaitingPartner,
   formatDateShort,
   headcountOf,
@@ -20,6 +21,7 @@ import {
   type VisitStatus,
 } from '@/lib/visit'
 import { SERVER_URL } from '@/lib/labApi'
+import { ADMIN_URLS } from '@/lib/routes'
 import { useAdminData } from './useAdminData'
 import { AdminCalendar } from './AdminCalendar'
 import { BlockDialog } from './BlockDialog'
@@ -123,7 +125,42 @@ function LoginPanel({
   )
 }
 
+/**
+ * 시화MTV 를 아직 열지 않았으면(MTV_ENABLED = false) 시화MTV · 통합 관제 페이지는 안내만 보여준다.
+ * 메가와이즈 · TDL Lab 관리자(/admin/)는 그대로.
+ */
 export default function AdminApp({ site }: { site: AdminSite }) {
+  if (site !== 'main' && !MTV_ENABLED) return <NotOpen site={site} />
+  return <AdminDashboard site={site} />
+}
+
+function NotOpen({ site }: { site: AdminSite }) {
+  return (
+    <div className="min-h-screen bg-[#f7f6f5]">
+      <header className="border-b-4 border-brand bg-[#1e2229] text-white">
+        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-5 md:px-8">
+          <Logo tone="light" className="h-8" />
+          <h1 className="text-lg font-bold">{PAGE_TEXT[site].title}</h1>
+        </div>
+      </header>
+      <main className="mx-auto mt-16 max-w-md border border-warm-300/50 bg-white p-8 text-center">
+        <p className="font-mono text-xs uppercase tracking-[0.3em] text-brand">Coming soon</p>
+        <h2 className="mt-2 text-xl font-bold text-warm-800">준비 중인 페이지입니다</h2>
+        <p className="mt-2 text-sm leading-relaxed text-warm-600">
+          시화MTV 방문 예약은 아직 열리지 않았습니다. 메가와이즈 · TDL Lab 예약은 기존 관리자 페이지에서 관리합니다.
+        </p>
+        <a
+          href={ADMIN_URLS.main}
+          className="mt-6 inline-flex items-center justify-center border border-warm-800 bg-warm-800 px-4 py-2 text-sm font-semibold text-white transition hover:brightness-125"
+        >
+          메가와이즈 · TDL Lab 관리자로 이동
+        </a>
+      </main>
+    </div>
+  )
+}
+
+function AdminDashboard({ site }: { site: AdminSite }) {
   const data = useAdminData(site)
   const readOnly = data.readOnly
   const scopes = ADMIN_SCOPES[site]

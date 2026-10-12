@@ -1,4 +1,4 @@
-import { isCrossSite, toDateKey, type SiteApprovals, type TourType, type VisitRequest, type VisitStatus, type Visitor } from '@/lib/visit'
+import { MTV_ENABLED, isCrossSite, toDateKey, type SiteApprovals, type TourType, type VisitRequest, type VisitStatus, type Visitor } from '@/lib/visit'
 
 /**
  * 백엔드(VITE_LAB_API)가 연결되지 않았을 때 관리자 화면을 둘러볼 수 있도록 하는
@@ -220,7 +220,7 @@ function generate(): VisitRequest[] {
       for (const [half, options] of [[0, MORNING], [1, AFTERNOON]] as const) {
         if (random() > growth * future * (half === 0 ? 1.1 : 0.8)) continue
         const mtvPool = half === 0 ? MTV_MORNING : MTV_AFTERNOON
-        const [tour, slot] = key >= MTV_FROM && random() < 0.35 ? pick(mtvPool) : pick([...options])
+        const [tour, slot] = MTV_ENABLED && key >= MTV_FROM && random() < 0.35 ? pick(mtvPool) : pick([...options])
         const upcoming = key >= today
         const roll = random()
         const status: VisitStatus = upcoming
@@ -284,5 +284,7 @@ const FOREIGN_MOCKS: Record<string, Pick<VisitRequest, 'language' | 'foreignLang
 }
 
 export function buildSampleRequests(): VisitRequest[] {
-  return [...MOCKUP.map((request) => ({ ...request, ...FOREIGN_MOCKS[request.id] })), ...generate()]
+  // 시화MTV 를 닫아 두면 시화MTV 가 들어간 예시는 빼고 보여준다.
+  const mockup = MOCKUP.filter((request) => MTV_ENABLED || !isCrossSite(request.tour))
+  return [...mockup.map((request) => ({ ...request, ...FOREIGN_MOCKS[request.id] })), ...generate()]
 }
