@@ -40,7 +40,7 @@ export interface ServerHealth {
   }
 }
 
-const DEMO_KEY = 'tdl-lab-admin-demo-v5'
+const DEMO_KEY = 'tdl-lab-admin-demo-v6'
 /** 관리자 키는 페이지마다 따로 기억한다 (한 브라우저에서 두 센터 페이지를 열어도 섞이지 않게). */
 const SESSION_KEYS: Record<AdminSite, string> = {
   main: 'tdl-lab-admin-key',
