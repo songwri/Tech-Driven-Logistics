@@ -15,6 +15,8 @@ import { tourLanguageName, FOREIGN_LANGUAGES,
   isConfirmed,
   isCounted,
   divisionGroup,
+  parseDateKey,
+  toDateKey,
   toursForSite,
   type AdminSite,
   type Resource,
@@ -40,7 +42,17 @@ const SEGMENTS = [
   { label: '고객 · 미분류', color: '#d5d9e0' },
 ]
 
-type Period = 'year' | 'month'
+type Period = 'year' | 'month' | 'range' | 'all'
+
+/** 'YYYY-MM-DD' 키에 일수를 더한다 */
+function shiftDateKey(key: string, days: number) {
+  const date = parseDateKey(key)
+  date.setDate(date.getDate() + days)
+  return toDateKey(date)
+}
+
+/** 2026-03-05 → 2026.03.05 */
+const dotted = (key: string) => key.replaceAll('-', '.')
 type Basis = 'all' | 'approved'
 
 function countBy(requests: VisitRequest[], keys: (request: VisitRequest) => string[], order: string[]) {
@@ -106,6 +118,9 @@ export function StatsView({ requests, site }: { requests: VisitRequest[]; site: 
   const [year, setYear] = useState(now.getFullYear())
   const [period, setPeriod] = useState<Period>('year')
   const [month, setMonth] = useState(now.getMonth() + 1)
+  // 기간 지정: 기본값은 이번 달 1일 ~ 오늘
+  const [rangeStart, setRangeStart] = useState(() => toDateKey(new Date(now.getFullYear(), now.getMonth(), 1)))
+  const [rangeEnd, setRangeEnd] = useState(() => toDateKey(now))
   const [basis, setBasis] = useState<Basis>('all')
   const [detail, setDetail] = useState<{ title: string; requests: VisitRequest[] } | null>(null)
   const [gridView, setGridView] = useState<'month' | 'year'>('month')
@@ -119,20 +134,50 @@ export function StatsView({ requests, site }: { requests: VisitRequest[]; site: 
     [requests, basis],
   )
 
-  const prefix = period === 'year' ? `${year}-` : `${year}-${String(month).padStart(2, '0')}-`
-  const scoped = useMemo(() => basisRequests.filter((request) => request.date.startsWith(prefix)), [basisRequests, prefix])
-  const periodLabel = period === 'year' ? `${year}년` : `${year}년 ${month}월`
-
-  // 비교 기간: 전년 / 전월
-  const previousPrefix =
+  // 선택 기간 [start, end] (방문일 기준, 양끝 포함). 'all' 은 전체 기간.
+  const mm = String(month).padStart(2, '0')
+  const [start, end] =
     period === 'year'
-      ? `${year - 1}-`
-      : month === 1
-        ? `${year - 1}-12-`
-        : `${year}-${String(month - 1).padStart(2, '0')}-`
-  const previous = basisRequests.filter((request) => request.date.startsWith(previousPrefix))
+      ? [`${year}-01-01`, `${year}-12-31`]
+      : period === 'month'
+        ? [`${year}-${mm}-01`, toDateKey(new Date(year, month, 0))]
+        : period === 'range'
+          ? [rangeStart <= rangeEnd ? rangeStart : rangeEnd, rangeStart <= rangeEnd ? rangeEnd : rangeStart]
+          : ['0000-00-00', '9999-99-99']
+  const inPeriod = (request: VisitRequest) => request.date >= start && request.date <= end
+  const scoped = useMemo(
+    () => basisRequests.filter((request) => request.date >= start && request.date <= end),
+    [basisRequests, start, end],
+  )
+  const periodLabel =
+    period === 'year'
+      ? `${year}년`
+      : period === 'month'
+        ? `${year}년 ${month}월`
+        : period === 'range'
+          ? start === end
+            ? dotted(start)
+            : `${dotted(start)}~${dotted(end)}`
+          : '전체 기간'
 
-  const allInPeriod = requests.filter((request) => request.date.startsWith(prefix))
+  // 비교 기간: 전년 / 전월 / 기간 지정은 바로 앞의 같은 일수 / 전체 기간은 비교 없음
+  const previousRange: [string, string] | null =
+    period === 'year'
+      ? [`${year - 1}-01-01`, `${year - 1}-12-31`]
+      : period === 'month'
+        ? [toDateKey(new Date(year, month - 2, 1)), toDateKey(new Date(year, month - 1, 0))]
+        : period === 'range'
+          ? [
+              shiftDateKey(start, -(Math.round((parseDateKey(end).getTime() - parseDateKey(start).getTime()) / 86_400_000) + 1)),
+              shiftDateKey(start, -1),
+            ]
+          : null
+  const previous = previousRange
+    ? basisRequests.filter((request) => request.date >= previousRange[0] && request.date <= previousRange[1])
+    : []
+  const compareLabel = period === 'year' ? '전년' : period === 'month' ? '전월' : '직전 동기간'
+
+  const allInPeriod = requests.filter(inPeriod)
   const approved = allInPeriod.filter((request) => isConfirmed(request.status)).length
   const decided = allInPeriod.filter((request) => isConfirmed(request.status) || request.status === 'rejected').length
   const visitors = scoped.reduce((sum, request) => sum + headcountOf(request), 0)
@@ -191,32 +236,35 @@ export function StatsView({ requests, site }: { requests: VisitRequest[]; site: 
     withList(row.label, scoped.filter((request) => divisionGroup(request.host.division) === row.label)),
   )
 
+  // 월별 추이는 기간 지정이면 끝나는 날의 연도를 보여 주고, 선택 기간과 겹치지 않는 달·연도는 흐리게 표시한다.
+  const chartYear = period === 'range' ? Number(end.slice(0, 4)) : year
   const monthly: Datum[] = Array.from({ length: 12 }, (_, index) => {
-    const key = `${year}-${String(index + 1).padStart(2, '0')}-`
+    const key = `${chartYear}-${String(index + 1).padStart(2, '0')}-`
     const list = basisRequests.filter((request) => request.date.startsWith(key))
     return {
       label: `${index + 1}월`,
       value: list.length,
       requests: list,
-      dim: period === 'month' && index + 1 !== month,
+      dim: `${key}31` < start || `${key}01` > end,
     }
   })
   const yearly: Datum[] = years.map((item) => {
     const list = basisRequests.filter((request) => request.date.startsWith(`${item}-`))
-    return { label: `${item}년`, value: list.length, requests: list, dim: item !== year }
+    return { label: `${item}년`, value: list.length, requests: list, dim: `${item}-12-31` < start || `${item}-01-01` > end }
   })
 
-  const gridRows = gridView === 'month' ? monthlyRows(requests, year) : yearlyRows(requests, years)
+  const gridRows = gridView === 'month' ? monthlyRows(requests, chartYear) : yearlyRows(requests, years)
 
   const exportExcel = () => {
-    const fileLabel = period === 'year' ? `${year}` : `${year}-${String(month).padStart(2, '0')}`
+    const fileLabel =
+      period === 'year' ? `${year}` : period === 'month' ? `${year}-${mm}` : period === 'range' ? `${start}_${end}` : 'all'
     downloadWorkbook(
       `TDL_visit_stats_${fileLabel}.xlsx`,
       buildStatsSheets({
         requests,
         periodRequests: allInPeriod.filter((request) => isCounted(request.status)),
         scoped,
-        year,
+        year: chartYear,
         years,
         periodLabel,
         site,
@@ -234,14 +282,14 @@ export function StatsView({ requests, site }: { requests: VisitRequest[]; site: 
       label: basis === 'approved' ? '승인·완료 건수' : '신청 건수',
       value: scoped.length,
       unit: '건',
-      delta: scoped.length - previous.length,
+      delta: previousRange ? scoped.length - previous.length : undefined,
     },
     {
       // 집계 기준이 '전체'면 승인 대기까지 포함한 신청 인원이라 아래 통계표의 '방문 인원(승인·완료)'과 다르다.
       label: basis === 'approved' ? '방문 인원' : '신청 인원 (대기 포함)',
       value: visitors,
       unit: '명',
-      delta: visitors - previousVisitors,
+      delta: previousRange ? visitors - previousVisitors : undefined,
     },
     {
       label: '승인률',
@@ -259,18 +307,6 @@ export function StatsView({ requests, site }: { requests: VisitRequest[]; site: 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3 border border-warm-300/50 bg-white px-4 py-3">
-        <select
-          value={year}
-          onChange={(e) => setYear(Number(e.target.value))}
-          aria-label="연도"
-          className="border border-warm-300/60 bg-white px-2 py-1.5 text-[13px] font-semibold text-warm-800"
-        >
-          {years.map((item) => (
-            <option key={item} value={item}>
-              {item}년
-            </option>
-          ))}
-        </select>
         <Segmented
           label="조회 단위"
           value={period}
@@ -278,8 +314,24 @@ export function StatsView({ requests, site }: { requests: VisitRequest[]; site: 
           options={[
             { value: 'year', label: '연간' },
             { value: 'month', label: '월별' },
+            { value: 'range', label: '기간 지정' },
+            { value: 'all', label: '전체 기간' },
           ]}
         />
+        {(period === 'year' || period === 'month') && (
+          <select
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+            aria-label="연도"
+            className="border border-warm-300/60 bg-white px-2 py-1.5 text-[13px] font-semibold text-warm-800"
+          >
+            {years.map((item) => (
+              <option key={item} value={item}>
+                {item}년
+              </option>
+            ))}
+          </select>
+        )}
         {period === 'month' && (
           <select
             value={month}
@@ -293,6 +345,27 @@ export function StatsView({ requests, site }: { requests: VisitRequest[]; site: 
               </option>
             ))}
           </select>
+        )}
+        {period === 'range' && (
+          <div className="inline-flex items-center gap-1.5">
+            <input
+              type="date"
+              value={rangeStart}
+              max={rangeEnd}
+              onChange={(e) => e.target.value && setRangeStart(e.target.value)}
+              aria-label="시작일"
+              className="border border-warm-300/60 bg-white px-2 py-1 text-[13px] font-semibold text-warm-800"
+            />
+            <span className="text-[13px] text-warm-600">~</span>
+            <input
+              type="date"
+              value={rangeEnd}
+              min={rangeStart}
+              onChange={(e) => e.target.value && setRangeEnd(e.target.value)}
+              aria-label="종료일"
+              className="border border-warm-300/60 bg-white px-2 py-1 text-[13px] font-semibold text-warm-800"
+            />
+          </div>
         )}
         <span className="hidden h-5 w-px bg-warm-300/50 sm:block" />
         <Segmented
@@ -333,7 +406,7 @@ export function StatsView({ requests, site }: { requests: VisitRequest[]; site: 
             <p className="mt-2 text-[12px] tabular-nums text-warm-600">
               {'delta' in kpi && kpi.delta !== undefined ? (
                 <>
-                  {period === 'year' ? '전년' : '전월'} 대비{' '}
+                  {compareLabel} 대비{' '}
                   <b className={kpi.delta > 0 ? 'text-[#2b8a3e]' : kpi.delta < 0 ? 'text-brand' : 'text-warm-600'}>
                     {kpi.delta > 0 ? '▲' : kpi.delta < 0 ? '▼' : '–'} {Math.abs(kpi.delta)}
                   </b>
@@ -348,8 +421,8 @@ export function StatsView({ requests, site }: { requests: VisitRequest[]; site: 
 
       {/* 핵심: 추이를 가장 크게, 세부 분석은 아래로 작게 */}
       <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <Card title="월별 추이" subtitle={`${year}년 · 월별 ${basis === 'approved' ? '승인' : '신청'} 건수`}>
-          <ColumnChart data={monthly} height={220} onSelect={select(`${year}년 월별`)} />
+        <Card title="월별 추이" subtitle={`${chartYear}년 · 월별 ${basis === 'approved' ? '승인' : '신청'} 건수`}>
+          <ColumnChart data={monthly} height={220} onSelect={select(`${chartYear}년 월별`)} />
         </Card>
         <Card title="연도별 추이" subtitle="연도별 합계">
           <ColumnChart data={yearly} height={220} onSelect={select('연도별')} />
@@ -406,7 +479,7 @@ export function StatsView({ requests, site }: { requests: VisitRequest[]; site: 
             value={gridView}
             onChange={setGridView}
             options={[
-              { value: 'month', label: `${year}년 월별` },
+              { value: 'month', label: `${chartYear}년 월별` },
               { value: 'year', label: '연도별' },
             ]}
           />
