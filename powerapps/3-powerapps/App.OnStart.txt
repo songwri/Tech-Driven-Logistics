@@ -37,5 +37,12 @@ Set(gStatMonth, Month(Today()));
 Set(gStatBasis, "all");
 Set(gStatTab, "overview");
 
+// 관리자 예약 달력
+Set(gCalMonth, Date(Year(Today()), Month(Today()), 1));
+Set(gCalDay, Text(Today(), "yyyy-mm-dd"));
+Set(gCalTour, "");
+Set(gOpenId, Blank());
+Set(gBlockDate, Blank());
+
 // 이번 달 예약 점유 · 막힌 일정 (개인정보 없음)
 ClearCollect(colBusy, Filter(TourBusy, MonthKey = Text(gMonth, "yyyy-mm")))

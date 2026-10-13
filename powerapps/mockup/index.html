@@ -12,7 +12,7 @@
     --primary: #111111; --primary-hover: #333333; --brand: #A72B2B;
     --red-bg: #FDEBEC; --red: #9F2F2D; --blue-bg: #E1F3FE; --blue: #1F6C9F;
     --green-bg: #EDF3EC; --green: #346538; --yellow-bg: #FBF3DB; --yellow: #956400;
-    --gray-bg: #EFEFED; --gray: #5F5E5B;
+    --gray-bg: #EFEFED; --gray: #5F5E5B; --red: #9F2F2D;
   }
   * { box-sizing: border-box; margin: 0; }
   body { background: #DAD9D4; font-family: "Segoe UI", "Malgun Gothic", sans-serif; color: var(--ink); word-break: keep-all; }
@@ -99,6 +99,7 @@
   <button data-s="my">내 신청</button>
   <button data-s="adm">관리자</button>
   <button data-s="blk">일정 막기 창</button>
+  <button data-s="cal">예약 달력</button>
   <button data-s="st">통계</button>
   <span class="note">좌표는 Power Apps 컨트롤의 X · Y 와 같습니다</span>
 </div>
@@ -111,7 +112,8 @@
   <div class="abs nav" id="n1" style="left:520px">방문 신청</div>
   <div class="abs nav" id="n2" style="left:624px">내 신청</div>
   <div class="abs nav" id="n3" style="left:728px">관리자</div>
-  <div class="abs nav" id="n4" style="left:832px">통계</div>
+  <div class="abs nav" id="n5" style="left:832px">달력</div>
+  <div class="abs nav" id="n4" style="left:936px">통계</div>
   <div class="abs user">김서연 책임 · CL운영담당</div>
 
   <!-- ============ 신청 1단계 ============ -->
@@ -402,6 +404,31 @@
     </div>
   </div>
 
+  <!-- ============ 예약 달력 ============ -->
+  <div class="screen" id="s-cal">
+    <div class="abs" style="left:24px;top:72px;height:36px;line-height:36px;font-size:20px;font-weight:600">2026년 10월</div>
+    <div class="abs seg" style="left:196px;top:74px;width:36px;height:32px;line-height:30px">‹</div>
+    <div class="abs seg" style="left:238px;top:74px;width:36px;height:32px;line-height:30px">›</div>
+    <div class="abs seg" style="left:280px;top:74px;width:60px;height:32px;line-height:30px;font-size:13px">오늘</div>
+    <div class="abs lbl" style="left:372px;top:82px">투어</div>
+    <div class="abs seg" style="left:410px;top:74px;width:192px;height:32px;line-height:30px;font-size:12px;border-color:#7C5CC4">TDL Lab 투어</div>
+    <div class="abs seg" style="left:608px;top:74px;width:192px;height:32px;line-height:30px;font-size:12px;border-color:#1A8FA0">메가와이즈 센터 투어</div>
+    <div class="abs seg" style="left:806px;top:74px;width:192px;height:32px;line-height:30px;font-size:12px;border-color:#DC2626">메가와이즈 + TDL Lab</div>
+    <div id="calgrid"></div>
+    <div class="abs card" style="left:1020px;top:120px;width:322px;height:630px">
+      <div class="abs" style="left:20px;top:16px;font-size:17px;font-weight:600">10월 21일 (수)</div>
+      <div class="abs lbl" style="left:20px;top:46px">예약 3건 · 대기 2건</div>
+      <div id="calday"></div>
+      <div class="abs btn sec" style="left:20px;top:488px;width:282px;height:36px;line-height:34px">이 날 일정 막기</div>
+      <div class="abs" style="left:20px;top:538px;width:282px;height:1px;background:var(--line)"></div>
+      <div class="abs lbl" style="left:20px;top:548px;font-size:11px">칩 색 = 상태 · 왼쪽 띠 = 투어</div>
+      <span class="abs tag t-yellow" style="left:20px;top:572px">대기</span><span class="abs tag t-green" style="left:76px;top:572px">승인</span>
+      <span class="abs tag t-blue" style="left:132px;top:572px">완료</span><span class="abs tag t-gray" style="left:188px;top:572px">거절</span>
+      <span class="abs tag" style="left:244px;top:572px;background:var(--soft);color:var(--ink2)">막힘</span>
+      <div class="abs hint" style="left:20px;top:600px;font-size:11px">EN · ZH · 통역 = 외국어 투어 / 통역 동반</div>
+    </div>
+  </div>
+
 </div></div></div>
 <script>
   // 달력 (2026년 10월, 일요일 시작 6주)
@@ -468,8 +495,50 @@
     document.getElementById('places').innerHTML = bars([['메가와이즈 센터', 24], ['TDL Lab', 19]], 70, 130)
     document.getElementById('tourbars').innerHTML = bars([['TDL Lab 투어', 7], ['메가와이즈 센터 투어', 12], ['메가와이즈 + TDL Lab', 12]], 240, 150)
   })()
+
+  // 예약 달력: 칸마다 칩 (시간 · 투어 · 업체), 상태 색
+  ;(function () {
+    const C = { lab: '#7C5CC4', center: '#1A8FA0', combined: '#DC2626' }
+    const S = { 대기: ['#FBF3DB', 'var(--ink)'], 승인: ['#EDF3EC', 'var(--ink)'], 완료: ['#E1F3FE', 'var(--ink)'], 거절: ['#EFEFED', 'var(--ink3)'], 막힘: ['var(--soft)', 'var(--ink2)'] }
+    const ev = {
+      '2026-10-02': [['10:00 센터 대성전자', 'center', '완료']],
+      '2026-10-07': [['10:30 Lab CL전자담당 기획팀', 'lab', '완료'], ['13:00 센터+Lab 서진유통 · EN', 'combined', '완료']],
+      '2026-10-12': [['14:00 Lab 한국물류협회', 'lab', '승인']],
+      '2026-10-14': [['09:30 센터+Lab 오리온푸드', 'combined', '승인'], ['15:00 센터 그린케미칼', 'center', '거절']],
+      '2026-10-16': [['막힘 · 메가와이즈 · 종일', '', '막힘'], ['10:30 Lab 미래전자 · ZH', 'lab', '승인']],
+      '2026-10-21': [['10:00 센터 대한화학', 'center', '대기'], ['13:00 센터 한빛식품 · 통역', 'center', '대기'], ['14:00 Lab CL운영담당 운영혁신팀', 'lab', '승인']],
+      '2026-10-23': [['10:00 센터 대한화학', 'center', '대기']],
+      '2026-10-26': [['14:00 Lab CL전자담당 기획팀', 'lab', '대기']],
+      '2026-10-28': [['09:30 센터+Lab 서진유통', 'combined', '대기'], ['10:30 Lab 바른제약', 'lab', '대기'], ['13:00 센터 코스모뷰티', 'center', '대기'], ['15:00 센터 한솔가구', 'center', '대기']],
+      '2026-10-30': [['막힘 · 메가와이즈 · 종일 · 정기 점검', '', '막힘']],
+    }
+    const chip = (e, w) => `<div style="position:relative;height:20px;margin-bottom:2px;background:${S[e[2]][0]};color:${S[e[2]][1]};border-radius:3px;font-size:10px;line-height:20px;padding-left:8px;white-space:nowrap;overflow:hidden;width:${w}px;${e[2] === '거절' ? 'text-decoration:line-through;' : ''}"><span style="position:absolute;left:0;top:0;width:4px;height:20px;background:${C[e[1]] || 'var(--ink2)'}"></span>${e[0]}</div>`
+    let h = ['일','월','화','수','목','금','토'].map((w, i) => `<div class="abs lbl" style="left:${24 + i * 140}px;top:120px;width:140px;height:26px;line-height:26px;text-align:center;background:var(--bg);color:${i === 0 ? 'var(--red)' : 'var(--ink2)'}">${w}</div>`).join('')
+    const start = new Date(2026, 8, 27), hol = ['2026-10-03', '2026-10-05', '2026-10-09']
+    for (let n = 0; n < 42; n++) {
+      const d = new Date(start); d.setDate(start.getDate() + n)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const inM = d.getMonth() === 9, open = [1, 3, 5].includes(d.getDay()) && !hol.includes(key), sel = key === '2026-10-21', today = key === '2026-10-13'
+      const list = ev[key] || [], pend = list.filter((e) => e[2] === '대기').length
+      const shown = list.length > 3 ? list.slice(0, 2) : list
+      h += `<div class="abs" style="left:${24 + (n % 7) * 140}px;top:${150 + Math.floor(n / 7) * 100}px;width:140px;height:100px;box-sizing:border-box;border:${sel ? '2px solid var(--ink)' : '1px solid var(--line)'};background:${sel ? 'var(--soft)' : inM && open ? '#fff' : 'var(--bg)'}">
+        <div class="abs" style="left:4px;top:4px;width:22px;height:22px;border-radius:11px;text-align:center;line-height:22px;font-size:11px;font-weight:600;background:${today ? 'var(--brand)' : 'transparent'};color:${today ? '#fff' : !inM ? 'var(--ink3)' : d.getDay() === 0 || hol.includes(key) ? 'var(--red)' : 'var(--ink)'}">${d.getDate()}</div>
+        ${hol.includes(key) && inM ? '<div class="abs" style="left:30px;top:8px;font-size:9px;color:var(--red)">공휴일</div>' : ''}
+        ${pend ? `<span class="abs tag t-yellow" style="right:4px;top:5px;height:18px;line-height:18px;font-size:10px;padding:0 6px">대기 ${pend}</span>` : ''}
+        <div class="abs" style="left:3px;top:27px">${shown.map((e) => chip(e, 130)).join('')}</div>
+        ${list.length > 3 ? `<div class="abs" style="left:8px;top:73px;font-size:10px;color:var(--ink2)">+${list.length - 2}건 더보기</div>` : ''}
+      </div>`
+    }
+    document.getElementById('calgrid').innerHTML = h
+    const day = [['대한화학', '10:00 – 11:00 · 메가와이즈 센터 투어', 'center', '대기'], ['한빛식품', '13:00 – 14:00 · 메가와이즈 센터 투어 · 통역', 'center', '대기'], ['CL운영담당 운영혁신팀', '14:00 – 15:00 · TDL Lab 투어', 'lab', '승인']]
+    document.getElementById('calday').innerHTML = day.map((r, i) => `<div class="abs" style="left:12px;top:${76 + i * 64}px;width:298px;height:60px;border:1px solid var(--line);border-radius:6px;background:#fff;overflow:hidden">
+      <div class="abs" style="left:0;top:0;width:4px;height:60px;background:${C[r[2]]}"></div>
+      <div class="abs" style="left:14px;top:8px;font-size:14px;font-weight:600">${r[0]}</div>
+      <div class="abs lbl" style="left:14px;top:34px;font-size:11px">${r[1]}</div>
+      <span class="abs tag ${r[3] === '대기' ? 't-yellow' : 't-green'}" style="right:12px;top:8px">${r[3]}</span></div>`).join('')
+  })()
   // 화면 전환 · 크기 맞춤
-  const navOf = { b1: 'n1', b2: 'n1', b3: 'n1', done: 'n1', my: 'n2', adm: 'n3', blk: 'n3', st: 'n4' }
+  const navOf = { b1: 'n1', b2: 'n1', b3: 'n1', done: 'n1', my: 'n2', adm: 'n3', blk: 'n3', st: 'n4', cal: 'n5' }
   document.querySelectorAll('.toolbar button').forEach((b) => b.addEventListener('click', () => {
     document.querySelectorAll('.toolbar button').forEach((x) => x.classList.toggle('on', x === b))
     document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('on', s.id === 's-' + b.dataset.s))

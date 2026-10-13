@@ -125,11 +125,35 @@
       RadiusBottomLeft: =6
       RadiusBottomRight: =6
       Visible: =!IsBlank(gAdminSite)
+- hdrBNavCal:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="달력"
+      X: =832
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrCalendar, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrCalendar, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrCalendar, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrCalendar, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =!IsBlank(gAdminSite)
 - hdrBNavStats:
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="통계"
-      X: =832
+      X: =936
       Y: =12
       Width: =96
       Height: =32

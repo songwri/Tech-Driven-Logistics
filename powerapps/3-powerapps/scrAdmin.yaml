@@ -3,7 +3,8 @@
 #    OnVisible =
 #      If(IsBlank(gAdminSite), Notify("관리자 권한이 없습니다.", NotificationType.Error); Navigate(scrBook),
 #         ClearCollect(colAdminReqs, Filter(VisitRequests, VisitDate >= DateAdd(Today(), -180, TimeUnit.Days)));
-#         If(!IsBlank(Param("requestNo")), Set(gAdminFilter, "전체"); Set(gSel, LookUp(colAdminReqs, Title = Param("requestNo")))))
+#         If(!IsBlank(Param("requestNo")), Set(gAdminFilter, "전체"); Set(gSel, LookUp(colAdminReqs, Title = Param("requestNo"))));
+#         If(!IsBlank(gOpenId), Set(gAdminFilter, "전체"); Set(gSel, Coalesce(LookUp(colAdminReqs, ID = gOpenId), LookUp(VisitRequests, ID = gOpenId))); Set(gOpenId, Blank())))
 # 2) 이 파일 내용을 전부 복사 → 트리 뷰에서 scrAdmin 오른쪽 클릭 → '붙여넣기'
 - hdrABar:
     Control: Rectangle@2.3.0
@@ -127,11 +128,35 @@
       RadiusBottomLeft: =6
       RadiusBottomRight: =6
       Visible: =!IsBlank(gAdminSite)
+- hdrANavCal:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="달력"
+      X: =832
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrCalendar, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrCalendar, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrCalendar, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrCalendar, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =!IsBlank(gAdminSite)
 - hdrANavStats:
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="통계"
-      X: =832
+      X: =936
       Y: =12
       Width: =96
       Height: =32
@@ -226,6 +251,7 @@
             OnSelect: |-
               =Set(gBlockTarget, If(gAdminSite = "mtv", "시화MTV", "메가와이즈"));
               Set(gBlockTime, "종일");
+              Set(gBlockDate, Today());
               Reset(dpBlock);
               Reset(txtBlockReason);
               Set(gShowBlock, true)
@@ -1490,7 +1516,7 @@
                   Y: =104
                   Width: =200
                   Height: =36
-                  DefaultDate: =Today()
+                  DefaultDate: =Coalesce(gBlockDate, Today())
                   Format: =DateTimeFormat.ShortDate
                   Font: =fnt
                   Size: =10.5
