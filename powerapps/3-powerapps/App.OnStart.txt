@@ -30,5 +30,12 @@ Set(gBlockTime, "종일");
 Set(gIndustry, "");
 Set(gPurpose, "");
 
+// 통계 화면: 연간 · 월별 · 기간 지정 · 전체 기간, 집계 기준(전체 / 승인 · 완료)
+Set(gStatPeriod, "year");
+Set(gStatYear, Year(Today()));
+Set(gStatMonth, Month(Today()));
+Set(gStatBasis, "all");
+Set(gStatTab, "overview");
+
 // 이번 달 예약 점유 · 막힌 일정 (개인정보 없음)
 ClearCollect(colBusy, Filter(TourBusy, MonthKey = Text(gMonth, "yyyy-mm")))

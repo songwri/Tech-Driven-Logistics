@@ -99,6 +99,7 @@
   <button data-s="my">내 신청</button>
   <button data-s="adm">관리자</button>
   <button data-s="blk">일정 막기 창</button>
+  <button data-s="st">통계</button>
   <span class="note">좌표는 Power Apps 컨트롤의 X · Y 와 같습니다</span>
 </div>
 <div class="stage"><div class="scaler" id="scaler"><div class="app" id="app">
@@ -110,6 +111,7 @@
   <div class="abs nav" id="n1" style="left:520px">방문 신청</div>
   <div class="abs nav" id="n2" style="left:624px">내 신청</div>
   <div class="abs nav" id="n3" style="left:728px">관리자</div>
+  <div class="abs nav" id="n4" style="left:832px">통계</div>
   <div class="abs user">김서연 책임 · CL운영담당</div>
 
   <!-- ============ 신청 1단계 ============ -->
@@ -366,6 +368,40 @@
     </div>
   </div>
 
+  <!-- ============ 통계 ============ -->
+  <div class="screen" id="s-st">
+    <div class="abs card" style="left:24px;top:72px;width:1318px;height:52px">
+      <div class="abs seg" style="left:16px;top:10px;width:84px;height:32px;line-height:30px;font-size:13px">연간</div>
+      <div class="abs seg" style="left:104px;top:10px;width:84px;height:32px;line-height:30px;font-size:13px">월별</div>
+      <div class="abs seg on" style="left:192px;top:10px;width:84px;height:32px;line-height:30px;font-size:13px">기간 지정</div>
+      <div class="abs seg" style="left:280px;top:10px;width:84px;height:32px;line-height:30px;font-size:13px">전체 기간</div>
+      <div class="abs input" style="left:384px;top:8px;width:150px">2026-09-01</div>
+      <div class="abs lbl" style="left:538px;top:18px;width:20px;text-align:center">~</div>
+      <div class="abs input" style="left:562px;top:8px;width:150px">2026-10-13</div>
+      <div class="abs lbl" style="left:980px;top:18px">집계 기준</div>
+      <div class="abs seg on" style="left:1050px;top:10px;width:110px;height:32px;line-height:30px;font-size:13px">전체</div>
+      <div class="abs seg" style="left:1166px;top:10px;width:132px;height:32px;line-height:30px;font-size:13px">승인 · 완료만</div>
+    </div>
+    <div id="kpis"></div>
+    <div class="abs seg on" style="left:24px;top:240px;width:140px;height:32px;line-height:30px;font-size:13px">추이 · 센터</div>
+    <div class="abs seg" style="left:170px;top:240px;width:140px;height:32px;line-height:30px;font-size:13px">유형 · 목적 · 업종</div>
+    <div class="abs seg" style="left:316px;top:240px;width:140px;height:32px;line-height:30px;font-size:13px">담당 · 언어 · 직무</div>
+    <div class="abs lbl" style="left:760px;top:248px;width:582px;text-align:right">2026.09.01~2026.10.13 · 거절 · 취소 제외</div>
+    <div class="abs card" style="left:24px;top:282px;width:860px;height:470px">
+      <div class="abs h3" style="left:20px;top:16px">월별 추이</div>
+      <div class="abs lbl" style="left:20px;top:42px">2026년 · 월별 신청 건수 · 선택 기간 밖의 달은 흐리게</div>
+      <div id="trend"></div>
+    </div>
+    <div class="abs card" style="left:896px;top:282px;width:446px;height:470px">
+      <div class="abs h3" style="left:20px;top:16px">센터별 방문 건수</div>
+      <div class="abs hint" style="left:20px;top:42px">복합 투어는 들르는 센터마다 1건씩</div>
+      <div id="places"></div>
+      <div class="abs" style="left:20px;top:190px;width:406px;height:1px;background:var(--line)"></div>
+      <div class="abs h3" style="left:20px;top:206px">투어 종류</div>
+      <div id="tourbars"></div>
+    </div>
+  </div>
+
 </div></div></div>
 <script>
   // 달력 (2026년 10월, 일요일 시작 6주)
@@ -409,8 +445,31 @@
       return r.map((c, j) => `<div class="abs td" style="left:${xs[j]}px;top:${y + 8}px">${c}</div>`).join('') + `<div class="abs" style="left:28px;top:${y + 35}px;width:802px;height:1px;background:var(--line)"></div>`
     }).join('')
   })()
+
+  // 통계: KPI · 월별 추이 · 가로 막대
+  ;(function () {
+    const k = [['신청 건수','31건','직전 동기간 대비 ▲ 6'],['신청 인원 (대기 포함)','188명','직전 동기간 대비 ▲ 42'],['승인률','92%','처리 26건 중 승인 24건'],['건당 평균 인원','6.1명','인원 = 제출된 참석자 수 (없으면 예상 인원)']]
+    document.getElementById('kpis').innerHTML = k.map((r, i) => `<div class="abs card" style="left:${24 + i * 332}px;top:136px;width:320px;height:92px">
+      <div class="abs lbl" style="left:18px;top:14px">${r[0]}</div><div class="abs" style="left:18px;top:34px;font-size:24px;font-weight:600">${r[1]}</div>
+      <div class="abs hint" style="left:18px;top:66px">${r[2]}</div></div>`).join('')
+    const m = [9,11,14,12,16,13,10,15,17,14,0,0]
+    const mx = Math.max(...m)
+    document.getElementById('trend').innerHTML = m.map((v, i) => {
+      const h = 300 * v / mx, x = 20 + i * (820 / 12), dim = i < 8 || i > 9
+      return `<div class="abs" style="left:${x}px;top:${76 + 300 - h}px;width:${820 / 12}px;text-align:center;font-size:12px;color:${dim ? 'var(--ink3)' : 'var(--ink)'}">${v || ''}</div>
+        <div class="abs" style="left:${x + (820 / 12 - 36) / 2}px;top:${76 + 322 - h}px;width:36px;height:${h}px;background:${dim ? 'var(--line)' : 'var(--primary)'}"></div>
+        <div class="abs lbl" style="left:${x}px;top:${76 + 330}px;width:${820 / 12}px;text-align:center">${i + 1}월</div>`
+    }).join('') + '<div class="abs" style="left:20px;top:398px;width:820px;height:1px;background:var(--line)"></div>'
+    const bars = (rows, top, lw) => { const mx = Math.max(...rows.map((r) => r[1]), 1), bw = 406 - lw - 70
+      return rows.map((r, i) => `<div class="abs" style="left:20px;top:${top + i * 30}px;width:${lw}px;line-height:28px;font-size:13px;color:var(--ink2)">${r[0]}</div>
+        <div class="abs" style="left:${28 + lw}px;top:${top + i * 30 + 10}px;width:${bw}px;height:8px;background:var(--soft)"></div>
+        <div class="abs" style="left:${28 + lw}px;top:${top + i * 30 + 10}px;width:${bw * r[1] / mx}px;height:8px;background:var(--primary)"></div>
+        <div class="abs" style="left:${36 + lw + bw}px;top:${top + i * 30}px;width:54px;line-height:28px;font-size:13px;font-weight:600;text-align:right">${r[1]}건</div>`).join('') }
+    document.getElementById('places').innerHTML = bars([['메가와이즈 센터', 24], ['TDL Lab', 19]], 70, 130)
+    document.getElementById('tourbars').innerHTML = bars([['TDL Lab 투어', 7], ['메가와이즈 센터 투어', 12], ['메가와이즈 + TDL Lab', 12]], 240, 150)
+  })()
   // 화면 전환 · 크기 맞춤
-  const navOf = { b1: 'n1', b2: 'n1', b3: 'n1', done: 'n1', my: 'n2', adm: 'n3', blk: 'n3' }
+  const navOf = { b1: 'n1', b2: 'n1', b3: 'n1', done: 'n1', my: 'n2', adm: 'n3', blk: 'n3', st: 'n4' }
   document.querySelectorAll('.toolbar button').forEach((b) => b.addEventListener('click', () => {
     document.querySelectorAll('.toolbar button').forEach((x) => x.classList.toggle('on', x === b))
     document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('on', s.id === 's-' + b.dataset.s))
