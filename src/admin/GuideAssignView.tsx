@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button'
 import {
   GUIDE_ROSTER,
   HOURS_PER_DAY,
+  SESSION_HOURS,
   OPERATORS,
   formatGuides,
   guideLoads,
@@ -30,7 +31,8 @@ import { GuideWeekly } from './GuideWeekly'
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
 const formatHours = (hours: number) => `${Math.round(hours * 10) / 10}`
-const formatMM = (value: number) => value.toFixed(2)
+/** 소수 둘째 자리 반올림 (0.075 → 0.08: 부동소수 오차 보정) */
+const formatMM = (value: number) => (Math.round(value * 100 + 1e-9) / 100).toFixed(2)
 
 function Card({ title, subtitle, actions, children }: { title: string; subtitle?: string; actions?: ReactNode; children: ReactNode }) {
   return (
@@ -104,7 +106,7 @@ function AssignPanel({
         </p>
         <p className="mt-0.5 text-[15px] font-bold text-warm-800">{request.company}</p>
         <p className="mt-0.5 text-[12px] text-warm-600">
-          {tour.label} · {headcountOf(request)}명 · 투입 {formatHours(tourHours(request))}시간
+          {tour.label} · {headcountOf(request)}명 · 투입 1타임({formatHours(tourHours(request))}시간)
         </p>
       </div>
 
@@ -394,7 +396,7 @@ export function GuideAssignView({
 
       <Card
         title={`${monthNumber}월 인원별 투입 (M/M)`}
-        subtitle={`투어 시간 기준(센터 등과 묶인 복합 투어는 Lab 구간 1시간) · 근무일 ${days}일 × ${HOURS_PER_DAY}시간 = ${days * HOURS_PER_DAY}시간을 1 M/M 으로 계산 · 시간 미정 방문은 투어 기본 시간`}
+        subtitle={`투어 1건 = 1타임(반일 ${SESSION_HOURS}시간, 오전 · 오후 각 1타임) · 근무일 ${days}일 × ${HOURS_PER_DAY}시간 = ${days * HOURS_PER_DAY}시간을 1 M/M 으로 계산`}
       >
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-[13px]">
