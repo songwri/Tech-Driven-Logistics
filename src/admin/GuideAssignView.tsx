@@ -226,7 +226,8 @@ export function GuideAssignView({
   const inMonth = confirmed
     .filter((request) => request.date.startsWith(prefix))
     .sort((a, b) => (a.date + a.slot).localeCompare(b.date + b.slot))
-  const selected = inMonth.find((request) => request.id === selectedId) ?? null
+  // 주간 보드에서 다른 달의 방문을 골라도 배정 패널이 열리도록 전체에서 찾는다.
+  const selected = confirmed.find((request) => request.id === selectedId) ?? null
   const unassigned = inMonth.filter((request) => !parseGuides(request.guides).main).length
 
   const byDate = new Map<string, VisitRequest[]>()
@@ -293,6 +294,14 @@ export function GuideAssignView({
     if (window.matchMedia('(max-width: 1023px)').matches) {
       window.setTimeout(() => document.getElementById('guide-assign-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
     }
+  }
+  /** 주간 보드에서 방문을 누르면 그 달로 달력을 맞추고 위쪽 배정 패널로 이동한다. */
+  const pickFromBoard = (request: VisitRequest) => {
+    const date = new Date(Number(request.date.slice(0, 4)), Number(request.date.slice(5, 7)) - 1, 1)
+    if (date.getTime() !== month.getTime()) setMonth(date)
+    setSelectedDate(request.date)
+    setSelectedId(request.id)
+    window.setTimeout(() => document.getElementById('guide-assign-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
   }
   const dayList = selectedDate ? (byDate.get(selectedDate) ?? []) : []
 
@@ -509,6 +518,8 @@ export function GuideAssignView({
         </div>
       </div>
 
+      <GuideWeekly requests={confirmed} selectedId={selectedId} onSelect={pickFromBoard} />
+
       <Card
         title="월간 인원별 투입 (M/M)"
         subtitle={`투어 1건 = 1타임(반일 ${SESSION_HOURS}시간, 오전 · 오후 각 1타임) · 근무일 ${days}일 × ${HOURS_PER_DAY}시간 = ${days * HOURS_PER_DAY}시간을 1 M/M 으로 계산`}
@@ -584,8 +595,6 @@ export function GuideAssignView({
           </table>
         </div>
       </Card>
-
-      <GuideWeekly requests={confirmed} />
 
       <Card title={`${year}년 월별 M/M`} subtitle="사람 × 월 · 값이 클수록 진하게">
         <div className="overflow-x-auto">
