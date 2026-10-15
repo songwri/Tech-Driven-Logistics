@@ -383,7 +383,7 @@ export function GuideAssignView({
 
       <Card
         title={`${monthNumber}월 인원별 투입 (M/M)`}
-        subtitle={`투어 시간 기준 · 근무일 ${days}일 × ${HOURS_PER_DAY}시간 = ${days * HOURS_PER_DAY}시간을 1 M/M 으로 계산 · 시간 미정 방문은 투어 기본 시간`}
+        subtitle={`투어 시간 기준(센터 등과 묶인 복합 투어는 Lab 구간 1시간) · 근무일 ${days}일 × ${HOURS_PER_DAY}시간 = ${days * HOURS_PER_DAY}시간을 1 M/M 으로 계산 · 시간 미정 방문은 투어 기본 시간`}
       >
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-[13px]">
