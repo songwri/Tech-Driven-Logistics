@@ -872,9 +872,7 @@ export function sectionProblems(draft: VisitDraft): Record<FormSection, string |
       ? external ? '업체명을 입력해 주세요.' : '방문 조직명을 입력해 주세요.'
       : external && draft.industries.length === 0
         ? '업종을 선택해 주세요.'
-        : draft.industries.includes(OTHER)
-          ? '기타 업종을 입력해 주세요.'
-          : null
+        : null
 
   const purpose = draft.purposes.length === 0
     ? '방문 목적을 선택해 주세요.'
@@ -937,7 +935,7 @@ export function missingFields(draft: VisitDraft): Set<string> {
   const external = draft.category === 'external'
   mark('clientType', external && !draft.clientType)
   mark('company', blank(draft.company))
-  mark('industries', external && (draft.industries.length === 0 || draft.industries.includes(OTHER)))
+  mark('industries', external && draft.industries.length === 0)
   mark('purposes', draft.purposes.length === 0 || draft.purposes.includes(OTHER))
   mark('language', draft.language === 'foreign' && (!draft.foreignLanguage || draft.foreignLanguage === OTHER))
   draft.visitors.forEach((visitor, index) => {
