@@ -1,4 +1,4 @@
-import { STATUS_LABEL, TOUR_BY_ID, type SiteApprovals, type VisitRequest, type VisitStatus, type TourType, type Visitor } from '@/lib/visit'
+import { STATUS_LABEL, TOUR_BY_ID, normalizeIndustries, type SiteApprovals, type VisitRequest, type VisitStatus, type TourType, type Visitor } from '@/lib/visit'
 
 /**
  * 서버(구글 시트)에서 온 예약 한 건을 화면이 기대하는 모양으로 정리한다.
@@ -32,7 +32,7 @@ export function normalizeRequest(value: unknown): VisitRequest {
     interpreter: r.interpreter === true,
     interpreterLanguage: text(r.interpreterLanguage),
     company: text(r.company),
-    industries: list(r.industries),
+    industries: r.category === 'internal' ? [] : normalizeIndustries(list(r.industries)),
     purposes: list(r.purposes),
     host: {
       name: text(host.name),

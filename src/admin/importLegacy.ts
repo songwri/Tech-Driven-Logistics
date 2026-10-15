@@ -1,4 +1,4 @@
-import { emptyHost, tourFromLabel, type TourType, type Visitor, type VisitRequest, type VisitStatus } from '@/lib/visit'
+import { emptyHost, normalizeIndustries, tourFromLabel, type TourType, type Visitor, type VisitRequest, type VisitStatus } from '@/lib/visit'
 
 /**
  * 방문 이력 가져오기 (붙여넣기 · .xlsx · .csv 파일). 두 가지 양식을 알아본다.
@@ -285,7 +285,7 @@ function parseVisitSheet(table: string[][], headerAt: number): ParsedRow[] {
         interpreter: get('통역동반') === '동반',
         interpreterLanguage: get('통역동반') === '동반' ? get('통역언어') : '',
         company,
-        industries: category === 'external' ? splitComma(get('업종')) : [],
+        industries: category === 'external' ? normalizeIndustries(splitComma(get('업종'))) : [],
         purposes: splitComma(get('방문목적')),
         host: {
           name: get('담당자'),

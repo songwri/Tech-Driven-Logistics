@@ -5,7 +5,7 @@ import { Field, Input, Label, Textarea } from '../ui/Field'
 import {
   CATEGORY_LABEL,
   CLIENT_TYPE_LABEL,
-  INDUSTRY_GROUPS,
+  INDUSTRIES,
   JOBS,
   MAIN_DIVISIONS,
   MAX_VISITORS,
@@ -555,36 +555,28 @@ export function CompanyFields({
             <FieldLabel required>업종</FieldLabel>
             <span className="text-[12px] text-warm-600">주 업종 한 가지만 선택</span>
           </div>
-          <div className="mt-2 space-y-2.5" role="radiogroup" aria-label="업종">
-            {INDUSTRY_GROUPS.map((group) => (
-              <div key={group.label} className="flex flex-wrap items-center gap-2">
-                <span className="w-full shrink-0 text-[12px] text-warm-600 sm:w-24">{group.label}</span>
-                {group.items.map((item) => (
-                  <Chip
-                    key={item}
-                    multi={false}
-                    selected={draft.industries.includes(item)}
-                    onClick={() => onChange({ industries: draft.industries.includes(item) ? [] : [item] })}
-                  >
-                    {item}
-                  </Chip>
-                ))}
-              </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2" role="radiogroup" aria-label="업종">
+            {INDUSTRIES.map((item) => (
+              <Chip
+                key={item}
+                multi={false}
+                selected={draft.industries.includes(item)}
+                onClick={() => onChange({ industries: draft.industries.includes(item) ? [] : [item] })}
+              >
+                {item}
+              </Chip>
             ))}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="w-full shrink-0 text-[12px] text-warm-600 sm:w-24">그 외</span>
-              <OtherOption
-                values={draft.industries}
-                // 업종은 하나만: 기타를 고르면 다른 선택은 해제된다.
-                onChange={(industries) =>
-                  onChange({
-                    industries: industries.some((v) => v.startsWith(OTHER)) ? industries.filter((v) => v.startsWith(OTHER)) : industries,
-                  })
-                }
-                placeholder="업종 직접 입력"
-                single
-              />
-            </div>
+            <OtherOption
+              values={draft.industries}
+              // 업종은 하나만: 기타를 고르면 다른 선택은 해제된다.
+              onChange={(industries) =>
+                onChange({
+                  industries: industries.some((v) => v.startsWith(OTHER)) ? industries.filter((v) => v.startsWith(OTHER)) : industries,
+                })
+              }
+              placeholder="업종 직접 입력 (예: 공공, 대학교)"
+              single
+            />
           </div>
           <GroupError show={Boolean(errors?.has('industries'))}>
             {draft.industries.includes(OTHER) ? '기타 업종을 입력해 주세요.' : '업종을 선택해 주세요.'}
