@@ -27,7 +27,7 @@ function addWeeks(monday: string, weeks: number) {
 }
 
 /**
- * 주간 인원별 투입: 월~일 칸에 그날 맡은 투어 시간(메인/운영)을 보여 주고,
+ * 주간 인원별 투입: 월~일 칸에 그날 맡은 투어 시간(인솔/운영)을 보여 주고,
  * 가동률 = 투입 시간 ÷ (그 주 근무일 × 8시간).
  */
 export function GuideWeekly({ requests }: { requests: VisitRequest[] }) {
@@ -67,7 +67,7 @@ export function GuideWeekly({ requests }: { requests: VisitRequest[] }) {
         <div>
           <h3 className="text-[15px] font-bold text-warm-800">주간 인원별 투입</h3>
           <p className="mt-0.5 text-[12px] text-warm-600">
-            날짜 칸은 그날 투입 시간(투어 1건 = 반일 4시간) · <b className="text-warm-800">진하게</b> 메인 / 연하게 운영 · 가동률 = 투입 시간 ÷ 근무일 {workDays}일 ×{' '}
+            날짜 칸은 그날 투입 시간(투어 1건 = 반일 4시간) · <b className="text-warm-800">진하게</b> 인솔 / 연하게 운영 · 가동률 = 투입 시간 ÷ 근무일 {workDays}일 ×{' '}
             {HOURS_PER_DAY}시간({capacity}시간)
           </p>
         </div>
@@ -113,7 +113,7 @@ export function GuideWeekly({ requests }: { requests: VisitRequest[] }) {
                   </th>
                 )
               })}
-              <th className="px-2 py-2 text-right font-semibold">메인</th>
+              <th className="px-2 py-2 text-right font-semibold">인솔</th>
               <th className="px-2 py-2 text-right font-semibold">운영</th>
               <th className="px-2 py-2 text-right font-semibold">투입 시간</th>
               <th className="px-2 py-2 text-right font-semibold">가동률</th>
@@ -142,7 +142,7 @@ export function GuideWeekly({ requests }: { requests: VisitRequest[] }) {
                           main ? 'bg-[#30405f] font-semibold text-white' : jobs.length > 0 && 'bg-[#30405f]/15 text-warm-800',
                         )}
                         title={jobs
-                          .map((job) => `${job.request.slot ? job.request.slot.slice(0, 5) : '미정'} ${job.request.company} (${job.role === 'main' ? '메인' : '운영'})`)
+                          .map((job) => `${job.request.slot ? job.request.slot.slice(0, 5) : '미정'} ${job.request.company} (${job.role === 'main' ? '인솔' : '운영'})`)
                           .join('\n')}
                       >
                         {jobs.length > 0 ? `${formatHours(hours)}h${jobs.length > 1 ? `(${jobs.length}건)` : ''}` : '–'}

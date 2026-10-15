@@ -83,7 +83,7 @@ export function OpsFields({
       <Field label="주요 인원" hint="줄바꿈 또는 쉼표로 구분">
         <Textarea rows={3} value={value.keyPersons} onChange={(e) => set({ keyPersons: e.target.value })} placeholder="홍길동 상무" />
       </Field>
-      <Field label="가이드" hint="줄바꿈으로 구분 · 메인 가이드는 '(메인)' 표시 · 가이드 배정 메뉴에서 고를 수 있음">
+      <Field label="가이드" hint="줄바꿈으로 구분 · 인솔자는 '(인솔자)' 표시 · 가이드 배정 메뉴에서 고를 수 있음">
         <Textarea rows={3} value={value.guides} onChange={(e) => set({ guides: e.target.value })} placeholder={'홍길동 책임\n김철수 선임'} />
       </Field>
       <Field label="유관 부서" hint="쉼표로 구분 (예: 풀필먼트영업팀, SC품질팀)">

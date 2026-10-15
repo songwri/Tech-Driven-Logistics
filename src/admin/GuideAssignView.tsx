@@ -49,7 +49,7 @@ function Card({ title, subtitle, actions, children }: { title: string; subtitle?
   )
 }
 
-/** 선택한 방문의 메인 가이드(목록에서 하나) · 운영 인원(복수 체크) 배정 */
+/** 선택한 방문의 인솔자(목록에서 하나) · 운영 인원(복수 체크) 배정 */
 function AssignPanel({
   request,
   onSave,
@@ -65,10 +65,10 @@ function AssignPanel({
 
   const chooseMain = (name: string | null) => {
     setMessage(null)
-    // 메인 가이드로 고른 사람은 운영 인원에서 뺀다.
+    // 인솔자로 고른 사람은 운영 인원에서 뺀다.
     setDraft((current) => ({ ...current, main: name, operators: current.operators.filter((item) => item !== name) }))
   }
-  // 전체 선택 대상: 메인 가이드를 뺀 운영 가능 인원
+  // 전체 선택 대상: 인솔자를 뺀 운영 가능 인원
   const selectable = OPERATORS.filter((member) => member.name !== draft.main).map((member) => member.name)
   const allSelected = selectable.length > 0 && selectable.every((name) => draft.operators.includes(name))
   const toggleAll = () => {
@@ -112,9 +112,9 @@ function AssignPanel({
 
       <fieldset>
         <legend className="mb-1.5 flex items-center gap-1.5 text-[13px] font-bold text-warm-800">
-          <UserRound width={14} height={14} /> 메인 가이드
+          <UserRound width={14} height={14} /> 인솔자
         </legend>
-        <div className="border border-warm-300/50" role="radiogroup" aria-label="메인 가이드">
+        <div className="border border-warm-300/50" role="radiogroup" aria-label="인솔자">
           {[null, ...GUIDE_ROSTER.map((member) => member.name)].map((name) => {
             const member = GUIDE_ROSTER.find((item) => item.name === name)
             const active = draft.main === name
@@ -171,12 +171,12 @@ function AssignPanel({
                   onChange={() => toggleOperator(member.name)}
                 />
                 <span className="truncate">{memberLabel(member)}</span>
-                {isMain && <span className="ml-auto shrink-0 text-[11px]">메인</span>}
+                {isMain && <span className="ml-auto shrink-0 text-[11px]">인솔자</span>}
               </label>
             )
           })}
         </div>
-        <p className="mt-1.5 text-[11px] text-warm-600">메인 가이드로 고른 인원은 운영 인원에서 제외됩니다 · 팀장은 메인 가이드만 가능</p>
+        <p className="mt-1.5 text-[11px] text-warm-600">인솔자로 고른 인원은 운영 인원에서 제외됩니다 · 팀장은 인솔자만 가능</p>
       </fieldset>
 
       {draft.others.length > 0 && (
@@ -329,7 +329,7 @@ export function GuideAssignView({
               </button>
               <span className="ml-2 text-[12px] text-warm-600">
                 {inMonth.length}건 ·{' '}
-                <b className={unassigned > 0 ? 'text-brand' : 'text-[#2b8a3e]'}>메인 미배정 {unassigned}건</b>
+                <b className={unassigned > 0 ? 'text-brand' : 'text-[#2b8a3e]'}>인솔자 미배정 {unassigned}건</b>
               </span>
             </div>
           }
@@ -386,7 +386,7 @@ export function GuideAssignView({
                       </span>
                       {holiday && <span className="hidden truncate text-[10px] text-brand/70 sm:inline">{holiday}</span>}
                     </div>
-                    {/* 모바일: 투어 색 점 (메인 미배정은 빨간 테두리) */}
+                    {/* 모바일: 투어 색 점 (인솔자 미배정은 빨간 테두리) */}
                     {list.length > 0 && (
                       <div className="flex flex-wrap gap-0.5 sm:hidden" aria-hidden>
                         {list.map((request) => (
@@ -431,7 +431,7 @@ export function GuideAssignView({
                                   {assignment.operators.length > 0 && ` + ${assignment.operators.length}명`}
                                 </>
                               ) : (
-                                <b className={active ? 'text-white' : 'text-brand'}>메인 미배정</b>
+                                <b className={active ? 'text-white' : 'text-brand'}>인솔자 미배정</b>
                               )}
                             </span>
                           </button>
@@ -476,7 +476,7 @@ export function GuideAssignView({
                             {assignment.operators.length > 0 && <span className="block">+ {assignment.operators.length}명</span>}
                           </>
                         ) : (
-                          <b className={active ? 'text-white' : 'text-brand'}>메인 미배정</b>
+                          <b className={active ? 'text-white' : 'text-brand'}>인솔자 미배정</b>
                         )}
                       </span>
                     </button>
@@ -503,7 +503,7 @@ export function GuideAssignView({
               )
             ) : (
               <p className="px-4 py-10 text-center text-[13px] text-warm-600">
-                {inMonth.length === 0 ? '이 달에는 확정된 방문이 없습니다.' : '일정을 누르면 메인 가이드와 운영 인원을 정할 수 있습니다.'}
+                {inMonth.length === 0 ? '이 달에는 확정된 방문이 없습니다.' : '일정을 누르면 인솔자와 운영 인원을 정할 수 있습니다.'}
               </p>
             )}
           </Card>
@@ -546,7 +546,7 @@ export function GuideAssignView({
             <thead>
               <tr className="border-b border-warm-300/40 text-left text-[12px] text-warm-600">
                 <th className="px-4 py-2 font-semibold">이름</th>
-                <th className="px-3 py-2 text-right font-semibold">메인</th>
+                <th className="px-3 py-2 text-right font-semibold">인솔</th>
                 <th className="px-3 py-2 text-right font-semibold">운영</th>
                 <th className="px-3 py-2 text-right font-semibold">합계</th>
                 <th className="px-3 py-2 text-right font-semibold">투입 시간</th>
