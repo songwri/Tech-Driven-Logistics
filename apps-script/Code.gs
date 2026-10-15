@@ -745,6 +745,11 @@ function normalizeIndustry_(value) {
   return LEGACY_INDUSTRY_.hasOwnProperty(text) ? LEGACY_INDUSTRY_[text] : ('기타: ' + text).slice(0, 50);
 }
 
+/** 예약 신청: 업종은 목록에서만 받는다. 목록에 없는 값(직접 입력)은 글자를 버리고 '기타' 로 저장한다. (관리자 수정은 기존 '기타: 물류' 표기를 지우지 않도록 normalizeIndustries_ 를 쓴다) */
+function strictIndustries_(values) {
+  return normalizeIndustries_(values).map(function (item) { return item.indexOf('기타') === 0 ? '기타' : item; });
+}
+
 /** 업종은 주 업종 한 가지만 쓴다 (여러 개면 옮긴 뒤 첫 번째). */
 function normalizeIndustries_(values) {
   return (values || []).map(normalizeIndustry_).filter(function (item) { return item; }).slice(0, 1);
@@ -1141,7 +1146,7 @@ function sanitizeVisit_(payload, requireConsent) {
     throw new Error('투어 진행 언어를 선택해 주세요.');
   }
   // 업종도 하나만 받는다 (통계 중복 집계 방지).
-  var industries = normalizeIndustries_((payload.industries || []).map(function (item) { return optionalText_(item, 50).replace(/,/g, ' '); })
+  var industries = strictIndustries_((payload.industries || []).map(function (item) { return optionalText_(item, 50).replace(/,/g, ' '); })
     .filter(function (item) { return item; }));
   // 방문 목적은 하나만 받는다 (통계 중복 집계 방지). 이전 화면이 여러 개를 보내도 첫 번째만 저장한다.
   var purposes = (payload.purposes || []).map(function (item) { return optionalText_(item, 50).replace(/,/g, ' '); })

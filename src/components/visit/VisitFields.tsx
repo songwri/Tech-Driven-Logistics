@@ -553,7 +553,7 @@ export function CompanyFields({
         <div>
           <div className="flex items-baseline justify-between gap-2">
             <FieldLabel required>업종</FieldLabel>
-            <span className="text-[12px] text-warm-600">주 업종 한 가지만 선택</span>
+            <span className="text-[12px] text-warm-600">주 업종 한 가지만 선택 · 공공, 대학교 등은 기타</span>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2" role="radiogroup" aria-label="업종">
             {INDUSTRIES.map((item) => (
@@ -566,20 +566,17 @@ export function CompanyFields({
                 {item}
               </Chip>
             ))}
-            <OtherOption
-              values={draft.industries}
-              // 업종은 하나만: 기타를 고르면 다른 선택은 해제된다.
-              onChange={(industries) =>
-                onChange({
-                  industries: industries.some((v) => v.startsWith(OTHER)) ? industries.filter((v) => v.startsWith(OTHER)) : industries,
-                })
-              }
-              placeholder="업종 직접 입력 (예: 공공, 대학교)"
-              single
-            />
+            {/* 업종은 목록에서만 고른다 (직접 입력 없음). 공공 · 대학교 등 어디에도 속하지 않으면 기타. */}
+            <Chip
+              multi={false}
+              selected={draft.industries.includes(OTHER)}
+              onClick={() => onChange({ industries: draft.industries.includes(OTHER) ? [] : [OTHER] })}
+            >
+              {OTHER}
+            </Chip>
           </div>
           <GroupError show={Boolean(errors?.has('industries'))}>
-            {draft.industries.includes(OTHER) ? '기타 업종을 입력해 주세요.' : '업종을 선택해 주세요.'}
+            업종을 선택해 주세요.
           </GroupError>
         </div>
       )}
