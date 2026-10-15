@@ -22,7 +22,8 @@ import { tourLanguageName, FOREIGN_LANGUAGES,
   type Resource,
   type VisitRequest,
 } from '@/lib/visit'
-import { ColumnChart, DonutChart, type Datum } from './charts'
+import { BarList, ColumnChart, DonutChart, type Datum } from './charts'
+import { LanguageFlag } from './flags'
 import { StatsGrid } from './StatsGrid'
 import { VisitListModal } from './VisitListModal'
 import { buildStatsSheets, divisionStats, metricColumns, monthlyRows, yearlyRows } from './statsData'
@@ -62,6 +63,9 @@ function countBy(requests: VisitRequest[], keys: (request: VisitRequest) => stri
   }
   return [...counts].map(([label, value]) => ({ label, value }))
 }
+
+/** 항목별 막대그래프는 큰 순서대로. 건수가 같으면 원래 순서를 유지한다. */
+const byValue = (data: Datum[]) => [...data].sort((a, b) => b.value - a.value)
 
 function Card({ title, subtitle, children, className }: { title: string; subtitle?: string; children: ReactNode; className?: string }) {
   return (
@@ -204,13 +208,12 @@ export function StatsView({ requests, site }: { requests: VisitRequest[]; site: 
     withList(tour.label, scoped.filter((request) => request.tour === tour.id), { color: tour.color }),
   )
   const external = scoped.filter((request) => request.category === 'external')
+  // 10개 분류를 모두 보여 준다 (0건 포함). 큰 순서 정렬은 그리는 곳(byValue)에서 한다.
   const industries = countBy(external, (request) => request.industries.map(baseOption), [...INDUSTRIES, OTHER])
     .map((datum) => ({
       ...datum,
       requests: external.filter((request) => request.industries.some((item) => baseOption(item) === datum.label)),
     }))
-    // 10개 분류를 모두 보여 준다 (0건 포함). 많은 순, 건수가 같으면 분류 순서.
-    .sort((a, b) => b.value - a.value)
   const languages: Datum[] = [
     withList('한국어', scoped.filter((request) => request.language !== 'foreign' && !request.interpreter)),
     withList('한국어 · 통역 동반', scoped.filter((request) => request.language !== 'foreign' && request.interpreter)),
@@ -431,12 +434,12 @@ export function StatsView({ requests, site }: { requests: VisitRequest[]; site: 
 
       {site === 'hq' && (
         <Card title="센터별 방문 건수" subtitle={`${periodLabel} · 복합 투어는 들르는 센터마다 1건씩`}>
-          <ColumnChart data={places} height={150} unit="건" onSelect={select('센터별')} />
+          <ColumnChart data={byValue(places)} height={150} unit="건" onSelect={select('센터별')} />
         </Card>
       )}
 
       <Card title="담당(실)별 방문 건수" subtitle={`${periodLabel} · 방문 횟수 기준 · 주요 6개 담당 + 기타`}>
-        <ColumnChart data={divisionCounts} height={170} unit="건" onSelect={select('담당(실)')} />
+        <ColumnChart data={byValue(divisionCounts)} height={170} unit="건" onSelect={select('담당(실)')} />
       </Card>
 
       <div className="grid gap-5 lg:grid-cols-3">
@@ -446,24 +449,27 @@ export function StatsView({ requests, site }: { requests: VisitRequest[]; site: 
           </div>
         </Card>
         <Card title="방문 목적" subtitle="복수 선택 포함">
-          <ColumnChart data={purposes} total={scoped.length} height={150} onSelect={select('방문 목적')} />
+          <ColumnChart data={byValue(purposes)} total={scoped.length} height={150} onSelect={select('방문 목적')} />
         </Card>
         <Card title="투어 종류" subtitle={periodLabel}>
-          <ColumnChart data={tours} height={150} onSelect={select('투어 종류')} />
+          <BarList data={byValue(tours)} onSelect={select('투어 종류')} />
         </Card>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <Card title="업종 (고객 방문)" subtitle={`${periodLabel} · 많은 순`}>
-          <ColumnChart data={industries} height={150} total={external.length} onSelect={select('업종')} />
+          <ColumnChart data={byValue(industries)} height={150} total={external.length} onSelect={select('업종')} />
         </Card>
         <Card title="투어 언어" subtitle="진행 언어 · 한국어 투어의 통역 동반">
-          <ColumnChart data={languages} height={150} onSelect={select('투어 언어')} />
+          <BarList
+            data={byValue(languages).map((datum) => ({ ...datum, icon: <LanguageFlag label={datum.label} /> }))}
+            onSelect={select('투어 언어')}
+          />
         </Card>
       </div>
 
       <Card title="방문자 직무" subtitle={`${periodLabel} · 방문자 수 기준`}>
-        <ColumnChart data={jobs} height={130} unit="명" onSelect={select('방문자 직무')} />
+        <ColumnChart data={byValue(jobs)} height={130} unit="명" onSelect={select('방문자 직무')} />
       </Card>
 
       <section className="border border-warm-300/50 bg-white p-5">

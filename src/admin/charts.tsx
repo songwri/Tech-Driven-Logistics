@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import type { VisitRequest } from '@/lib/visit'
 import { rampColor } from './ramp'
@@ -11,6 +11,8 @@ export interface Datum {
   dim?: boolean
   /** 이 막대에 포함된 방문 건 (있으면 막대를 눌러 목록을 볼 수 있다) */
   requests?: VisitRequest[]
+  /** 라벨 앞에 붙일 아이콘 (가로 막대 목록에서만 쓴다. 예: 투어 언어의 국기) */
+  icon?: ReactNode
 }
 
 function niceMax(value: number) {
@@ -154,6 +156,79 @@ export function ColumnChart({
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * 가로 막대 목록. 라벨이 길어도 잘리지 않도록 한 줄에는 이름 · 건수 · 비율, 그 아래에 막대를 둔다.
+ * 투어 종류 · 투어 언어처럼 이름이 긴 항목을 큰 순서대로 보여 줄 때 쓴다. 막대를 누르면 방문 목록을 볼 수 있다.
+ */
+export function BarList({
+  data,
+  unit = '건',
+  color,
+  total,
+  onSelect,
+}: {
+  data: Datum[]
+  unit?: string
+  color?: string
+  /** 비율 계산 기준 (없으면 합계) */
+  total?: number
+  onSelect?: (datum: Datum) => void
+}) {
+  const peak = Math.max(0, ...data.map((datum) => datum.value))
+  const sum = total ?? data.reduce((acc, datum) => acc + datum.value, 0)
+
+  if (data.length === 0 || peak === 0) {
+    return <div className="flex h-28 items-center justify-center text-sm text-warm-300">해당 기간 데이터가 없습니다.</div>
+  }
+
+  return (
+    <ul className="space-y-3 pt-1">
+      {data.map((datum) => {
+        const pct = sum > 0 ? Math.round((datum.value / sum) * 100) : 0
+        const clickable = Boolean(onSelect && datum.requests && datum.value > 0)
+        return (
+          <li
+            key={datum.label}
+            role={clickable ? 'button' : undefined}
+            tabIndex={clickable ? 0 : undefined}
+            aria-label={clickable ? `${datum.label} ${datum.value}${unit} 방문 목록 보기` : undefined}
+            title={`${datum.label} ${datum.value}${unit} · ${pct}%${clickable ? ' · 눌러서 목록 보기' : ''}`}
+            onClick={clickable ? () => onSelect?.(datum) : undefined}
+            onKeyDown={
+              clickable
+                ? (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      onSelect?.(datum)
+                    }
+                  }
+                : undefined
+            }
+            className={cn('group', clickable && 'cursor-pointer')}
+          >
+            <div className="flex items-center gap-2 text-[13px]">
+              {datum.icon}
+              <span className={cn('min-w-0 flex-1 truncate', datum.value > 0 ? 'text-warm-800' : 'text-warm-300')}>{datum.label}</span>
+              <span className="font-mono text-[13px] font-semibold tabular-nums text-warm-800">{datum.value}</span>
+              <span className="w-9 text-right font-mono text-[11px] tabular-nums text-warm-600">{pct}%</span>
+            </div>
+            <div className="mt-1 h-2 overflow-hidden rounded-[3px] bg-cream">
+              <div
+                className="h-full rounded-[3px] transition-[filter,width] group-hover:brightness-90"
+                style={{
+                  width: `${(datum.value / peak) * 100}%`,
+                  minWidth: datum.value > 0 ? 3 : 0,
+                  background: datum.color ?? color ?? rampColor(datum.value / peak),
+                }}
+              />
+            </div>
+          </li>
+        )
+      })}
+    </ul>
   )
 }
 
