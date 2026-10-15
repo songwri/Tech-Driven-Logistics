@@ -78,8 +78,13 @@ export function formatGuides({ main, operators, others }: GuideAssignment) {
   return [...lines, ...others].join('\n')
 }
 
-/** 가이드 배정 대상: 승인 · 완료된 방문 */
-export const isAssignable = (request: VisitRequest) => isConfirmed(request.status)
+/**
+ * 가이드 배정 대상: 승인 · 완료된 방문 중 TDL Lab 이 들어간 투어.
+ * 메가와이즈 센터 · 시화MTV 만 도는 투어는 Lab 인원이 맡지 않으므로 뺀다.
+ * 기타 방문(수기 등록)은 어느 공간인지 모르므로 포함한다.
+ */
+export const isAssignable = (request: VisitRequest) =>
+  isConfirmed(request.status) && (request.tour === 'other' || TOUR_BY_ID[request.tour].places.includes('lab'))
 
 const minutesOf = (time: string) => {
   const [hour, minute] = time.split(':').map(Number)

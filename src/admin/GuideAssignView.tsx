@@ -256,7 +256,7 @@ export function GuideAssignView({
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <Card
           title="투어 가이드 배정"
-          subtitle="승인 · 완료된 방문만 표시 · 일정을 눌러 오른쪽에서 배정"
+          subtitle="TDL Lab 이 들어간 승인 · 완료 방문만 표시 (센터 · 시화MTV 단독 투어 제외) · 일정을 눌러 오른쪽에서 배정"
           actions={
             <div className="flex items-center gap-1">
               <button
