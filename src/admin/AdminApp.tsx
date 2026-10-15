@@ -327,7 +327,7 @@ function AdminDashboard({ site }: { site: AdminSite }) {
           )}
         </div>
         {data.authenticated && (
-          <nav className="mx-auto flex max-w-7xl gap-1 px-4 md:px-8" aria-label="관리자 메뉴">
+          <nav className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 md:px-8" aria-label="관리자 메뉴">
             {(
               [
                 ['dashboard', '예약 대시보드', CalendarRange],
@@ -344,7 +344,7 @@ function AdminDashboard({ site }: { site: AdminSite }) {
                 onClick={() => setTab(id)}
                 aria-current={tab === id ? 'page' : undefined}
                 className={cn(
-                  'inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition',
+                  'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-2.5 text-sm font-semibold transition sm:gap-2 sm:px-4',
                   tab === id ? 'bg-[#f7f6f5] text-warm-800' : 'text-white/60 hover:text-white',
                 )}
               >

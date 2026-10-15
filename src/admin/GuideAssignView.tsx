@@ -214,6 +214,8 @@ export function GuideAssignView({
     return new Date(now.getFullYear(), now.getMonth(), 1)
   })
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  // 모바일: 날짜 칸에는 점만 보여 주고, 날짜를 누르면 달력 아래에 그날 일정 목록을 보여 준다 (예약 대시보드 달력과 같은 방식)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [loadMonth, setLoadMonth] = useState(month)
   const year = month.getFullYear()
   const monthNumber = month.getMonth() + 1
@@ -241,6 +243,7 @@ export function GuideAssignView({
   const shift = (delta: number) => {
     setMonth(new Date(year, monthNumber - 1 + delta, 1))
     setSelectedId(null)
+    setSelectedDate(null)
   }
 
   // 인원별 투입은 달력과 따로 월을 넘기며 본다 (주간 표처럼).
@@ -284,6 +287,15 @@ export function GuideAssignView({
   )
   const yearMax = Math.max(0.01, ...yearly.flat().map((load) => load.manMonth))
 
+  /** 일정을 고르면 배정 패널로 이동한다 (모바일은 패널이 달력 아래에 있다). */
+  const pick = (id: string) => {
+    setSelectedId(id)
+    if (window.matchMedia('(max-width: 1023px)').matches) {
+      window.setTimeout(() => document.getElementById('guide-assign-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+    }
+  }
+  const dayList = selectedDate ? (byDate.get(selectedDate) ?? []) : []
+
   const save = async (request: VisitRequest, guides: string) => {
     await onUpdate({ ...request, guides })
   }
@@ -293,9 +305,9 @@ export function GuideAssignView({
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <Card
           title="투어 가이드 배정"
-          subtitle="TDL Lab 이 들어간 승인 · 완료 방문만 표시 (센터 · 시화MTV 단독 투어 제외) · 일정을 눌러 오른쪽에서 배정"
+          subtitle="TDL Lab 이 들어간 승인 · 완료 방문만 표시 (센터 · 시화MTV 단독 투어 제외) · 일정을 눌러 배정"
           actions={
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1">
               <button
                 type="button"
                 onClick={() => shift(-1)}
@@ -322,8 +334,8 @@ export function GuideAssignView({
             </div>
           }
         >
-          <div className="overflow-x-auto">
-            <div className="grid min-w-[680px] grid-cols-7">
+          <div className="sm:overflow-x-auto">
+            <div className="grid select-none grid-cols-7 sm:min-w-[680px]">
               {WEEKDAYS.map((name, index) => (
                 <div
                   key={name}
@@ -336,14 +348,33 @@ export function GuideAssignView({
                 </div>
               ))}
               {cells.map((day, index) => {
-                if (day === null) return <div key={`empty-${index}`} className="min-h-24 border-b border-r border-warm-300/20 bg-cream/30" />
+                if (day === null) return <div key={`empty-${index}`} className="min-h-14 border-b border-r border-warm-300/20 bg-cream/30 sm:min-h-24" />
                 const key = toDateKey(new Date(year, monthNumber - 1, day))
                 const weekday = index % 7
                 const holiday = holidayName(key)
                 const off = weekday === 0 || weekday === 6 || Boolean(holiday)
                 const list = byDate.get(key) ?? []
+                const dayActive = key === selectedDate
                 return (
-                  <div key={key} className={cn('min-h-24 border-b border-r border-warm-300/30 p-1', off ? 'bg-cream/50' : 'bg-white')}>
+                  <div
+                    key={key}
+                    role={list.length > 0 ? 'button' : undefined}
+                    tabIndex={list.length > 0 ? 0 : undefined}
+                    onClick={() => list.length > 0 && setSelectedDate(dayActive ? null : key)}
+                    onKeyDown={(event) => {
+                      if (list.length > 0 && (event.key === 'Enter' || event.key === ' ')) {
+                        event.preventDefault()
+                        setSelectedDate(dayActive ? null : key)
+                      }
+                    }}
+                    aria-label={`${monthNumber}월 ${day}일 가이드 배정 대상 ${list.length}건`}
+                    className={cn(
+                      'min-h-14 border-b border-r border-warm-300/30 p-1 sm:min-h-24',
+                      off ? 'bg-cream/50' : 'bg-white',
+                      list.length > 0 && 'cursor-pointer sm:cursor-default',
+                      dayActive && 'bg-brand/10 sm:bg-white',
+                    )}
+                  >
                     <div className="mb-1 flex items-center gap-1">
                       <span
                         className={cn(
@@ -353,9 +384,21 @@ export function GuideAssignView({
                       >
                         {day}
                       </span>
-                      {holiday && <span className="truncate text-[10px] text-brand/70">{holiday}</span>}
+                      {holiday && <span className="hidden truncate text-[10px] text-brand/70 sm:inline">{holiday}</span>}
                     </div>
-                    <div className="space-y-1">
+                    {/* 모바일: 투어 색 점 (메인 미배정은 빨간 테두리) */}
+                    {list.length > 0 && (
+                      <div className="flex flex-wrap gap-0.5 sm:hidden" aria-hidden>
+                        {list.map((request) => (
+                          <span
+                            key={request.id}
+                            className={cn('h-2 w-2 rounded-full', !parseGuides(request.guides).main && 'ring-2 ring-brand ring-offset-1')}
+                            style={{ background: TOUR_BY_ID[request.tour].color }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <div className="hidden space-y-1 sm:block">
                       {list.map((request) => {
                         const assignment = parseGuides(request.guides)
                         const tour = TOUR_BY_ID[request.tour]
@@ -364,7 +407,10 @@ export function GuideAssignView({
                           <button
                             key={request.id}
                             type="button"
-                            onClick={() => setSelectedId(request.id)}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              pick(request.id)
+                            }}
                             aria-pressed={active}
                             title={`${tour.label} · ${formatScheduleShort(request.tour, request.slot)} · ${request.company}`}
                             className={cn(
@@ -397,9 +443,55 @@ export function GuideAssignView({
               })}
             </div>
           </div>
+          <div className="border-t border-warm-300/40 sm:hidden">
+            {selectedDate ? (
+              <div>
+                <p className="bg-cream/50 px-3 py-2 text-[13px] font-bold text-warm-800">{formatDateShort(selectedDate)}</p>
+                {dayList.map((request) => {
+                  const assignment = parseGuides(request.guides)
+                  const tour = TOUR_BY_ID[request.tour]
+                  const active = request.id === selectedId
+                  return (
+                    <button
+                      key={request.id}
+                      type="button"
+                      onClick={() => pick(request.id)}
+                      aria-pressed={active}
+                      className={cn(
+                        'flex w-full items-center gap-2.5 border-b border-l-[5px] border-warm-300/30 px-3 py-2.5 text-left transition',
+                        active ? 'bg-warm-800 text-white' : 'bg-white text-warm-800 active:bg-cream/70',
+                      )}
+                      style={{ borderLeftColor: tour.color }}
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[14px] font-semibold">{request.company}</span>
+                        <span className={cn('mt-0.5 block truncate text-[12px]', active ? 'text-white/80' : 'text-warm-600')}>
+                          {formatScheduleShort(request.tour, request.slot)} · {tour.label}
+                        </span>
+                      </span>
+                      <span className={cn('shrink-0 text-right text-[12px]', active ? 'text-white' : 'text-warm-600')}>
+                        {assignment.main ? (
+                          <>
+                            <b className={active ? 'text-white' : 'text-warm-800'}>{assignment.main}</b>
+                            {assignment.operators.length > 0 && <span className="block">+ {assignment.operators.length}명</span>}
+                          </>
+                        ) : (
+                          <b className={active ? 'text-white' : 'text-brand'}>메인 미배정</b>
+                        )}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="px-3 py-3 text-center text-[12px] text-warm-600">
+                {inMonth.length === 0 ? '이 달에는 확정된 방문이 없습니다.' : '점이 있는 날짜를 누르면 그날 일정이 보입니다.'}
+              </p>
+            )}
+          </div>
         </Card>
 
-        <div className="lg:sticky lg:top-4 lg:self-start">
+        <div id="guide-assign-panel" className="scroll-mt-4 lg:sticky lg:top-4 lg:self-start">
           <Card title="배정" subtitle={selected ? undefined : '달력에서 방문 일정을 선택하세요'}>
             {selected ? (
               readOnly ? (
