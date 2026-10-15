@@ -320,13 +320,11 @@ export const CLIENT_TYPE_LABEL: Record<ClientType, string> = {
   new: '신규 고객사',
 }
 
-/** 업종은 산업군별로 묶어 보여줍니다. 순서가 곧 화면 표시 순서입니다. */
-export const INDUSTRY_GROUPS: { label: string; items: string[] }[] = [
-  { label: '제조 · 산업재', items: ['제조', '전자', '가전', '자동차', '화학'] },
-  { label: '소비재', items: ['식품', '화장품', '의류', '제약/헬스케어', '가구/인테리어'] },
-  { label: '유통 · 물류', items: ['유통', '이커머스', 'CVS/편의점', '물류'] },
-]
-export const INDUSTRIES = INDUSTRY_GROUPS.flatMap((group) => group.items)
+/**
+ * 고객 방문 업종 분류. 순서가 곧 화면 표시 순서입니다.
+ * 여기에 속하지 않는 업종(공공 · 대학교 · 물류 등)은 '기타'를 고르고 직접 입력합니다. (apps-script/Code.gs 의 INDUSTRIES_ 와 같아야 한다)
+ */
+export const INDUSTRIES = ['리테일', '화학', '헬스케어', '패션&뷰티', '전자', '식품용품', '오토(Auto)', '기계&금속', '건자재']
 
 export const PURPOSES = ['기존 고객사 Lock-in', '신규 영업', '교육', '투어']
 
@@ -778,6 +776,34 @@ export function isOpenWeekday(date: Date) {
 export function baseOption(value: string) {
   return value.startsWith(OTHER) ? OTHER : value
 }
+
+/** 예전 업종(14가지) → 현재 분류. 물류처럼 맞는 분류가 없는 값은 normalizeIndustry 에서 '기타: 원문' 이 된다. */
+const LEGACY_INDUSTRY: Record<string, string> = {
+  전자: '전자',
+  가전: '전자',
+  자동차: '오토(Auto)',
+  오토: '오토(Auto)',
+  화학: '화학',
+  식품: '식품용품',
+  화장품: '패션&뷰티',
+  의류: '패션&뷰티',
+  '제약/헬스케어': '헬스케어',
+  유통: '리테일',
+  이커머스: '리테일',
+  'CVS/편의점': '리테일',
+  제조: '기계&금속',
+  '가구/인테리어': '건자재',
+}
+
+/** 업종 한 칸을 현재 분류로 맞춘다. 이미 현재 분류거나 '기타…' 면 그대로, 예전 업종은 옮기고, 그 밖의 값은 '기타: 원문' 으로 둔다. */
+export function normalizeIndustry(value: string) {
+  const text = value.trim()
+  if (!text || (INDUSTRIES as readonly string[]).includes(text) || text.startsWith(OTHER)) return text
+  return LEGACY_INDUSTRY[text] ?? `${OTHER}: ${text}`.slice(0, 50)
+}
+
+/** 업종은 주 업종 한 가지만 쓴다. 예전에 여러 개를 쉼표로 적은 기록은 첫 번째(옮긴 뒤 기준)만 남긴다. */
+export const normalizeIndustries = (values: string[]) => values.map(normalizeIndustry).filter(Boolean).slice(0, 1)
 
 /** '한국어' · '한국어 · 통역 동반(베트남어)' · '중국어 · 통역 없음' 형태. 한국어 · 통역 없음은 '한국어'만. */
 export function languageSummary(

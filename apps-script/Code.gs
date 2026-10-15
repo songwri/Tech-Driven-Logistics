@@ -89,7 +89,7 @@ var ADMIN_URL = SITE_URL + 'admin/';
 var ADMIN_URLS = { main: ADMIN_URL, mtv: SITE_URL + 'admin-mtv/', hq: SITE_URL + 'admin-hq/' };
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-12.mtv-closed';
+var CODE_VERSION = '2026-10-15.industry';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -727,6 +727,96 @@ function splitList_(value) {
     .filter(function (item) { return item; });
 }
 
+/* ------------------------------------------------- 업종 분류 */
+
+/** 고객 방문 업종 분류. src/lib/visit.ts 의 INDUSTRIES 와 같아야 한다. 이 밖의 값은 '기타: 원문' 으로 저장한다. */
+var INDUSTRIES_ = ['리테일', '화학', '헬스케어', '패션&뷰티', '전자', '식품용품', '오토(Auto)', '기계&금속', '건자재'];
+/** 예전 업종(14가지) → 현재 분류. src/lib/visit.ts 의 LEGACY_INDUSTRY 와 같아야 한다. */
+var LEGACY_INDUSTRY_ = {
+  '전자': '전자', '가전': '전자', '자동차': '오토(Auto)', '오토': '오토(Auto)', '화학': '화학', '식품': '식품용품',
+  '화장품': '패션&뷰티', '의류': '패션&뷰티', '제약/헬스케어': '헬스케어',
+  '유통': '리테일', '이커머스': '리테일', 'CVS/편의점': '리테일',
+  '제조': '기계&금속', '가구/인테리어': '건자재',
+};
+
+function normalizeIndustry_(value) {
+  var text = String(value == null ? '' : value).trim();
+  if (!text || INDUSTRIES_.indexOf(text) >= 0 || text.indexOf('기타') === 0) return text;
+  return LEGACY_INDUSTRY_.hasOwnProperty(text) ? LEGACY_INDUSTRY_[text] : ('기타: ' + text).slice(0, 50);
+}
+
+/** 업종은 주 업종 한 가지만 쓴다 (여러 개면 옮긴 뒤 첫 번째). */
+function normalizeIndustries_(values) {
+  return (values || []).map(normalizeIndustry_).filter(function (item) { return item; }).slice(0, 1);
+}
+
+/** 시트의 업종 칸을 읽어 옮길 내용을 계산한다 (쓰지 않는다). */
+function planIndustryMigration_() {
+  var target = book_().getSheetByName(VISIT_SHEET);
+  if (!target || target.getLastRow() < 2) throw new Error(VISIT_SHEET + ' 시트에 데이터가 없습니다.');
+  var col = VISIT_HEADERS.indexOf('업종') + 1;
+  var rows = target.getLastRow() - 1;
+  var before = target.getRange(2, col, rows, 1).getValues();
+  var after = [];
+  var summary = {}; // '예전 값 → 새 값' : 건수
+  var changed = 0;
+  var multi = 0;
+  before.forEach(function (row) {
+    var raw = String(row[0] == null ? '' : row[0]).trim();
+    var parts = splitList_(raw);
+    var next = normalizeIndustries_(parts).join(', ');
+    if (parts.length > 1) multi++;
+    if (next !== raw) {
+      changed++;
+      var key = (raw || '(빈 칸)') + ' → ' + (next || '(빈 칸)');
+      summary[key] = (summary[key] || 0) + 1;
+    }
+    after.push([next]);
+  });
+  return { sheet: target, col: col, rows: rows, after: after, summary: summary, changed: changed, multi: multi };
+}
+
+function industryReport_(plan) {
+  var lines = Object.keys(plan.summary).sort().map(function (key) { return '  ' + key + ' : ' + plan.summary[key] + '건'; });
+  var otherLines = lines.filter(function (line) { return line.indexOf('→ 기타') >= 0; });
+  return '업종 변경 대상 ' + plan.changed + '건 / 전체 ' + plan.rows + '건'
+    + (plan.multi > 0 ? ' (여러 개를 적은 ' + plan.multi + '건은 첫 번째만 남김)' : '') + '\n'
+    + (lines.length ? lines.join('\n') : '  (바꿀 내용 없음)')
+    + (otherLines.length ? '\n\n[기타로 옮기는 값 — 분류에 없는 업종]\n' + otherLines.join('\n') : '');
+}
+
+/**
+ * 1단계 (미리보기): 시트는 바꾸지 않고, 어떤 값이 어디로 바뀌는지 로그(보기 → 실행 로그)로 보여 준다.
+ * 스크립트 편집기에서 이 함수를 선택해 실행하세요.
+ */
+function previewIndustryMigration() {
+  var report = industryReport_(planIndustryMigration_());
+  Logger.log(report);
+  return report;
+}
+
+/**
+ * 2단계 (실행): 먼저 visit_requests 시트를 통째로 복사해 `visit_requests_업종변경전_날짜시각` 탭으로 남긴 뒤,
+ * 업종 칸만 새 분류로 바꿉니다. 문제가 있으면 백업 탭의 업종 열을 되돌려 놓으면 됩니다.
+ * 스크립트 편집기에서 이 함수를 선택해 한 번만 실행하세요. (미리보기로 먼저 확인)
+ */
+function migrateIndustries() {
+  return withLock_(function () {
+    var plan = planIndustryMigration_();
+    if (plan.changed === 0) {
+      Logger.log('바꿀 업종이 없습니다.');
+      return '바꿀 업종이 없습니다.';
+    }
+    var stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'Asia/Seoul', 'yyyyMMdd_HHmm');
+    var backup = plan.sheet.copyTo(book_());
+    backup.setName(VISIT_SHEET + '_업종변경전_' + stamp);
+    plan.sheet.getRange(2, plan.col, plan.rows, 1).setValues(plan.after);
+    var report = '백업: ' + backup.getName() + '\n' + industryReport_(plan);
+    Logger.log(report);
+    return report;
+  });
+}
+
 function visitSheet_() {
   var target = sheet_(VISIT_SHEET, VISIT_HEADERS);
   // 이전 버전의 저장 오류로 제목 행이 예약 데이터로 덮어써진 시트를 자동 복구한다.
@@ -1051,8 +1141,8 @@ function sanitizeVisit_(payload, requireConsent) {
     throw new Error('투어 진행 언어를 선택해 주세요.');
   }
   // 업종도 하나만 받는다 (통계 중복 집계 방지).
-  var industries = (payload.industries || []).map(function (item) { return optionalText_(item, 50).replace(/,/g, ' '); })
-    .filter(function (item) { return item; }).slice(0, 1);
+  var industries = normalizeIndustries_((payload.industries || []).map(function (item) { return optionalText_(item, 50).replace(/,/g, ' '); })
+    .filter(function (item) { return item; }));
   // 방문 목적은 하나만 받는다 (통계 중복 집계 방지). 이전 화면이 여러 개를 보내도 첫 번째만 저장한다.
   var purposes = (payload.purposes || []).map(function (item) { return optionalText_(item, 50).replace(/,/g, ' '); })
     .filter(function (item) { return item; }).slice(0, 1);
@@ -1256,7 +1346,7 @@ function sanitizeManual_(payload) {
     interpreter: payload.interpreter === true,
     interpreterLanguage: payload.interpreter === true ? optionalText_(payload.interpreterLanguage, 40) : '',
     company: requireText_(payload.company, '업체(기관)명', 80),
-    industries: category === 'external' ? list(payload.industries, 50) : [],
+    industries: category === 'external' ? normalizeIndustries_(list(payload.industries, 50)) : [],
     purposes: list(payload.purposes, 80),
     host: {
       name: optionalText_(host.name, 40), title: optionalText_(host.title, 40),
