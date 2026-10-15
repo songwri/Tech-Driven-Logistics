@@ -214,6 +214,7 @@ export function GuideAssignView({
     return new Date(now.getFullYear(), now.getMonth(), 1)
   })
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [loadMonth, setLoadMonth] = useState(month)
   const year = month.getFullYear()
   const monthNumber = month.getMonth() + 1
   const prefix = monthKey(year, monthNumber)
@@ -242,8 +243,31 @@ export function GuideAssignView({
     setSelectedId(null)
   }
 
-  const days = workingDays(year, monthNumber)
-  const loads = guideLoads(inMonth, year, monthNumber)
+  // 인원별 투입은 달력과 따로 월을 넘기며 본다 (주간 표처럼).
+  const loadYear = loadMonth.getFullYear()
+  const loadMonthNumber = loadMonth.getMonth() + 1
+  const days = workingDays(loadYear, loadMonthNumber)
+  const loads = guideLoads(
+    confirmed.filter((request) => request.date.startsWith(monthKey(loadYear, loadMonthNumber))),
+    loadYear,
+    loadMonthNumber,
+  )
+  const thisMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+  const monthOffset = (loadYear - thisMonth.getFullYear()) * 12 + (loadMonthNumber - 1 - thisMonth.getMonth())
+  const moveLoadMonth = (delta: number) => setLoadMonth(new Date(loadYear, loadMonthNumber - 1 + delta, 1))
+  const quickMonth = (label: string, offset: number) => (
+    <button
+      type="button"
+      onClick={() => setLoadMonth(new Date(thisMonth.getFullYear(), thisMonth.getMonth() + offset, 1))}
+      aria-pressed={monthOffset === offset}
+      className={cn(
+        'border px-2.5 py-1 text-[12px] font-semibold transition',
+        monthOffset === offset ? 'border-warm-800 bg-warm-800 text-white' : 'border-warm-300/60 text-warm-600 hover:border-warm-800 hover:text-warm-800',
+      )}
+    >
+      {label}
+    </button>
+  )
   const maxMM = Math.max(0.01, ...loads.map((load) => load.manMonth))
   const totals = loads.reduce(
     (sum, load) => ({ main: sum.main + load.main, operator: sum.operator + load.operator, hours: sum.hours + load.hours, manMonth: sum.manMonth + load.manMonth }),
@@ -395,8 +419,35 @@ export function GuideAssignView({
       </div>
 
       <Card
-        title={`${monthNumber}월 인원별 투입 (M/M)`}
+        title="월간 인원별 투입 (M/M)"
         subtitle={`투어 1건 = 1타임(반일 ${SESSION_HOURS}시간, 오전 · 오후 각 1타임) · 근무일 ${days}일 × ${HOURS_PER_DAY}시간 = ${days * HOURS_PER_DAY}시간을 1 M/M 으로 계산`}
+        actions={
+          <div className="flex flex-wrap items-center gap-1.5">
+            {quickMonth('지난 달', -1)}
+            {quickMonth('이번 달', 0)}
+            {quickMonth('다음 달', 1)}
+            <span className="mx-1 h-5 w-px bg-warm-300/50" />
+            <button
+              type="button"
+              onClick={() => moveLoadMonth(-1)}
+              aria-label="이전 달 투입"
+              className="flex h-8 w-8 items-center justify-center text-warm-600 transition hover:bg-cream hover:text-brand"
+            >
+              <ChevronLeft width={18} height={18} />
+            </button>
+            <span className="min-w-28 text-center text-[14px] font-bold text-warm-800">
+              {loadYear}년 {loadMonthNumber}월
+            </span>
+            <button
+              type="button"
+              onClick={() => moveLoadMonth(1)}
+              aria-label="다음 달 투입"
+              className="flex h-8 w-8 items-center justify-center text-warm-600 transition hover:bg-cream hover:text-brand"
+            >
+              <ChevronRight width={18} height={18} />
+            </button>
+          </div>
+        }
       >
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-[13px]">

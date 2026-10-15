@@ -145,7 +145,7 @@ export function GuideWeekly({ requests }: { requests: VisitRequest[] }) {
                           .map((job) => `${job.request.slot ? job.request.slot.slice(0, 5) : '미정'} ${job.request.company} (${job.role === 'main' ? '메인' : '운영'})`)
                           .join('\n')}
                       >
-                        {jobs.length > 0 ? `${formatHours(hours)}h${jobs.length > 1 ? ` · ${jobs.length}건` : ''}` : '–'}
+                        {jobs.length > 0 ? `${formatHours(hours)}h${jobs.length > 1 ? `(${jobs.length}건)` : ''}` : '–'}
                       </td>
                     )
                   })}
