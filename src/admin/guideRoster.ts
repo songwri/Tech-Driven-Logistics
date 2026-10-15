@@ -1,5 +1,5 @@
 import { holidayName } from '@/lib/holidays'
-import { TOUR_BY_ID, isConfirmed, toDateKey, type VisitRequest } from '@/lib/visit'
+import { TOUR_BY_ID, isConfirmed, parseDateKey, toDateKey, type VisitRequest } from '@/lib/visit'
 
 /**
  * TDL Lab 투어 가이드 명단.
@@ -116,9 +116,21 @@ export interface GuideLoad {
   manMonth: number
 }
 
+/** 그 사람이 이 방문에서 맡은 역할 */
+export function roleOf(request: VisitRequest, name: string): 'main' | 'operator' | null {
+  if (!isAssignable(request)) return null
+  const assignment = parseGuides(request.guides)
+  if (assignment.main === name) return 'main'
+  return assignment.operators.includes(name) ? 'operator' : null
+}
+
 /** 사람별 투입 집계. requests 는 한 달 치 방문이어야 M/M 이 맞다. */
 export function guideLoads(requests: VisitRequest[], year: number, month: number): GuideLoad[] {
-  const capacity = workingDays(year, month) * HOURS_PER_DAY
+  return tallyLoads(requests, workingDays(year, month) * HOURS_PER_DAY)
+}
+
+/** 사람별 투입 집계. manMonth 자리에는 투입 시간 ÷ capacity(기간의 근무 시간)를 넣는다. */
+export function tallyLoads(requests: VisitRequest[], capacity: number): GuideLoad[] {
   return GUIDE_ROSTER.map((member) => {
     let main = 0
     let operator = 0
@@ -138,3 +150,21 @@ export function guideLoads(requests: VisitRequest[], year: number, month: number
 }
 
 export const monthKey = (year: number, month: number) => `${year}-${String(month).padStart(2, '0')}-`
+
+/** 그 날이 속한 주의 월요일 */
+export function mondayOf(key: string) {
+  const date = parseDateKey(key)
+  date.setDate(date.getDate() - ((date.getDay() + 6) % 7))
+  return toDateKey(date)
+}
+
+/** 월요일부터 7일의 날짜 키 */
+export function weekDates(monday: string) {
+  const start = parseDateKey(monday)
+  return Array.from({ length: 7 }, (_, index) => toDateKey(new Date(start.getFullYear(), start.getMonth(), start.getDate() + index)))
+}
+
+export const isWorkingDay = (key: string) => {
+  const weekday = parseDateKey(key).getDay()
+  return weekday !== 0 && weekday !== 6 && !holidayName(key)
+}

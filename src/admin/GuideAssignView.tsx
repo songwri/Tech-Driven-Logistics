@@ -25,6 +25,7 @@ import {
   workingDays,
   type GuideAssignment,
 } from './guideRoster'
+import { GuideWeekly } from './GuideWeekly'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -428,6 +429,8 @@ export function GuideAssignView({
           </table>
         </div>
       </Card>
+
+      <GuideWeekly requests={confirmed} />
 
       <Card title={`${year}년 월별 M/M`} subtitle="사람 × 월 · 값이 클수록 진하게">
         <div className="overflow-x-auto">
