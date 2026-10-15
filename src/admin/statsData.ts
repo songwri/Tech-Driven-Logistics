@@ -51,6 +51,8 @@ export interface MetricColumn {
   label: string
   group: string
   percent?: boolean
+  /** 열 머리에 붙일 색 막대 (투어 종류 열: 달력 · 차트와 같은 투어 색) */
+  color?: string
 }
 
 export const METRIC_COLUMNS: MetricColumn[] = [
@@ -62,7 +64,7 @@ export const METRIC_COLUMNS: MetricColumn[] = [
   { key: 'cancelled', label: '취소', group: '처리 현황' },
   { key: 'approvalRate', label: '승인률', group: '처리 현황', percent: true },
   { key: 'visitors', label: '방문 인원(승인·완료)', group: '처리 현황' },
-  ...TOURS.map((tour): MetricColumn => ({ key: tour.id, label: tour.short, group: '투어 종류' })),
+  ...TOURS.map((tour): MetricColumn => ({ key: tour.id, label: tour.short, group: '투어 종류', color: tour.color })),
   { key: 'internal', label: '내부 방문', group: '방문 유형' },
   { key: 'existing', label: '고객·기존', group: '방문 유형' },
   { key: 'newClient', label: '고객·신규', group: '방문 유형' },

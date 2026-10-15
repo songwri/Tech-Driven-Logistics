@@ -477,7 +477,7 @@ export function StatsView({ requests, site }: { requests: VisitRequest[]; site: 
           <div>
             <h3 className="text-[15px] font-bold text-warm-800">기간별 통계표</h3>
             <p className="mt-0.5 text-[12px] text-warm-600">
-              거절 · 취소 건은 통계에서 제외(해당 열만 참고 표시) · 열마다 값이 클수록 진하게 표시 · 엑셀에는 월별/연도별/항목별/예약 목록 시트가 함께 저장됩니다
+              거절 · 취소 건은 통계에서 제외(해당 열만 참고 표시) · 엑셀에는 월별/연도별/항목별/예약 목록 시트가 함께 저장됩니다
             </p>
           </div>
           <Segmented
