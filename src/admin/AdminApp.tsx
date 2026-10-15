@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { BarChart3, CalendarRange, FileDown, FileInput, LogOut, MessageSquareText, Plus, RefreshCw, RotateCcw, X } from 'lucide-react'
+import { BarChart3, CalendarRange, FileDown, FileInput, LogOut, MessageSquareText, Plus, RefreshCw, RotateCcw, UserCheck, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/ui/Logo'
 import { Button } from '@/components/ui/Button'
@@ -29,19 +29,20 @@ import { ActionPanel, UpcomingPanel } from './ActionPanel'
 import { RequestTable, type StatusFilter } from './RequestTable'
 import { RequestModal } from './RequestModal'
 import { StatsView } from './StatsView'
+import { GuideAssignView } from './GuideAssignView'
 import { GuestbookAdmin } from './GuestbookAdmin'
 import { DiagnoseButton } from './DiagnosePanel'
 import { ManualVisitModal } from './ManualVisitModal'
 import { ImportModal } from './ImportModal'
 import { downloadVisitRequests } from './importTemplate'
 
-type Tab = 'dashboard' | 'stats' | 'guestbook'
+type Tab = 'dashboard' | 'stats' | 'guides' | 'guestbook'
 
 /** 페이지별 머리 문구 · 로그인 키 안내 */
 const PAGE_TEXT: Record<AdminSite, { title: string; subtitle: string; keyHint: string }> = {
   main: {
     title: '메가와이즈 · TDL Lab 방문 예약 관리자',
-    subtitle: '예약 요청 확인 · 승인/거절 · 방문 통계 · 방명록',
+    subtitle: '예약 요청 확인 · 승인/거절 · 방문 통계 · 가이드 배정 · 방명록',
     keyHint: 'Apps Script 스크립트 속성 ADMIN_KEY 에 설정한 관리자 키를 입력하세요.',
   },
   mtv: {
@@ -57,7 +58,7 @@ const PAGE_TEXT: Record<AdminSite, { title: string; subtitle: string; keyHint: s
 }
 
 const TABS: Record<AdminSite, Tab[]> = {
-  main: ['dashboard', 'stats', 'guestbook'],
+  main: ['dashboard', 'stats', 'guides', 'guestbook'],
   mtv: ['dashboard', 'stats'],
   hq: ['dashboard', 'stats'],
 }
@@ -331,6 +332,7 @@ function AdminDashboard({ site }: { site: AdminSite }) {
               [
                 ['dashboard', '예약 대시보드', CalendarRange],
                 ['stats', '방문 통계', BarChart3],
+                ['guides', '가이드 배정', UserCheck],
                 ['guestbook', '방명록', MessageSquareText],
               ] as const
             )
@@ -577,6 +579,8 @@ function AdminDashboard({ site }: { site: AdminSite }) {
             </>
           ) : tab === 'stats' ? (
             <StatsView requests={requests} site={site} />
+          ) : tab === 'guides' ? (
+            <GuideAssignView requests={requests} readOnly={readOnly} onUpdate={data.update} />
           ) : (
             <GuestbookAdmin adminKey={data.adminKey} />
           )}
