@@ -91,8 +91,17 @@ const minutesOf = (time: string) => {
   return hour * 60 + minute
 }
 
-/** 투어 진행 시간(시간). 시간이 정해지지 않은 방문은 그 투어의 기본 시간, 그것도 없으면 1시간. */
+/** 복합 투어(메가와이즈 + TDL Lab 등)에서 Lab 인원이 맡는 Lab 구간 시간 */
+export const LAB_LEG_HOURS = 1
+
+/**
+ * Lab 인원 투입 시간(시간).
+ * - 센터 등과 묶인 복합 투어는 Lab 구간만 맡으므로 전체 일정과 관계없이 1시간
+ * - Lab 투어 · 기타 방문은 방문 시간. 시간이 정해지지 않았으면 그 투어의 기본 시간, 그것도 없으면 1시간
+ */
 export function tourHours(request: VisitRequest) {
+  const places = TOUR_BY_ID[request.tour].places
+  if (places.length > 1 && places.includes('lab')) return LAB_LEG_HOURS
   const slot = request.slot || TOUR_BY_ID[request.tour].slots[0] || ''
   const [start, end] = slot.split('-')
   if (!start || !end) return 1
