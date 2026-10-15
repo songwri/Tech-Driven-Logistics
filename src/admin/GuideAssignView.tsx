@@ -66,6 +66,13 @@ function AssignPanel({
     // 메인 가이드로 고른 사람은 운영 인원에서 뺀다.
     setDraft((current) => ({ ...current, main: name, operators: current.operators.filter((item) => item !== name) }))
   }
+  // 전체 선택 대상: 메인 가이드를 뺀 운영 가능 인원
+  const selectable = OPERATORS.filter((member) => member.name !== draft.main).map((member) => member.name)
+  const allSelected = selectable.length > 0 && selectable.every((name) => draft.operators.includes(name))
+  const toggleAll = () => {
+    setMessage(null)
+    setDraft((current) => ({ ...current, operators: allSelected ? [] : selectable }))
+  }
   const toggleOperator = (name: string) => {
     setMessage(null)
     setDraft((current) => ({
@@ -131,8 +138,12 @@ function AssignPanel({
       </fieldset>
 
       <fieldset>
-        <legend className="mb-1.5 flex items-center gap-1.5 text-[13px] font-bold text-warm-800">
+        <legend className="mb-1.5 flex w-full items-center gap-1.5 text-[13px] font-bold text-warm-800">
           <Users width={14} height={14} /> 운영 인원 <span className="font-normal text-warm-600">복수 선택</span>
+          <label className="ml-auto inline-flex cursor-pointer items-center gap-1.5 text-[12px] font-semibold text-warm-600 hover:text-warm-800">
+            <input type="checkbox" className="accent-[#30405f]" checked={allSelected} onChange={toggleAll} />
+            전체
+          </label>
         </legend>
         <div className="grid grid-cols-2 gap-1.5">
           {OPERATORS.map((member) => {
