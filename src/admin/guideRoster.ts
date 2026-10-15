@@ -1,5 +1,5 @@
 import { holidayName } from '@/lib/holidays'
-import { TOUR_BY_ID, isConfirmed, parseDateKey, toDateKey, type VisitRequest } from '@/lib/visit'
+import { TOUR_BY_ID, isConfirmed, legsOf, parseDateKey, toDateKey, type VisitRequest } from '@/lib/visit'
 
 /**
  * TDL Lab 투어 가이드 명단.
@@ -170,4 +170,28 @@ export function weekDates(monday: string) {
 export const isWorkingDay = (key: string) => {
   const weekday = parseDateKey(key).getDay()
   return weekday !== 0 && weekday !== 6 && !holidayName(key)
+}
+
+/** 이름(성 + 이름) → '권요한 책임'. 명단에 없으면 이름 그대로 */
+export function nameLabel(name: string) {
+  const member = GUIDE_ROSTER.find((item) => item.name === name)
+  return member ? memberLabel(member) : name
+}
+
+/**
+ * Lab 인원이 움직이는 시간대. 복합 투어는 Lab 구간(센터 → Lab, 3개 센터 투어의 센터+Lab 구간)만 보고,
+ * Lab 투어 · 기타 방문은 방문 시간을 쓴다. 시간이 정해지지 않았으면 빈 문자열.
+ */
+export function labSlot(request: VisitRequest) {
+  const leg = legsOf(request.tour, request.slot)?.find((item) => item.tour === 'lab' || item.tour === 'combined')
+  return leg?.slot ?? request.slot
+}
+
+export type Half = 'am' | 'pm' | 'tbd'
+
+/** 12시 이전 시작이면 오전, 이후면 오후 */
+export function halfOf(request: VisitRequest): Half {
+  const slot = labSlot(request)
+  if (!slot) return 'tbd'
+  return Number(slot.slice(0, 2)) < 12 ? 'am' : 'pm'
 }
