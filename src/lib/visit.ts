@@ -777,7 +777,7 @@ export function baseOption(value: string) {
   return value.startsWith(OTHER) ? OTHER : value
 }
 
-/** 예전 업종(14가지) → 현재 분류. 물류처럼 맞는 분류가 없는 값은 normalizeIndustry 에서 '기타: 원문' 이 된다. */
+/** 예전 업종(14가지) → 현재 분류. 물류처럼 맞는 분류가 없는 값은 normalizeIndustry 에서 '기타' 가 된다. */
 const LEGACY_INDUSTRY: Record<string, string> = {
   전자: '전자',
   가전: '전자',
@@ -795,11 +795,12 @@ const LEGACY_INDUSTRY: Record<string, string> = {
   '가구/인테리어': '건자재',
 }
 
-/** 업종 한 칸을 현재 분류로 맞춘다. 이미 현재 분류거나 '기타…' 면 그대로, 예전 업종은 옮기고, 그 밖의 값은 '기타: 원문' 으로 둔다. */
+/** 업종 한 칸을 현재 분류로 맞춘다. 현재 분류면 그대로, 예전 업종은 옮기고, 그 밖의 값('기타: 공공' 등 세부 표기 포함)은 '기타' 로 통일한다. */
 export function normalizeIndustry(value: string) {
   const text = value.trim()
-  if (!text || (INDUSTRIES as readonly string[]).includes(text) || text.startsWith(OTHER)) return text
-  return LEGACY_INDUSTRY[text] ?? `${OTHER}: ${text}`.slice(0, 50)
+  if (!text) return text
+  if ((INDUSTRIES as readonly string[]).includes(text)) return text
+  return LEGACY_INDUSTRY[text] ?? OTHER
 }
 
 /** 업종은 주 업종 한 가지만 쓴다. 예전에 여러 개를 쉼표로 적은 기록은 첫 번째(옮긴 뒤 기준)만 남긴다. */
