@@ -135,10 +135,8 @@ export function ManualVisitModal({
   const [clientType, setClientType] = useState<'none' | 'existing' | 'new'>(initial?.clientType ?? 'none')
   const [company, setCompany] = useState(initial?.company ?? '')
   const [purposes, setPurposes] = useState((initial?.purposes ?? []).join(', '))
-  // 업종: 목록에서만 고른다. 예전 업종 값은 현재 분류로 옮겨 보여 주고,
-  // 옮기며 남긴 '기타: 물류' 같은 세부 표기는 기타를 그대로 두면 유지한다.
-  const initialIndustry = normalizeIndustry(initial?.industries[0] ?? '')
-  const [industry, setIndustry] = useState(initialIndustry.startsWith(OTHER) ? OTHER : initialIndustry)
+  // 업종: 목록에서만 고른다. 예전 업종 값은 현재 분류로 옮겨 보여 준다.
+  const [industry, setIndustry] = useState(normalizeIndustry(initial?.industries[0] ?? ''))
   const [headcount, setHeadcount] = useState(initial?.headcount != null ? String(initial.headcount) : '')
   // 진행 언어: 한국어 · 영어 · 중국어. 이전 기록의 다른 외국어(예: '기타: 태국어')는 고치지 않으면 그대로 둔다.
   const initialForeign = initial?.language === 'foreign' ? initial.foreignLanguage : ''
@@ -176,10 +174,7 @@ export function ManualVisitModal({
       interpreter,
       interpreterLanguage: interpreter ? interpreterLanguage.trim() : '',
       company: company.trim(),
-      industries:
-        category === 'external' && industry
-          ? [industry === OTHER && initialIndustry.startsWith(OTHER) ? initialIndustry : industry]
-          : [],
+      industries: category === 'external' && industry ? [industry] : [],
       purposes: splitComma(purposes).slice(0, 1),
       host: {
         name: hostName.trim(),

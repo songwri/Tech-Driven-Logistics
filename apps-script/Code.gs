@@ -729,7 +729,7 @@ function splitList_(value) {
 
 /* ------------------------------------------------- 업종 분류 */
 
-/** 고객 방문 업종 분류. src/lib/visit.ts 의 INDUSTRIES 와 같아야 한다. 이 밖의 값은 '기타: 원문' 으로 저장한다. */
+/** 고객 방문 업종 분류. src/lib/visit.ts 의 INDUSTRIES 와 같아야 한다. 이 밖의 값은 '기타' 로 저장한다 (직접 입력은 받지 않는다). */
 var INDUSTRIES_ = ['리테일', '화학', '헬스케어', '패션&뷰티', '전자', '식품용품', '오토(Auto)', '기계&금속', '건자재'];
 /** 예전 업종(14가지) → 현재 분류. src/lib/visit.ts 의 LEGACY_INDUSTRY 와 같아야 한다. */
 var LEGACY_INDUSTRY_ = {
@@ -741,13 +741,9 @@ var LEGACY_INDUSTRY_ = {
 
 function normalizeIndustry_(value) {
   var text = String(value == null ? '' : value).trim();
-  if (!text || INDUSTRIES_.indexOf(text) >= 0 || text.indexOf('기타') === 0) return text;
-  return LEGACY_INDUSTRY_.hasOwnProperty(text) ? LEGACY_INDUSTRY_[text] : ('기타: ' + text).slice(0, 50);
-}
-
-/** 예약 신청: 업종은 목록에서만 받는다. 목록에 없는 값(직접 입력)은 글자를 버리고 '기타' 로 저장한다. (관리자 수정은 기존 '기타: 물류' 표기를 지우지 않도록 normalizeIndustries_ 를 쓴다) */
-function strictIndustries_(values) {
-  return normalizeIndustries_(values).map(function (item) { return item.indexOf('기타') === 0 ? '기타' : item; });
+  if (!text) return text;
+  if (INDUSTRIES_.indexOf(text) >= 0) return text;
+  return LEGACY_INDUSTRY_.hasOwnProperty(text) ? LEGACY_INDUSTRY_[text] : '기타';
 }
 
 /** 업종은 주 업종 한 가지만 쓴다 (여러 개면 옮긴 뒤 첫 번째). */
@@ -1146,7 +1142,7 @@ function sanitizeVisit_(payload, requireConsent) {
     throw new Error('투어 진행 언어를 선택해 주세요.');
   }
   // 업종도 하나만 받는다 (통계 중복 집계 방지).
-  var industries = strictIndustries_((payload.industries || []).map(function (item) { return optionalText_(item, 50).replace(/,/g, ' '); })
+  var industries = normalizeIndustries_((payload.industries || []).map(function (item) { return optionalText_(item, 50).replace(/,/g, ' '); })
     .filter(function (item) { return item; }));
   // 방문 목적은 하나만 받는다 (통계 중복 집계 방지). 이전 화면이 여러 개를 보내도 첫 번째만 저장한다.
   var purposes = (payload.purposes || []).map(function (item) { return optionalText_(item, 50).replace(/,/g, ' '); })
