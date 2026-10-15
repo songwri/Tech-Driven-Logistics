@@ -86,27 +86,15 @@ export function formatGuides({ main, operators, others }: GuideAssignment) {
 export const isAssignable = (request: VisitRequest) =>
   isConfirmed(request.status) && (request.tour === 'other' || TOUR_BY_ID[request.tour].places.includes('lab'))
 
-const minutesOf = (time: string) => {
-  const [hour, minute] = time.split(':').map(Number)
-  return hour * 60 + minute
-}
-
-/** 복합 투어(메가와이즈 + TDL Lab 등)에서 Lab 인원이 맡는 Lab 구간 시간 */
-export const LAB_LEG_HOURS = 1
+/** 투어 한 타임 = 반일(4시간). 하루는 오전 · 오후 두 타임이다. */
+export const SESSION_HOURS = 4
 
 /**
- * Lab 인원 투입 시간(시간).
- * - 센터 등과 묶인 복합 투어는 Lab 구간만 맡으므로 전체 일정과 관계없이 1시간
- * - Lab 투어 · 기타 방문은 방문 시간. 시간이 정해지지 않았으면 그 투어의 기본 시간, 그것도 없으면 1시간
+ * M/M 계산용 투입 시간(시간). 실제 투어 길이와 관계없이 한 타임(반일 4시간)으로 본다.
+ * 복합 투어도 Lab 인원은 Lab 구간 한 타임만 맡으므로 같다.
  */
-export function tourHours(request: VisitRequest) {
-  const places = TOUR_BY_ID[request.tour].places
-  if (places.length > 1 && places.includes('lab')) return LAB_LEG_HOURS
-  const slot = request.slot || TOUR_BY_ID[request.tour].slots[0] || ''
-  const [start, end] = slot.split('-')
-  if (!start || !end) return 1
-  const minutes = minutesOf(end) - minutesOf(start)
-  return minutes > 0 ? minutes / 60 : 1
+export function tourHours(_request: VisitRequest) {
+  return SESSION_HOURS
 }
 
 /** 그 달의 근무일(주말 · 공휴일 제외) */

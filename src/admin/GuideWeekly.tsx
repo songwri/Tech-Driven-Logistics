@@ -67,7 +67,7 @@ export function GuideWeekly({ requests }: { requests: VisitRequest[] }) {
         <div>
           <h3 className="text-[15px] font-bold text-warm-800">주간 인원별 투입</h3>
           <p className="mt-0.5 text-[12px] text-warm-600">
-            날짜 칸은 그날 투입 시간 · <b className="text-warm-800">진하게</b> 메인 / 연하게 운영 · 가동률 = 투입 시간 ÷ 근무일 {workDays}일 ×{' '}
+            날짜 칸은 그날 투입 시간(투어 1건 = 반일 4시간) · <b className="text-warm-800">진하게</b> 메인 / 연하게 운영 · 가동률 = 투입 시간 ÷ 근무일 {workDays}일 ×{' '}
             {HOURS_PER_DAY}시간({capacity}시간)
           </p>
         </div>
