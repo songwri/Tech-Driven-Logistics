@@ -209,7 +209,7 @@ export function StatsView({ requests, site }: { requests: VisitRequest[]; site: 
       ...datum,
       requests: external.filter((request) => request.industries.some((item) => baseOption(item) === datum.label)),
     }))
-    .filter((datum) => datum.value > 0)
+    // 10개 분류를 모두 보여 준다 (0건 포함). 많은 순, 건수가 같으면 분류 순서.
     .sort((a, b) => b.value - a.value)
   const languages: Datum[] = [
     withList('한국어', scoped.filter((request) => request.language !== 'foreign' && !request.interpreter)),
