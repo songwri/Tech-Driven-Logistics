@@ -405,7 +405,7 @@ function AdminDashboard({ site }: { site: AdminSite }) {
             </p>
           )}
 
-          {tab !== 'guestbook' && scopes.length > 0 && (
+          {tab !== 'guestbook' && tab !== 'guides' && scopes.length > 0 && (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2" role="radiogroup" aria-label="보기 범위">
               <span className="text-[13px] font-semibold text-warm-600">보기 범위</span>
               <div className="inline-flex border border-warm-300/60 bg-white">
@@ -580,7 +580,7 @@ function AdminDashboard({ site }: { site: AdminSite }) {
           ) : tab === 'stats' ? (
             <StatsView requests={requests} site={site} />
           ) : tab === 'guides' ? (
-            <GuideAssignView requests={requests} readOnly={readOnly} onUpdate={data.update} />
+            <GuideAssignView requests={allRequests} readOnly={readOnly} onUpdate={data.update} />
           ) : (
             <GuestbookAdmin adminKey={data.adminKey} />
           )}
