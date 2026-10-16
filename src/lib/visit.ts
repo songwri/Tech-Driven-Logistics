@@ -844,12 +844,26 @@ export const FORM_SECTIONS: { id: FormSection; label: string }[] = [
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const blank = (value: string) => !value.trim()
 
+/**
+ * 검사 옵션. 관리자 수정은 당일 · 익일 방문도 고칠 수 있어야 하므로 leadDays 를 0 으로 주고,
+ * 고치기 전 그대로인 날짜(keepDate)는 지난 날짜여도 문제 삼지 않는다.
+ */
+export interface DraftCheckOptions {
+  /** 방문일까지 필요한 준비 일수 (기본 MIN_LEAD_DAYS). 관리자 수정은 0 */
+  leadDays?: number
+  /** 이미 저장돼 있는 방문일: 이 날짜 그대로면 날짜 제한을 적용하지 않는다 */
+  keepDate?: string
+}
+
 /** 섹션별 첫 번째 문제(없으면 null). 화면 안내와 제출 검사가 같은 규칙을 쓴다. */
-export function sectionProblems(draft: VisitDraft): Record<FormSection, string | null> {
+export function sectionProblems(draft: VisitDraft, options: DraftCheckOptions = {}): Record<FormSection, string | null> {
+  const { leadDays = MIN_LEAD_DAYS, keepDate } = options
   const schedule = !draft.date
     ? '방문 희망일을 선택해 주세요. (월 · 수 · 금, 당일 · 익일 제외)'
-    : draft.date < toDateKey(earliestDateFor(draft.tour))
-      ? includesMtv(draft.tour)
+    : draft.date !== keepDate && draft.date < toDateKey(earliestDateFor(draft.tour, leadDays))
+      ? leadDays === 0
+        ? '이미 지난 날짜로는 바꿀 수 없습니다. 오늘 이후 날짜를 선택해 주세요.'
+        : includesMtv(draft.tour)
         ? `시화MTV 가 들어간 투어는 방문일 ${MTV_LEAD_BUSINESS_DAYS}영업일 전까지 신청할 수 있습니다. ${formatDateShort(toDateKey(earliestDateFor(draft.tour)))} 이후 날짜를 선택해 주세요.`
         : '당일 · 익일 방문은 신청할 수 없습니다. 모레 이후 날짜를 선택해 주세요.'
       : !draft.slot
@@ -908,8 +922,8 @@ export function sectionProblems(draft: VisitDraft): Record<FormSection, string |
 }
 
 /** 제출 전 전체 검사: 첫 번째 문제의 섹션과 문구 */
-export function firstProblem(draft: VisitDraft): { section: FormSection; message: string } | null {
-  const problems = sectionProblems(draft)
+export function firstProblem(draft: VisitDraft, options?: DraftCheckOptions): { section: FormSection; message: string } | null {
+  const problems = sectionProblems(draft, options)
   for (const { id } of FORM_SECTIONS) {
     const message = problems[id]
     if (message) return { section: id, message }
@@ -950,6 +964,6 @@ export function missingFields(draft: VisitDraft): Set<string> {
   return missing
 }
 
-export function validateVisitDraft(draft: VisitDraft): string | null {
-  return firstProblem(draft)?.message ?? null
+export function validateVisitDraft(draft: VisitDraft, options?: DraftCheckOptions): string | null {
+  return firstProblem(draft, options)?.message ?? null
 }

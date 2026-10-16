@@ -84,12 +84,16 @@ export function RequestModal({ site, readOnly, request, requests, onClose, onSet
 
   const save = async () => {
     // 담당(실) 항목이 생기기 전 기록도 고칠 수 있도록, 관리자 수정에서는 담당(실)을 필수로 보지 않는다.
-    const problem = validateVisitDraft({
-      ...draft,
-      consent: true,
-      visitorConsent: true,
-      host: { ...draft.host, division: draft.host.division || '-' },
-    })
+    // 당일 · 익일 방문(신청 화면에서는 받지 않는 날짜)과 이미 지난 방문도 고칠 수 있도록 날짜 제한을 풀어 검사한다.
+    const problem = validateVisitDraft(
+      {
+        ...draft,
+        consent: true,
+        visitorConsent: true,
+        host: { ...draft.host, division: draft.host.division || '-' },
+      },
+      { leadDays: 0, keepDate: request.date },
+    )
     if (problem) {
       setError(problem)
       return
