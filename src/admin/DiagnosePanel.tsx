@@ -62,12 +62,14 @@ export function DiagnoseButton({ diagnose }: { diagnose: () => Promise<ServerHea
 
   return (
     <>
+      {/* 숨김 버튼: 화면 오른쪽 아래 구석 24px. 평소에는 보이지 않고 마우스를 올리면 흐릿하게 나타난다. */}
       <button
         type="button"
         onClick={() => void run()}
-        className="inline-flex items-center gap-1.5 border border-white/25 px-3 py-1.5 text-[12px] text-white/80 transition hover:border-white hover:text-white"
+        aria-label="서버 진단"
+        className="fixed bottom-0 right-0 z-40 flex h-6 w-6 items-center justify-center text-warm-600 opacity-0 transition hover:opacity-50 focus-visible:opacity-60"
       >
-        <Stethoscope width={13} height={13} /> 서버 진단
+        <Stethoscope width={12} height={12} />
       </button>
       {open && (
         <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/50 p-4 pt-20" onClick={() => setOpen(false)}>
