@@ -280,7 +280,7 @@ export function ImportModal({
       {error && <p className="mt-4 border border-brand/40 bg-brand/5 px-3 py-2 text-sm text-brand">{error}</p>}
       {isLiveBackend && (
         <div className="mt-5 max-w-sm">
-          <Field label="가져오기 암호키" required hint="Apps Script 스크립트 속성 IMPORT_KEY 값. 기존 데이터는 지우지 않고 시트 마지막 행 아래에 이어서 추가됩니다.">
+          <Field label="가져오기 암호키" required hint="기존 데이터는 지우지 않고 시트 마지막 행 아래에 이어서 추가됩니다.">
             <Input
               type="password"
               autoComplete="off"
