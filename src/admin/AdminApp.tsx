@@ -39,21 +39,18 @@ import { downloadVisitRequests } from './importTemplate'
 type Tab = 'dashboard' | 'stats' | 'guides' | 'guestbook'
 
 /** 페이지별 머리 문구 · 로그인 키 안내 */
-const PAGE_TEXT: Record<AdminSite, { title: string; subtitle: string; keyHint: string }> = {
+const PAGE_TEXT: Record<AdminSite, { title: string; subtitle: string }> = {
   main: {
     title: '메가와이즈 · TDL Lab 방문 예약 관리자',
     subtitle: '예약 요청 확인 · 승인/거절 · 방문 통계 · 가이드 배정 · 방명록',
-    keyHint: 'Apps Script 스크립트 속성 ADMIN_KEY 에 설정한 관리자 키를 입력하세요.',
   },
   mtv: {
     title: '시화MTV 방문 예약 관리자',
     subtitle: '시화MTV 가 들어간 예약 확인 · 승인/거절 · 방문 통계',
-    keyHint: 'Apps Script 스크립트 속성 MTV_ADMIN_KEY 에 설정한 시화MTV 관리자 키를 입력하세요.',
   },
   hq: {
     title: '통합 관제 · 방문 통계',
     subtitle: '3개 센터 예약 · 방문 통계 (보기 전용)',
-    keyHint: 'Apps Script 스크립트 속성 HQ_ADMIN_KEY 에 설정한 통합 관제 키를 입력하세요.',
   },
 }
 
@@ -107,7 +104,6 @@ function LoginPanel({
     >
       <p className="font-mono text-xs uppercase tracking-[0.3em] text-brand">Admin</p>
       <h2 className="mt-2 text-xl font-bold text-warm-800">{ADMIN_SITE_LABEL[site]} 관리자 로그인</h2>
-      <p className="mt-1 text-sm text-warm-600">{PAGE_TEXT[site].keyHint}</p>
       {fromMail && (
         <p className="mt-3 border-l-2 border-brand bg-cream px-3 py-2 text-[13px] text-warm-800">
           메일에서 연 예약은 로그인하면 바로 상세 화면으로 열립니다.
@@ -305,7 +301,6 @@ function AdminDashboard({ site }: { site: AdminSite }) {
                   >
                     <RefreshCw width={13} height={13} className={data.loading ? 'animate-spin' : undefined} /> 새로고침
                   </button>
-                  <DiagnoseButton diagnose={data.diagnose} />
                   <button
                     type="button"
                     onClick={data.logout}
@@ -586,6 +581,9 @@ function AdminDashboard({ site }: { site: AdminSite }) {
           )}
         </main>
       )}
+
+      {/* 서버 진단: 다른 관리자가 누르지 않도록 화면 오른쪽 아래 구석에 숨겨 둔 버튼 (마우스를 올리면 흐릿하게 보인다) */}
+      {data.authenticated && data.mode === 'live' && <DiagnoseButton diagnose={data.diagnose} />}
 
       {dialog === 'manual' && (
         <ManualVisitModal
