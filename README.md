@@ -28,6 +28,11 @@ Tech Innovation Team의 TDL Lab 방문 예약 · 방명록 · 관리자 사이�
 2. 이 파일은 이미 `vite.config.ts`의 `notice` 입력으로 잡혀 있어 그대로 빌드됩니다.
 3. 예약 · 방명록 페이지에서 소개 사이트로 가는 링크는 지금 없으므로, 필요하면 `src/lib/routes.ts`에 주소를 추가합니다.
 
+## 사내 이전 (Power Apps)
+
+개인정보 보호를 위해 예약 · 관리 기능을 회사 Microsoft 365(Power Apps + SharePoint + Power Automate + Forms)로 옮기는 설계와
+단계별 가이드는 [`powerapps/README.md`](powerapps/README.md) 에 있습니다.
+
 ## 스택
 
 - React + TypeScript + Vite

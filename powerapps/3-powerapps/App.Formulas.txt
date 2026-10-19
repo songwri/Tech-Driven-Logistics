@@ -1,0 +1,112 @@
+// =====================================================================
+//  App.Formulas  (트리 뷰 → App 선택 → 속성 드롭다운 'Formulas' 에 통째로 붙여넣기)
+//  이름 붙인 수식(Named formulas): 앱 어디서나 이 이름으로 값을 꺼내 씁니다.
+// =====================================================================
+
+// ---------- 1. 운영 전에 꼭 바꿀 값 ----------
+// Microsoft Forms '미리 채워진 링크 가져오기' 로 만든 주소에서, 신청번호 자리에 넣은 값을 REQNO 로 바꿔 붙여넣으세요.
+// 예) "https://forms.office.com/Pages/ResponsePage.aspx?id=AbCd...&r1a2b3c4d=REQNO"
+FormsPrefillUrl = "https://forms.office.com/Pages/ResponsePage.aspx?id=여기에_폼ID&r여기에_질문ID=REQNO";
+
+// 시화MTV 예약을 열지 여부. 웹 버전(src/lib/visit.ts · apps-script/Code.gs)의 MTV_ENABLED 와 같은 스위치입니다.
+// false: 시화MTV 가 들어간 투어 3종을 신청 화면에서 숨기고, 시화MTV · 통합 관제(mtv · hq) 관리자는 들어올 수 없습니다.
+// 열 때는 true 로만 바꾸면 시간표 · 3영업일 규칙 · 센터별 승인이 모두 그대로 동작합니다.
+MtvEnabled = false;
+
+// ---------- 2. 디자인 토큰 (색 · 글꼴) ----------
+cBg = ColorValue("#F7F6F3");          // 화면 바탕 (따뜻한 오프화이트)
+cSurface = ColorValue("#FFFFFF");     // 카드
+cSoft = ColorValue("#F1F0EC");        // 선택된 항목 바탕
+cLine = ColorValue("#EAEAEA");        // 1px 테두리 · 구분선
+cInk = ColorValue("#2F3437");         // 본문 글자
+cInk2 = ColorValue("#787774");        // 보조 글자 · 라벨
+cInk3 = ColorValue("#A3A29E");        // 힌트 · 비활성
+cPrimary = ColorValue("#111111");     // 주 버튼
+cPrimaryHover = ColorValue("#333333");
+cBrand = ColorValue("#A72B2B");       // 로고 표시에만 사용
+cRed = ColorValue("#9F2F2D");
+cRedBg = ColorValue("#FDEBEC");
+cGreen = ColorValue("#346538");
+cGreenBg = ColorValue("#EDF3EC");
+cScrim = RGBA(17, 17, 17, 0.35);
+fnt = Font.'Segoe UI';                // 한글은 맑은 고딕으로 자동 대체됩니다
+
+// 상태 태그 색 (옅은 파스텔 바탕 + 진한 글자)
+StatusStyle = Table(
+    {S: "대기", Bg: ColorValue("#FBF3DB"), Fg: ColorValue("#956400")},
+    {S: "승인", Bg: ColorValue("#EDF3EC"), Fg: ColorValue("#346538")},
+    {S: "완료", Bg: ColorValue("#E1F3FE"), Fg: ColorValue("#1F6C9F")},
+    {S: "거절", Bg: ColorValue("#FDEBEC"), Fg: ColorValue("#9F2F2D")},
+    {S: "취소", Bg: ColorValue("#EFEFED"), Fg: ColorValue("#5F5E5B")}
+);
+
+// ---------- 3. 투어 ----------
+// Main = 메가와이즈 · TDL Lab 관리자 승인 필요, Mtv = 시화MTV 관리자 승인 필요
+Tours = Table(
+    {Id: "lab", Name: "TDL Lab 투어", Desc: "TDL Lab만 · 약 1시간", Multi: false, Main: true, Mtv: false, Color: ColorValue("#7C5CC4")},
+    {Id: "center", Name: "메가와이즈 센터 투어", Desc: "메가와이즈 물류센터만 · 약 1시간", Multi: false, Main: true, Mtv: false, Color: ColorValue("#1A8FA0")},
+    {Id: "mtv", Name: "시화MTV 투어", Desc: "시화MTV 센터만 · 약 1시간 · 3영업일 전까지", Multi: false, Main: false, Mtv: true, Color: ColorValue("#3D5A80")},
+    {Id: "combined", Name: "메가와이즈 + TDL Lab", Desc: "메가와이즈 센터 → TDL Lab · 약 2시간", Multi: true, Main: true, Mtv: false, Color: ColorValue("#DC2626")},
+    {Id: "center_mtv", Name: "메가와이즈 + 시화MTV", Desc: "오전 · 오후로 나눠 두 센터 방문", Multi: true, Main: true, Mtv: true, Color: ColorValue("#9C6644")},
+    {Id: "all3", Name: "3개 센터 전체", Desc: "메가와이즈 + TDL Lab + 시화MTV", Multi: true, Main: true, Mtv: true, Color: ColorValue("#343A40")}
+);
+
+// 신청 화면에 보이는 투어 (시화MTV 를 닫아 두면 TDL Lab · 메가와이즈 · 메가와이즈 + TDL Lab 3종)
+OpenTours = Filter(Tours, MtvEnabled || !Mtv);
+
+// ---------- 4. 투어별 시간대와 공간 점유 ----------
+// 시간은 '자정부터 몇 분' 으로 적습니다 (600 = 10:00). -1 = 그 공간을 쓰지 않음.
+// C = 메가와이즈 센터, L = TDL Lab, M = 시화MTV.  (웹 버전 src/lib/visit.ts 의 segmentsOf 와 같은 값)
+TourSlots = Table(
+    {Tour: "lab", Slot: "10:30-11:30", Show: "10:30 – 11:30", Detail: "TDL Lab", CFrom: -1, CTo: -1, LFrom: 630, LTo: 690, MFrom: -1, MTo: -1},
+    {Tour: "lab", Slot: "14:00-15:00", Show: "14:00 – 15:00", Detail: "TDL Lab", CFrom: -1, CTo: -1, LFrom: 840, LTo: 900, MFrom: -1, MTo: -1},
+    {Tour: "center", Slot: "10:00-11:00", Show: "10:00 – 11:00", Detail: "메가와이즈 센터", CFrom: 600, CTo: 660, LFrom: -1, LTo: -1, MFrom: -1, MTo: -1},
+    {Tour: "center", Slot: "13:00-14:00", Show: "13:00 – 14:00", Detail: "메가와이즈 센터", CFrom: 780, CTo: 840, LFrom: -1, LTo: -1, MFrom: -1, MTo: -1},
+    {Tour: "center", Slot: "15:00-16:00", Show: "15:00 – 16:00", Detail: "메가와이즈 센터", CFrom: 900, CTo: 960, LFrom: -1, LTo: -1, MFrom: -1, MTo: -1},
+    {Tour: "mtv", Slot: "10:00-11:00", Show: "10:00 – 11:00", Detail: "시화MTV", CFrom: -1, CTo: -1, LFrom: -1, LTo: -1, MFrom: 600, MTo: 660},
+    {Tour: "mtv", Slot: "14:00-15:00", Show: "14:00 – 15:00", Detail: "시화MTV", CFrom: -1, CTo: -1, LFrom: -1, LTo: -1, MFrom: 840, MTo: 900},
+    {Tour: "combined", Slot: "09:30-11:30", Show: "09:30 – 11:30", Detail: "09:30 메가와이즈 → 10:30 TDL Lab", CFrom: 570, CTo: 630, LFrom: 570, LTo: 690, MFrom: -1, MTo: -1},
+    {Tour: "combined", Slot: "13:00-15:00", Show: "13:00 – 15:00", Detail: "13:00 메가와이즈 → 14:00 TDL Lab", CFrom: 780, CTo: 840, LFrom: 780, LTo: 900, MFrom: -1, MTo: -1},
+    {Tour: "center_mtv", Slot: "10:00-15:00", Show: "오전 메가와이즈 → 오후 시화MTV", Detail: "10:00 – 11:00 메가와이즈 · 14:00 – 15:00 시화MTV", CFrom: 600, CTo: 660, LFrom: -1, LTo: -1, MFrom: 840, MTo: 900},
+    {Tour: "center_mtv", Slot: "10:00-14:00", Show: "오전 시화MTV → 오후 메가와이즈", Detail: "10:00 – 11:00 시화MTV · 13:00 – 14:00 메가와이즈", CFrom: 780, CTo: 840, LFrom: -1, LTo: -1, MFrom: 600, MTo: 660},
+    {Tour: "all3", Slot: "09:30-15:00", Show: "오전 메가와이즈+Lab → 오후 시화MTV", Detail: "09:30 – 11:30 메가와이즈+Lab · 14:00 – 15:00 시화MTV", CFrom: 570, CTo: 630, LFrom: 570, LTo: 690, MFrom: 840, MTo: 900},
+    {Tour: "all3", Slot: "10:00-15:00", Show: "오전 시화MTV → 오후 메가와이즈+Lab", Detail: "10:00 – 11:00 시화MTV · 13:00 – 15:00 메가와이즈+Lab", CFrom: 780, CTo: 840, LFrom: 780, LTo: 900, MFrom: 600, MTo: 660}
+);
+
+// ---------- 5. 선택지 ----------
+Industries = ["제조", "전자", "가전", "자동차", "화학", "식품", "화장품", "의류", "제약/헬스케어", "가구/인테리어", "유통", "이커머스", "CVS/편의점", "물류", "기타"];   // 하나만 선택 (통계용)
+Purposes = ["기존 고객사 Lock-in", "신규 영업", "교육", "투어", "기타"];   // 하나만 선택 (통계용)
+// 참석자 Forms 의 직무 선택지 (통계용, Forms 질문 7과 같은 순서)
+JobOptions = ["경영진", "영업", "기획", "마케팅", "구매", "운영", "물류", "품질관리", "IT/개발", "R&D/연구개발"];
+// 담당(실) 통계 분류: 주요 6개 + 기타 (웹 src/lib/visit.ts 의 DIVISION_GROUPS)
+DivisionGroups = ["CL전자담당", "CL LG/LX담당", "CL영업담당", "CL운영담당", "CL컨설팅담당", "EC사업담당", "기타"];
+Languages = Table({Id: "ko", Name: "한국어"}, {Id: "en", Name: "영어"}, {Id: "zh", Name: "중국어"});
+
+// ---------- 6. 공휴일 (해마다 추가하세요. 'YYYY-MM-DD') ----------
+HolidayKeys = [
+    "2026-01-01", "2026-02-16", "2026-02-17", "2026-02-18", "2026-03-01", "2026-03-02", "2026-05-05", "2026-05-24", "2026-05-25",
+    "2026-06-03", "2026-06-06", "2026-08-15", "2026-08-17", "2026-09-24", "2026-09-25", "2026-09-26", "2026-10-03", "2026-10-05",
+    "2026-10-09", "2026-12-25",
+    "2027-01-01", "2027-02-06", "2027-02-07", "2027-02-08", "2027-02-09", "2027-03-01", "2027-05-05", "2027-05-13", "2027-06-06",
+    "2027-08-15", "2027-08-16", "2027-09-14", "2027-09-15", "2027-09-16", "2027-10-03", "2027-10-04", "2027-10-09", "2027-10-11",
+    "2027-12-25", "2027-12-27"
+];
+
+// ---------- 7. 신청 가능한 가장 이른 날 ----------
+// 기본: 당일 · 익일 불가 (오늘 +2일부터)
+EarliestBase = DateAdd(Today(), 2, TimeUnit.Days);
+// 시화MTV 가 들어간 투어: 3영업일 뒤 (주말 · 공휴일 제외)와 기본 중 더 늦은 날
+EarliestMtv = With(
+    {
+        d: Last(
+            FirstN(
+                Filter(
+                    ForAll(Sequence(20), {D: DateAdd(Today(), Value, TimeUnit.Days)}),
+                    Weekday(D, StartOfWeek.Monday) <= 5 && !(Text(D, "yyyy-mm-dd") in HolidayKeys.Value)
+                ),
+                3
+            )
+        ).D
+    },
+    If(d > EarliestBase, d, EarliestBase)
+);

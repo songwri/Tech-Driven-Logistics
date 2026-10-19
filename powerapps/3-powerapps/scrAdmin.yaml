@@ -1,0 +1,1773 @@
+# scrAdmin — 관리자 (TourAdmins 목록에 있는 사람만 들어올 수 있음)
+# 1) 새 화면(빈 화면) → 이름 scrAdmin, 화면 Fill = cBg
+#    OnVisible =
+#      If(IsBlank(gAdminSite), Notify("관리자 권한이 없습니다.", NotificationType.Error); Navigate(scrBook),
+#         ClearCollect(colAdminReqs, Filter(VisitRequests, VisitDate >= DateAdd(Today(), -180, TimeUnit.Days)));
+#         If(!IsBlank(Param("requestNo")), Set(gAdminFilter, "전체"); Set(gSel, LookUp(colAdminReqs, Title = Param("requestNo"))));
+#         If(!IsBlank(gOpenId), Set(gAdminFilter, "전체"); Set(gSel, Coalesce(LookUp(colAdminReqs, ID = gOpenId), LookUp(VisitRequests, ID = gOpenId))); Set(gOpenId, Blank())))
+# 2) 이 파일 내용을 전부 복사 → 트리 뷰에서 scrAdmin 오른쪽 클릭 → '붙여넣기'
+- hdrABar:
+    Control: Rectangle@2.3.0
+    Properties:
+      X: =0
+      Y: =0
+      Width: =1366
+      Height: =56
+      Fill: =cSurface
+- hdrALine:
+    Control: Rectangle@2.3.0
+    Properties:
+      X: =0
+      Y: =55
+      Width: =1366
+      Height: =1
+      Fill: =cLine
+- hdrAMark:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="TDL"
+      X: =24
+      Y: =16
+      Width: =24
+      Height: =24
+      Font: =fnt
+      Size: =7
+      Color: =cSurface
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      FontWeight: =FontWeight.Bold
+      Align: =Align.Center
+      Fill: =cBrand
+- hdrATitle:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="TDL 방문 예약"
+      X: =58
+      Y: =16
+      Width: =200
+      Height: =24
+      Font: =fnt
+      Size: =12
+      Color: =cInk
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      FontWeight: =FontWeight.Semibold
+- hdrANavBook:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="방문 신청"
+      X: =520
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrBook, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =true
+- hdrANavMy:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="내 신청"
+      X: =624
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrMy, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrMy, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrMy, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrMy, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =true
+- hdrANavAdmin:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="관리자"
+      X: =728
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrAdmin, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrAdmin, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrAdmin, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrAdmin, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =!IsBlank(gAdminSite)
+- hdrANavCal:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="달력"
+      X: =832
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrCalendar, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrCalendar, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrCalendar, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrCalendar, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =!IsBlank(gAdminSite)
+- hdrANavStats:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="통계"
+      X: =936
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrStats, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrStats, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrStats, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrStats, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =!IsBlank(gAdminSite)
+- hdrAUser:
+    Control: Label@2.5.1
+    Properties:
+      Text: =gMe.displayName & If(IsBlank(gMe.department), "", " · " & gMe.department)
+      X: =1042
+      Y: =18
+      Width: =300
+      Height: =20
+      Font: =fnt
+      Size: =9.75
+      Color: =cInk2
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      Align: =Align.Right
+- conAdminList:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      X: =24
+      Y: =72
+      Width: =440
+      Height: =680
+      Fill: =cSurface
+      BorderColor: =cLine
+      BorderThickness: =1
+      DropShadow: =DropShadow.None
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+    Children:
+      - lblAdminTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="예약 요청"
+            X: =20
+            Y: =16
+            Width: =90
+            Height: =24
+            Font: =fnt
+            Size: =11.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblAdminSite:
+          Control: Label@2.5.1
+          Properties:
+            Text: =Switch(gAdminSite, "main", "메가와이즈 · TDL Lab", "mtv", "시화MTV", "hq", "통합 관제 (보기 전용)", "")
+            X: =100
+            Y: =19
+            Width: =210
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk3
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - btnOpenBlock:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="일정 막기"
+            X: =320
+            Y: =10
+            Width: =100
+            Height: =32
+            OnSelect: |-
+              =Set(gBlockTarget, If(gAdminSite = "mtv", "시화MTV", "메가와이즈"));
+              Set(gBlockTime, "종일");
+              Set(gBlockDate, Today());
+              Reset(dpBlock);
+              Reset(txtBlockReason);
+              Set(gShowBlock, true)
+            Font: =fnt
+            Size: =9.75
+            FontWeight: =FontWeight.Semibold
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            Fill: =cSurface
+            Color: =cInk
+            HoverFill: =cSoft
+            PressedFill: =cSoft
+            HoverColor: =cInk
+            PressedColor: =cInk
+            BorderColor: =cLine
+            HoverBorderColor: =cInk3
+            BorderThickness: =1
+            DisabledFill: =cSurface
+            DisabledColor: =cInk3
+            DisabledBorderColor: =cLine
+            Visible: =gAdminSite <> "hq"
+      - btnFilterWait:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="대기 " & CountRows(Filter(colAdminReqs, (gAdminSite = "hq" || (gAdminSite = "main" && ForMain = "Y") || (gAdminSite = "mtv" && ForMtv = "Y")) && Status = "대기"))
+            X: =20
+            Y: =52
+            Width: =96
+            Height: =32
+            OnSelect: =Set(gAdminFilter, "대기")
+            Font: =fnt
+            Size: =9.75
+            Fill: =If(gAdminFilter = "대기", cPrimary, cSurface)
+            Color: =If(gAdminFilter = "대기", cSurface, cInk)
+            HoverFill: =If(gAdminFilter = "대기", cPrimaryHover, cSoft)
+            HoverColor: =If(gAdminFilter = "대기", cSurface, cInk)
+            PressedFill: =If(gAdminFilter = "대기", cPrimaryHover, cSoft)
+            PressedColor: =If(gAdminFilter = "대기", cSurface, cInk)
+            BorderColor: =If(gAdminFilter = "대기", cPrimary, cLine)
+            HoverBorderColor: =If(gAdminFilter = "대기", cPrimary, cInk3)
+            BorderThickness: =1
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+      - btnFilterOk:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="승인"
+            X: =122
+            Y: =52
+            Width: =96
+            Height: =32
+            OnSelect: =Set(gAdminFilter, "승인")
+            Font: =fnt
+            Size: =9.75
+            Fill: =If(gAdminFilter = "승인", cPrimary, cSurface)
+            Color: =If(gAdminFilter = "승인", cSurface, cInk)
+            HoverFill: =If(gAdminFilter = "승인", cPrimaryHover, cSoft)
+            HoverColor: =If(gAdminFilter = "승인", cSurface, cInk)
+            PressedFill: =If(gAdminFilter = "승인", cPrimaryHover, cSoft)
+            PressedColor: =If(gAdminFilter = "승인", cSurface, cInk)
+            BorderColor: =If(gAdminFilter = "승인", cPrimary, cLine)
+            HoverBorderColor: =If(gAdminFilter = "승인", cPrimary, cInk3)
+            BorderThickness: =1
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+      - btnFilterAll:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="전체"
+            X: =224
+            Y: =52
+            Width: =96
+            Height: =32
+            OnSelect: =Set(gAdminFilter, "전체")
+            Font: =fnt
+            Size: =9.75
+            Fill: =If(gAdminFilter = "전체", cPrimary, cSurface)
+            Color: =If(gAdminFilter = "전체", cSurface, cInk)
+            HoverFill: =If(gAdminFilter = "전체", cPrimaryHover, cSoft)
+            HoverColor: =If(gAdminFilter = "전체", cSurface, cInk)
+            PressedFill: =If(gAdminFilter = "전체", cPrimaryHover, cSoft)
+            PressedColor: =If(gAdminFilter = "전체", cSurface, cInk)
+            BorderColor: =If(gAdminFilter = "전체", cPrimary, cLine)
+            HoverBorderColor: =If(gAdminFilter = "전체", cPrimary, cInk3)
+            BorderThickness: =1
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+      - txtAdminSearch:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            Default: =""
+            HintText: ="업체명 · 신청자 · 신청번호 검색"
+            X: =20
+            Y: =96
+            Width: =400
+            Height: =36
+            Font: =fnt
+            Size: =10.5
+            Color: =cInk
+            Fill: =cSurface
+            BorderColor: =cLine
+            HoverBorderColor: =cInk3
+            FocusedBorderColor: =cInk
+            BorderThickness: =1
+            FocusedBorderThickness: =1
+            PaddingLeft: =10
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+      - galAdmin:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Items: |-
+              =SortByColumns(
+                  Filter(
+                      colAdminReqs,
+                      (gAdminSite = "hq" || (gAdminSite = "main" && ForMain = "Y") || (gAdminSite = "mtv" && ForMtv = "Y"))
+                          && (gAdminFilter = "전체" || Status = gAdminFilter)
+                          && (IsBlank(txtAdminSearch.Text) || txtAdminSearch.Text in Company || txtAdminSearch.Text in HostName || txtAdminSearch.Text in Title)
+                  ),
+                  "VisitDate",
+                  If(gAdminFilter = "대기", SortOrder.Ascending, SortOrder.Descending)
+              )
+            X: =20
+            Y: =144
+            Width: =400
+            Height: =520
+            TemplateSize: =90
+            TemplatePadding: =0
+            ShowScrollbar: =false
+            BorderThickness: =0
+            Fill: =Color.Transparent
+            OnSelect: =Set(gSel, ThisItem)
+          Children:
+            - btnAdminItem:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  Text: =""
+                  X: =0
+                  Y: =0
+                  Width: =400
+                  Height: =86
+                  OnSelect: =Select(Parent)
+                  Fill: =If(ThisItem.ID = gSel.ID, cSoft, cSurface)
+                  HoverFill: =cSoft
+                  PressedFill: =cSoft
+                  BorderThickness: =0
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+            - lblAdmCompany:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.Company
+                  X: =16
+                  Y: =14
+                  Width: =300
+                  Height: =24
+                  Font: =fnt
+                  Size: =11.25
+                  Color: =cInk
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  FontWeight: =FontWeight.Semibold
+                  OnSelect: =Select(Parent)
+            - lblAdmInfo:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =Text(DateValue(ThisItem.DateKey), "mm/dd") & " (" & Text(DateValue(ThisItem.DateKey), "ddd", "ko-KR") & ") " & Left(ThisItem.Slot, 5) & " · " & ThisItem.TourName
+                  X: =16
+                  Y: =42
+                  Width: =370
+                  Height: =20
+                  Font: =fnt
+                  Size: =9
+                  Color: =cInk2
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  OnSelect: =Select(Parent)
+            - lblAdmSub:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.HostName & " " & ThisItem.HostTitle & " · 참석자 " & ThisItem.AttendeeCount & "/" & ThisItem.ExpectedHeadcount & If(ThisItem.Status = "대기" && ThisItem.ApproveMain = "승인" && ThisItem.ApproveMtv = "대기", " · 시화MTV 승인 대기", ThisItem.Status = "대기" && ThisItem.ApproveMtv = "승인" && ThisItem.ApproveMain = "대기", " · 메가와이즈 · Lab 승인 대기", "")
+                  X: =16
+                  Y: =62
+                  Width: =370
+                  Height: =20
+                  Font: =fnt
+                  Size: =9
+                  Color: =cInk3
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  OnSelect: =Select(Parent)
+            - tagAdmStatus:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  Text: =ThisItem.Status
+                  X: =328
+                  Y: =14
+                  Width: =56
+                  Height: =22
+                  DisplayMode: =DisplayMode.View
+                  Font: =fnt
+                  Size: =8
+                  FontWeight: =FontWeight.Semibold
+                  Fill: =LookUp(StatusStyle, S = ThisItem.Status, Bg)
+                  Color: =LookUp(StatusStyle, S = ThisItem.Status, Fg)
+                  BorderThickness: =0
+                  RadiusTopLeft: =11
+                  RadiusTopRight: =11
+                  RadiusBottomLeft: =11
+                  RadiusBottomRight: =11
+                  OnSelect: =false
+            - rctAdmLine:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =0
+                  Y: =89
+                  Width: =400
+                  Height: =1
+                  Fill: =cLine
+- conAdminDetail:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      X: =480
+      Y: =72
+      Width: =862
+      Height: =680
+      Fill: =cSurface
+      BorderColor: =cLine
+      BorderThickness: =1
+      DropShadow: =DropShadow.None
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+      Visible: =!IsBlank(gSel)
+    Children:
+      - lblSelNo:
+          Control: Label@2.5.1
+          Properties:
+            Text: =gSel.Title & " · " & Text(gSel.Created, "yyyy.mm.dd") & " 신청"
+            X: =28
+            Y: =24
+            Width: =500
+            Height: =20
+            Font: =Font.Consolas
+            Size: =9
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - lblSelCompany:
+          Control: Label@2.5.1
+          Properties:
+            Text: =gSel.Company
+            X: =28
+            Y: =44
+            Width: =420
+            Height: =32
+            Font: =fnt
+            Size: =16.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - tagSelStatus:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: =gSel.Status
+            X: =460
+            Y: =50
+            Width: =56
+            Height: =22
+            DisplayMode: =DisplayMode.View
+            Font: =fnt
+            Size: =8
+            FontWeight: =FontWeight.Semibold
+            Fill: =LookUp(StatusStyle, S = gSel.Status, Bg)
+            Color: =LookUp(StatusStyle, S = gSel.Status, Fg)
+            BorderThickness: =0
+            RadiusTopLeft: =11
+            RadiusTopRight: =11
+            RadiusBottomLeft: =11
+            RadiusBottomRight: =11
+            OnSelect: =false
+      - btnReject:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="거절"
+            X: =598
+            Y: =40
+            Width: =110
+            Height: =40
+            OnSelect: |-
+              =Patch(
+                  VisitRequests,
+                  LookUp(VisitRequests, ID = gSel.ID),
+                  {
+                      Status: "거절",
+                      ApproveMain: If(gAdminSite = "main", "거절", gSel.ApproveMain),
+                      ApproveMtv: If(gAdminSite = "mtv", "거절", gSel.ApproveMtv),
+                      AdminMemo: txtMemo.Text
+                  }
+              );
+              TDLVisitDecision.Run(gSel.ID, "거절", Coalesce(txtMemo.Text, "-"));
+              Notify("거절했습니다. 신청자에게 메일이 발송됩니다.", NotificationType.Success);
+              ClearCollect(colAdminReqs, Filter(VisitRequests, VisitDate >= DateAdd(Today(), -180, TimeUnit.Days)));
+              Set(gSel, LookUp(colAdminReqs, ID = gSel.ID))
+            Font: =fnt
+            Size: =10.5
+            FontWeight: =FontWeight.Semibold
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            Fill: =cSurface
+            Color: =cRed
+            HoverFill: =cSoft
+            PressedFill: =cSoft
+            HoverColor: =cRed
+            PressedColor: =cRed
+            BorderColor: =cLine
+            HoverBorderColor: =cInk3
+            BorderThickness: =1
+            DisabledFill: =cSurface
+            DisabledColor: =cInk3
+            DisabledBorderColor: =cLine
+            Visible: =gSel.Status = "대기" && Switch(gAdminSite, "main", gSel.ApproveMain, "mtv", gSel.ApproveMtv, "") = "대기"
+      - btnApprove:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="승인"
+            X: =720
+            Y: =40
+            Width: =110
+            Height: =40
+            OnSelect: |-
+              =With(
+                  {
+                      am: If(gAdminSite = "main", "승인", gSel.ApproveMain),
+                      mt: If(gAdminSite = "mtv", "승인", gSel.ApproveMtv)
+                  },
+                  With(
+                      {final: If(am <> "대기" && mt <> "대기", "승인", "대기")},
+                      If(
+                          final = "승인" && !IsEmpty(Filter(Filter(TourBusy, DateKey = gSel.DateKey) As b, ((gSel.CFrom >= 0 && b.CFrom >= 0 && gSel.CFrom < b.CTo && b.CFrom < gSel.CTo) || (gSel.LFrom >= 0 && b.LFrom >= 0 && gSel.LFrom < b.LTo && b.LFrom < gSel.LTo) || (gSel.MFrom >= 0 && b.MFrom >= 0 && gSel.MFrom < b.MTo && b.MFrom < gSel.MTo)))),
+                          Notify("같은 시간에 이미 확정되었거나 막힌 일정이 있습니다. 달력을 확인해 주세요.", NotificationType.Error),
+                          Patch(VisitRequests, LookUp(VisitRequests, ID = gSel.ID), {ApproveMain: am, ApproveMtv: mt, Status: final, AdminMemo: txtMemo.Text});
+                          If(
+                              final = "승인",
+                              Patch(
+                                  TourBusy,
+                                  Defaults(TourBusy),
+                                  {
+                                      Title: gSel.Title, DateKey: gSel.DateKey, MonthKey: Left(gSel.DateKey, 7),
+                                      CFrom: gSel.CFrom, CTo: gSel.CTo, LFrom: gSel.LFrom, LTo: gSel.LTo, MFrom: gSel.MFrom, MTo: gSel.MTo,
+                                      Kind: "예약", Reason: gSel.TourName
+                                  }
+                              );
+                              TDLVisitDecision.Run(gSel.ID, "승인", Coalesce(txtMemo.Text, "-"));
+                              Notify("승인했습니다. 신청자에게 확정 메일이 발송됩니다.", NotificationType.Success),
+                              Notify("이 센터의 승인을 기록했습니다. 상대 센터의 승인을 기다립니다.", NotificationType.Success)
+                          );
+                          ClearCollect(colAdminReqs, Filter(VisitRequests, VisitDate >= DateAdd(Today(), -180, TimeUnit.Days)));
+                          Set(gSel, LookUp(colAdminReqs, ID = gSel.ID))
+                      )
+                  )
+              )
+            Font: =fnt
+            Size: =10.5
+            FontWeight: =FontWeight.Semibold
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            Fill: =cPrimary
+            Color: =cSurface
+            HoverFill: =cPrimaryHover
+            PressedFill: =cPrimaryHover
+            HoverColor: =cSurface
+            PressedColor: =cSurface
+            BorderThickness: =0
+            DisabledFill: =cSoft
+            DisabledColor: =cInk3
+            Visible: =gSel.Status = "대기" && Switch(gAdminSite, "main", gSel.ApproveMain, "mtv", gSel.ApproveMtv, "") = "대기"
+      - btnCancelVisit:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="일정 취소"
+            X: =598
+            Y: =40
+            Width: =110
+            Height: =40
+            OnSelect: |-
+              =Patch(VisitRequests, LookUp(VisitRequests, ID = gSel.ID), {Status: "취소", AdminMemo: txtMemo.Text});
+              RemoveIf(TourBusy, Title = gSel.Title);
+              TDLVisitDecision.Run(gSel.ID, "취소", Coalesce(txtMemo.Text, "-"));
+              Notify("일정을 취소했습니다. 신청자에게 메일이 발송됩니다.", NotificationType.Success);
+              ClearCollect(colAdminReqs, Filter(VisitRequests, VisitDate >= DateAdd(Today(), -180, TimeUnit.Days)));
+              Set(gSel, LookUp(colAdminReqs, ID = gSel.ID))
+            Font: =fnt
+            Size: =10.5
+            FontWeight: =FontWeight.Semibold
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            Fill: =cSurface
+            Color: =cRed
+            HoverFill: =cSoft
+            PressedFill: =cSoft
+            HoverColor: =cRed
+            PressedColor: =cRed
+            BorderColor: =cLine
+            HoverBorderColor: =cInk3
+            BorderThickness: =1
+            DisabledFill: =cSurface
+            DisabledColor: =cInk3
+            DisabledBorderColor: =cLine
+            Visible: =gSel.Status = "승인" && gAdminSite <> "hq"
+      - btnComplete:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="방문 완료"
+            X: =720
+            Y: =40
+            Width: =110
+            Height: =40
+            OnSelect: |-
+              =Patch(VisitRequests, LookUp(VisitRequests, ID = gSel.ID), {Status: "완료", AdminMemo: txtMemo.Text});
+              Notify("방문 완료로 바꿨습니다.", NotificationType.Success);
+              ClearCollect(colAdminReqs, Filter(VisitRequests, VisitDate >= DateAdd(Today(), -180, TimeUnit.Days)));
+              Set(gSel, LookUp(colAdminReqs, ID = gSel.ID))
+            Font: =fnt
+            Size: =10.5
+            FontWeight: =FontWeight.Semibold
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            Fill: =cPrimary
+            Color: =cSurface
+            HoverFill: =cPrimaryHover
+            PressedFill: =cPrimaryHover
+            HoverColor: =cSurface
+            PressedColor: =cSurface
+            BorderThickness: =0
+            DisabledFill: =cSoft
+            DisabledColor: =cInk3
+            Visible: =gSel.Status = "승인" && gAdminSite <> "hq"
+      - infoWhenKey:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="일정"
+            X: =28
+            Y: =96
+            Width: =90
+            Height: =34
+            Font: =fnt
+            Size: =9.75
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - infoWhenVal:
+          Control: Label@2.5.1
+          Properties:
+            Text: =Text(DateValue(gSel.DateKey), "mm/dd") & " (" & Text(DateValue(gSel.DateKey), "ddd", "ko-KR") & ") " & gSel.ScheduleText
+            X: =118
+            Y: =96
+            Width: =306
+            Height: =34
+            Font: =fnt
+            Size: =10.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - infoWhenLine:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =28
+            Y: =130
+            Width: =396
+            Height: =1
+            Fill: =cLine
+      - infoTourKey:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="투어"
+            X: =434
+            Y: =96
+            Width: =90
+            Height: =34
+            Font: =fnt
+            Size: =9.75
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - infoTourVal:
+          Control: Label@2.5.1
+          Properties:
+            Text: =gSel.TourName
+            X: =524
+            Y: =96
+            Width: =306
+            Height: =34
+            Font: =fnt
+            Size: =10.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - infoTourLine:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =434
+            Y: =130
+            Width: =396
+            Height: =1
+            Fill: =cLine
+      - infoHostKey:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="신청자"
+            X: =28
+            Y: =130
+            Width: =90
+            Height: =34
+            Font: =fnt
+            Size: =9.75
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - infoHostVal:
+          Control: Label@2.5.1
+          Properties:
+            Text: =gSel.HostName & " " & gSel.HostTitle & " · " & gSel.HostPhone
+            X: =118
+            Y: =130
+            Width: =306
+            Height: =34
+            Font: =fnt
+            Size: =10.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - infoHostLine:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =28
+            Y: =164
+            Width: =396
+            Height: =1
+            Fill: =cLine
+      - infoOrgKey:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="소속"
+            X: =434
+            Y: =130
+            Width: =90
+            Height: =34
+            Font: =fnt
+            Size: =9.75
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - infoOrgVal:
+          Control: Label@2.5.1
+          Properties:
+            Text: =gSel.HostDivision & " " & gSel.HostOrg
+            X: =524
+            Y: =130
+            Width: =306
+            Height: =34
+            Font: =fnt
+            Size: =10.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - infoOrgLine:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =434
+            Y: =164
+            Width: =396
+            Height: =1
+            Fill: =cLine
+      - infoCatKey:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="방문 유형"
+            X: =28
+            Y: =164
+            Width: =90
+            Height: =34
+            Font: =fnt
+            Size: =9.75
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - infoCatVal:
+          Control: Label@2.5.1
+          Properties:
+            Text: =gSel.Category & If(IsBlank(gSel.ClientType), "", " · " & gSel.ClientType)
+            X: =118
+            Y: =164
+            Width: =306
+            Height: =34
+            Font: =fnt
+            Size: =10.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - infoCatLine:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =28
+            Y: =198
+            Width: =396
+            Height: =1
+            Fill: =cLine
+      - infoLangKey:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="언어"
+            X: =434
+            Y: =164
+            Width: =90
+            Height: =34
+            Font: =fnt
+            Size: =9.75
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - infoLangVal:
+          Control: Label@2.5.1
+          Properties:
+            Text: =gSel.Language & If(gSel.Interpreter = "Y", " · 통역 동반" & If(IsBlank(gSel.InterpreterLanguage), "", "(" & gSel.InterpreterLanguage & ")"), "")
+            X: =524
+            Y: =164
+            Width: =306
+            Height: =34
+            Font: =fnt
+            Size: =10.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - infoLangLine:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =434
+            Y: =198
+            Width: =396
+            Height: =1
+            Fill: =cLine
+      - infoPurposeKey:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="업종 · 목적"
+            X: =28
+            Y: =198
+            Width: =90
+            Height: =34
+            Font: =fnt
+            Size: =9.75
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - infoPurposeVal:
+          Control: Label@2.5.1
+          Properties:
+            Text: =If(IsBlank(gSel.Industry), "", gSel.Industry & " · ") & gSel.Purpose
+            X: =118
+            Y: =198
+            Width: =712
+            Height: =34
+            Font: =fnt
+            Size: =10.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - infoPurposeLine:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =28
+            Y: =232
+            Width: =802
+            Height: =1
+            Fill: =cLine
+      - infoCommentKey:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="의견"
+            X: =28
+            Y: =232
+            Width: =90
+            Height: =52
+            Font: =fnt
+            Size: =9.75
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - infoCommentVal:
+          Control: Label@2.5.1
+          Properties:
+            Text: =Coalesce(gSel.HostComment, "-")
+            X: =118
+            Y: =232
+            Width: =712
+            Height: =52
+            Font: =fnt
+            Size: =10.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - infoCommentLine:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =28
+            Y: =284
+            Width: =802
+            Height: =1
+            Fill: =cLine
+      - infoApprovalKey:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="센터 승인"
+            X: =28
+            Y: =284
+            Width: =90
+            Height: =30
+            Font: =fnt
+            Size: =9.75
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - infoApprovalVal:
+          Control: Label@2.5.1
+          Properties:
+            Text: |-
+              =If(IsBlank(gSel.ApproveMain), "", "메가와이즈 · Lab: " & gSel.ApproveMain) & If(!IsBlank(gSel.ApproveMain) && !IsBlank(gSel.ApproveMtv), "   ", "") & If(IsBlank(gSel.ApproveMtv), "", "시화MTV: " & gSel.ApproveMtv)
+            X: =118
+            Y: =284
+            Width: =712
+            Height: =30
+            Font: =fnt
+            Size: =10.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            VerticalAlign: =VerticalAlign.Middle
+      - infoApprovalLine:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =28
+            Y: =314
+            Width: =802
+            Height: =1
+            Fill: =cLine
+      - lblAttTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="참석자  " & gSel.AttendeeCount & " / " & gSel.ExpectedHeadcount & "명 제출 · Forms"
+            X: =28
+            Y: =330
+            Width: =600
+            Height: =24
+            Font: =fnt
+            Size: =11.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - rctAttHead:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =28
+            Y: =360
+            Width: =802
+            Height: =30
+            Fill: =cBg
+      - lblAttHead0:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="성함"
+            X: =40
+            Y: =366
+            Width: =100
+            Height: =18
+            Font: =fnt
+            Size: =9
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblAttHead1:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="직책"
+            X: =150
+            Y: =366
+            Width: =90
+            Height: =18
+            Font: =fnt
+            Size: =9
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblAttHead2:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="소속"
+            X: =250
+            Y: =366
+            Width: =120
+            Height: =18
+            Font: =fnt
+            Size: =9
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblAttHead3:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="이메일"
+            X: =380
+            Y: =366
+            Width: =210
+            Height: =18
+            Font: =fnt
+            Size: =9
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblAttHead4:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="차량번호"
+            X: =600
+            Y: =366
+            Width: =100
+            Height: =18
+            Font: =fnt
+            Size: =9
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblAttHead5:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="제출"
+            X: =710
+            Y: =366
+            Width: =110
+            Height: =18
+            Font: =fnt
+            Size: =9
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - galAtt:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Items: =Filter(VisitAttendees, RequestNo = gSel.Title)
+            X: =28
+            Y: =392
+            Width: =802
+            Height: =108
+            TemplateSize: =36
+            TemplatePadding: =0
+            ShowScrollbar: =true
+            BorderThickness: =0
+            Fill: =Color.Transparent
+          Children:
+            - lblAttCol0:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.Title
+                  X: =12
+                  Y: =0
+                  Width: =100
+                  Height: =35
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  VerticalAlign: =VerticalAlign.Middle
+                  Wrap: =false
+            - lblAttCol1:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.JobTitle
+                  X: =122
+                  Y: =0
+                  Width: =90
+                  Height: =35
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  VerticalAlign: =VerticalAlign.Middle
+                  Wrap: =false
+            - lblAttCol2:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.Org
+                  X: =222
+                  Y: =0
+                  Width: =120
+                  Height: =35
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  VerticalAlign: =VerticalAlign.Middle
+                  Wrap: =false
+            - lblAttCol3:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.Email
+                  X: =352
+                  Y: =0
+                  Width: =210
+                  Height: =35
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  VerticalAlign: =VerticalAlign.Middle
+                  Wrap: =false
+            - lblAttCol4:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =Coalesce(ThisItem.CarNo, "-")
+                  X: =572
+                  Y: =0
+                  Width: =100
+                  Height: =35
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  VerticalAlign: =VerticalAlign.Middle
+                  Wrap: =false
+            - lblAttCol5:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =Text(ThisItem.Created, "mm/dd hh:mm")
+                  X: =682
+                  Y: =0
+                  Width: =110
+                  Height: =35
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  VerticalAlign: =VerticalAlign.Middle
+                  Wrap: =false
+            - rctAttLine:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =0
+                  Y: =35
+                  Width: =802
+                  Height: =1
+                  Fill: =cLine
+      - lblMemo:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="관리자 메모 (거절 · 취소 사유는 신청자 메일에 들어갑니다)"
+            X: =28
+            Y: =512
+            Width: =690
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - txtMemo:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            Default: =gSel.AdminMemo
+            HintText: ="안내 가이드 · 특이사항"
+            X: =28
+            Y: =534
+            Width: =690
+            Height: =80
+            Font: =fnt
+            Size: =10.5
+            Color: =cInk
+            Fill: =cSurface
+            BorderColor: =cLine
+            HoverBorderColor: =cInk3
+            FocusedBorderColor: =cInk
+            BorderThickness: =1
+            FocusedBorderThickness: =1
+            PaddingLeft: =10
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            Mode: =TextMode.MultiLine
+      - btnSaveMemo:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="메모 저장"
+            X: =730
+            Y: =534
+            Width: =100
+            Height: =40
+            OnSelect: |-
+              =Patch(VisitRequests, LookUp(VisitRequests, ID = gSel.ID), {AdminMemo: txtMemo.Text});
+              Notify("메모를 저장했습니다.", NotificationType.Success);
+              ClearCollect(colAdminReqs, Filter(VisitRequests, VisitDate >= DateAdd(Today(), -180, TimeUnit.Days)));
+              Set(gSel, LookUp(colAdminReqs, ID = gSel.ID))
+            Font: =fnt
+            Size: =10.5
+            FontWeight: =FontWeight.Semibold
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            Fill: =cSurface
+            Color: =cInk
+            HoverFill: =cSoft
+            PressedFill: =cSoft
+            HoverColor: =cInk
+            PressedColor: =cInk
+            BorderColor: =cLine
+            HoverBorderColor: =cInk3
+            BorderThickness: =1
+            DisabledFill: =cSurface
+            DisabledColor: =cInk3
+            DisabledBorderColor: =cLine
+            Visible: =gAdminSite <> "hq"
+      - lblApproveHint:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="승인하면 해당 시간이 신청 달력에서 마감 처리되고, 신청자에게 확정 메일이 갑니다."
+            X: =28
+            Y: =630
+            Width: =802
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk3
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+- lblAdminEmpty:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="왼쪽 목록에서 요청을 고르세요."
+      X: =480
+      Y: =380
+      Width: =862
+      Height: =24
+      Font: =fnt
+      Size: =10.5
+      Color: =cInk3
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      Align: =Align.Center
+      Visible: =IsBlank(gSel)
+- conBlock:
+    Control: GroupContainer@1.3.0
+    Properties:
+      X: =0
+      Y: =0
+      Width: =1366
+      Height: =768
+      Fill: =cScrim
+      BorderThickness: =0
+      DropShadow: =DropShadow.None
+      Visible: =gShowBlock
+    Children:
+      - conBlockCard:
+          Control: GroupContainer@1.3.0
+          Variant: ManualLayout
+          Properties:
+            X: =443
+            Y: =154
+            Width: =480
+            Height: =460
+            Fill: =cSurface
+            BorderColor: =cLine
+            BorderThickness: =1
+            DropShadow: =DropShadow.None
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+          Children:
+            - lblBlockTitle:
+                Control: Label@2.5.1
+                Properties:
+                  Text: ="일정 막기"
+                  X: =24
+                  Y: =20
+                  Width: =300
+                  Height: =24
+                  Font: =fnt
+                  Size: =11.5
+                  Color: =cInk
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  FontWeight: =FontWeight.Semibold
+            - lblBlockHint:
+                Control: Label@2.5.1
+                Properties:
+                  Text: ="휴무 · 행사 등으로 투어를 받을 수 없는 시간을 막습니다."
+                  X: =24
+                  Y: =46
+                  Width: =430
+                  Height: =20
+                  Font: =fnt
+                  Size: =9
+                  Color: =cInk3
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+            - lblBlockDate:
+                Control: Label@2.5.1
+                Properties:
+                  Text: ="날짜"
+                  X: =24
+                  Y: =84
+                  Width: =200
+                  Height: =20
+                  Font: =fnt
+                  Size: =9
+                  Color: =cInk2
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+            - dpBlock:
+                Control: Classic/DatePicker@2.6.0
+                Properties:
+                  X: =24
+                  Y: =104
+                  Width: =200
+                  Height: =36
+                  DefaultDate: =Coalesce(gBlockDate, Today())
+                  Format: =DateTimeFormat.ShortDate
+                  Font: =fnt
+                  Size: =10.5
+                  Color: =cInk
+                  BorderColor: =cLine
+                  IconFill: =cInk
+                  IconBackground: =cSurface
+                  StartYear: =Year(Today())
+            - lblBlockTarget:
+                Control: Label@2.5.1
+                Properties:
+                  Text: ="공간"
+                  X: =24
+                  Y: =156
+                  Width: =200
+                  Height: =20
+                  Font: =fnt
+                  Size: =9
+                  Color: =cInk2
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+            - galBlockTarget:
+                Control: Gallery@2.15.0
+                Variant: Vertical
+                Properties:
+                  Items: =["메가와이즈", "TDL Lab", "센터 · Lab", "시화MTV"]
+                  X: =24
+                  Y: =176
+                  Width: =432
+                  Height: =36
+                  TemplateSize: =36
+                  TemplatePadding: =0
+                  ShowScrollbar: =false
+                  BorderThickness: =0
+                  Fill: =Color.Transparent
+                  WrapCount: =4
+                Children:
+                  - btnBlockTarget:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: =ThisItem.Value
+                        X: =0
+                        Y: =0
+                        Width: =104
+                        Height: =36
+                        OnSelect: =Set(gBlockTarget, ThisItem.Value)
+                        Font: =fnt
+                        Size: =9.75
+                        Fill: =If(gBlockTarget = ThisItem.Value, cPrimary, cSurface)
+                        Color: =If(gBlockTarget = ThisItem.Value, cSurface, cInk)
+                        HoverFill: =If(gBlockTarget = ThisItem.Value, cPrimaryHover, cSoft)
+                        HoverColor: =If(gBlockTarget = ThisItem.Value, cSurface, cInk)
+                        PressedFill: =If(gBlockTarget = ThisItem.Value, cPrimaryHover, cSoft)
+                        PressedColor: =If(gBlockTarget = ThisItem.Value, cSurface, cInk)
+                        BorderColor: =If(gBlockTarget = ThisItem.Value, cPrimary, cLine)
+                        HoverBorderColor: =If(gBlockTarget = ThisItem.Value, cPrimary, cInk3)
+                        BorderThickness: =1
+                        RadiusTopLeft: =6
+                        RadiusTopRight: =6
+                        RadiusBottomLeft: =6
+                        RadiusBottomRight: =6
+                        DisplayMode: =If(gAdminSite = "mtv" && ThisItem.Value <> "시화MTV" || gAdminSite = "main" && ThisItem.Value = "시화MTV" || !MtvEnabled && ThisItem.Value = "시화MTV", DisplayMode.Disabled, DisplayMode.Edit)
+            - lblBlockTime:
+                Control: Label@2.5.1
+                Properties:
+                  Text: ="시간"
+                  X: =24
+                  Y: =228
+                  Width: =200
+                  Height: =20
+                  Font: =fnt
+                  Size: =9
+                  Color: =cInk2
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+            - galBlockTime:
+                Control: Gallery@2.15.0
+                Variant: Vertical
+                Properties:
+                  Items: =["종일", "오전", "오후"]
+                  X: =24
+                  Y: =248
+                  Width: =432
+                  Height: =36
+                  TemplateSize: =36
+                  TemplatePadding: =0
+                  ShowScrollbar: =false
+                  BorderThickness: =0
+                  Fill: =Color.Transparent
+                  WrapCount: =3
+                Children:
+                  - btnBlockTime:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: =ThisItem.Value
+                        X: =0
+                        Y: =0
+                        Width: =138
+                        Height: =36
+                        OnSelect: =Set(gBlockTime, ThisItem.Value)
+                        Font: =fnt
+                        Size: =9.75
+                        Fill: =If(gBlockTime = ThisItem.Value, cPrimary, cSurface)
+                        Color: =If(gBlockTime = ThisItem.Value, cSurface, cInk)
+                        HoverFill: =If(gBlockTime = ThisItem.Value, cPrimaryHover, cSoft)
+                        HoverColor: =If(gBlockTime = ThisItem.Value, cSurface, cInk)
+                        PressedFill: =If(gBlockTime = ThisItem.Value, cPrimaryHover, cSoft)
+                        PressedColor: =If(gBlockTime = ThisItem.Value, cSurface, cInk)
+                        BorderColor: =If(gBlockTime = ThisItem.Value, cPrimary, cLine)
+                        HoverBorderColor: =If(gBlockTime = ThisItem.Value, cPrimary, cInk3)
+                        BorderThickness: =1
+                        RadiusTopLeft: =6
+                        RadiusTopRight: =6
+                        RadiusBottomLeft: =6
+                        RadiusBottomRight: =6
+            - lblBlockReason:
+                Control: Label@2.5.1
+                Properties:
+                  Text: ="사유"
+                  X: =24
+                  Y: =300
+                  Width: =200
+                  Height: =20
+                  Font: =fnt
+                  Size: =9
+                  Color: =cInk2
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+            - txtBlockReason:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  Default: =""
+                  HintText: ="예) 센터 정기 점검"
+                  X: =24
+                  Y: =320
+                  Width: =428
+                  Height: =36
+                  Font: =fnt
+                  Size: =10.5
+                  Color: =cInk
+                  Fill: =cSurface
+                  BorderColor: =cLine
+                  HoverBorderColor: =cInk3
+                  FocusedBorderColor: =cInk
+                  BorderThickness: =1
+                  FocusedBorderThickness: =1
+                  PaddingLeft: =10
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+            - lblBlockNote:
+                Control: Label@2.5.1
+                Properties:
+                  Text: ="오전 = 09:00–12:00, 오후 = 12:00–18:00 · 해제는 SharePoint TourBusy 목록에서 행 삭제"
+                  X: =24
+                  Y: =362
+                  Width: =428
+                  Height: =20
+                  Font: =fnt
+                  Size: =9
+                  Color: =cInk3
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+            - btnBlockClose:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  Text: ="닫기"
+                  X: =236
+                  Y: =392
+                  Width: =104
+                  Height: =40
+                  OnSelect: =Set(gShowBlock, false)
+                  Font: =fnt
+                  Size: =10.5
+                  FontWeight: =FontWeight.Semibold
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  Fill: =cSurface
+                  Color: =cInk
+                  HoverFill: =cSoft
+                  PressedFill: =cSoft
+                  HoverColor: =cInk
+                  PressedColor: =cInk
+                  BorderColor: =cLine
+                  HoverBorderColor: =cInk3
+                  BorderThickness: =1
+                  DisabledFill: =cSurface
+                  DisabledColor: =cInk3
+                  DisabledBorderColor: =cLine
+            - btnBlockSave:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  Text: ="막기"
+                  X: =348
+                  Y: =392
+                  Width: =104
+                  Height: =40
+                  OnSelect: |-
+                    =If(
+                        IsBlank(dpBlock.SelectedDate),
+                        Notify("날짜를 고르세요.", NotificationType.Warning),
+                        With(
+                            {
+                                f: Switch(gBlockTime, "종일", 0, "오전", 540, 720),
+                                e: Switch(gBlockTime, "종일", 1440, "오전", 720, 1080),
+                                c: gBlockTarget in ["메가와이즈", "센터 · Lab"],
+                                l: gBlockTarget in ["TDL Lab", "센터 · Lab"],
+                                m: gBlockTarget = "시화MTV"
+                            },
+                            Patch(
+                                TourBusy,
+                                Defaults(TourBusy),
+                                {
+                                    Title: "BLOCK-" & Text(Now(), "yymmdd-hhmmss"),
+                                    DateKey: Text(dpBlock.SelectedDate, "yyyy-mm-dd"),
+                                    MonthKey: Text(dpBlock.SelectedDate, "yyyy-mm"),
+                                    CFrom: If(c, f, -1), CTo: If(c, e, -1),
+                                    LFrom: If(l, f, -1), LTo: If(l, e, -1),
+                                    MFrom: If(m, f, -1), MTo: If(m, e, -1),
+                                    Kind: "막기",
+                                    Reason: gBlockTarget & " · " & gBlockTime & If(IsBlank(txtBlockReason.Text), "", " · " & txtBlockReason.Text)
+                                }
+                            )
+                        );
+                        Set(gShowBlock, false);
+                        Notify("일정을 막았습니다. 신청 달력에 바로 반영됩니다.", NotificationType.Success)
+                    )
+                  Font: =fnt
+                  Size: =10.5
+                  FontWeight: =FontWeight.Semibold
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  Fill: =cPrimary
+                  Color: =cSurface
+                  HoverFill: =cPrimaryHover
+                  PressedFill: =cPrimaryHover
+                  HoverColor: =cSurface
+                  PressedColor: =cSurface
+                  BorderThickness: =0
+                  DisabledFill: =cSoft
+                  DisabledColor: =cInk3

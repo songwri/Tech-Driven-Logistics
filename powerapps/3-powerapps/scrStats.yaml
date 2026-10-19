@@ -1,0 +1,2015 @@
+# scrStats — 방문 통계 (관리자만). 웹 관리자 '통계' 탭과 같은 기간 선택: 연간 · 월별 · 기간 지정 · 전체 기간
+# 1) 새 화면(빈 화면) → 이름 scrStats, 화면 Fill = cBg
+#    OnVisible =
+#      If(IsBlank(gAdminSite), Notify("관리자 권한이 없습니다.", NotificationType.Error); Navigate(scrBook),
+#         ClearCollect(colStatAll, AddColumns(Filter(VisitRequests, gAdminSite = "hq" || (gAdminSite = "main" && ForMain = "Y") || (gAdminSite = "mtv" && ForMtv = "Y")),
+#             DayNum, Value(Substitute(DateKey, "-", "")),
+#             Heads, If(AttendeeCount > 0, AttendeeCount, ExpectedHeadcount),
+#             Seg, If(Category = "내부 방문", "내부 방문", ClientType = "신규 고객사", "고객 · 신규", ClientType = "기존 고객사", "고객 · 기존", "고객 · 미분류"),
+#             LangLabel, If(Language = "한국어", If(Interpreter = "Y", "한국어 · 통역 동반", "한국어"), Language),
+#             DivGroup, With({k0: Lower(Substitute(Substitute(Substitute(Substitute(Substitute(Substitute(HostDivision, " ", ""), "/", ""), "·", ""), "-", ""), ".", ""), "_", ""))},
+#                 With({k1: If(StartsWith(k0, "cl"), Mid(k0, 3), k0)},
+#                     With({k: If(EndsWith(k1, "담당"), Left(k1, Len(k1) - 2), k1)},
+#                         Switch(k, "전자", "CL전자담당", "lglx", "CL LG/LX담당", "lxlg", "CL LG/LX담당", "영업", "CL영업담당", "운영", "CL운영담당", "컨설팅", "CL컨설팅담당", "ec사업", "EC사업담당", "ec", "EC사업담당", "기타"))))));
+#         ClearCollect(colStatAtt, ShowColumns(VisitAttendees, RequestNo, Jobs)))
+# 2) 이 파일 내용을 전부 복사 → 트리 뷰에서 scrStats 오른쪽 클릭 → '붙여넣기'
+- hdrSBar:
+    Control: Rectangle@2.3.0
+    Properties:
+      X: =0
+      Y: =0
+      Width: =1366
+      Height: =56
+      Fill: =cSurface
+- hdrSLine:
+    Control: Rectangle@2.3.0
+    Properties:
+      X: =0
+      Y: =55
+      Width: =1366
+      Height: =1
+      Fill: =cLine
+- hdrSMark:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="TDL"
+      X: =24
+      Y: =16
+      Width: =24
+      Height: =24
+      Font: =fnt
+      Size: =7
+      Color: =cSurface
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      FontWeight: =FontWeight.Bold
+      Align: =Align.Center
+      Fill: =cBrand
+- hdrSTitle:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="TDL 방문 예약"
+      X: =58
+      Y: =16
+      Width: =200
+      Height: =24
+      Font: =fnt
+      Size: =12
+      Color: =cInk
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      FontWeight: =FontWeight.Semibold
+- hdrSNavBook:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="방문 신청"
+      X: =520
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrBook, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =true
+- hdrSNavMy:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="내 신청"
+      X: =624
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrMy, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrMy, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrMy, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrMy, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =true
+- hdrSNavAdmin:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="관리자"
+      X: =728
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrAdmin, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrAdmin, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrAdmin, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrAdmin, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =!IsBlank(gAdminSite)
+- hdrSNavCal:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="달력"
+      X: =832
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrCalendar, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrCalendar, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrCalendar, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrCalendar, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =!IsBlank(gAdminSite)
+- hdrSNavStats:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="통계"
+      X: =936
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrStats, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrStats, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrStats, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrStats, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =!IsBlank(gAdminSite)
+- hdrSUser:
+    Control: Label@2.5.1
+    Properties:
+      Text: =gMe.displayName & If(IsBlank(gMe.department), "", " · " & gMe.department)
+      X: =1042
+      Y: =18
+      Width: =300
+      Height: =20
+      Font: =fnt
+      Size: =9.75
+      Color: =cInk2
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      Align: =Align.Right
+- lblStatS:
+    Control: Label@2.5.1
+    Properties:
+      Text: |-
+        =Switch(
+            gStatPeriod,
+            "year", Text(gStatYear * 10000 + 101),
+            "month", Text(gStatYear * 10000 + gStatMonth * 100 + 1),
+            "range", Text(If(dpStatFrom.SelectedDate <= dpStatTo.SelectedDate, dpStatFrom.SelectedDate, dpStatTo.SelectedDate), "yyyymmdd"),
+            "0"
+        )
+      X: =0
+      Y: =0
+      Width: =1
+      Height: =1
+      Font: =fnt
+      Size: =10.5
+      Color: =cInk
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      Visible: =false
+- lblStatE:
+    Control: Label@2.5.1
+    Properties:
+      Text: |-
+        =Switch(
+            gStatPeriod,
+            "year", Text(gStatYear * 10000 + 1231),
+            "month", Text(DateAdd(Date(gStatYear, gStatMonth + 1, 1), -1, TimeUnit.Days), "yyyymmdd"),
+            "range", Text(If(dpStatFrom.SelectedDate <= dpStatTo.SelectedDate, dpStatTo.SelectedDate, dpStatFrom.SelectedDate), "yyyymmdd"),
+            "99999999"
+        )
+      X: =0
+      Y: =0
+      Width: =1
+      Height: =1
+      Font: =fnt
+      Size: =10.5
+      Color: =cInk
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      Visible: =false
+- lblStatPS:
+    Control: Label@2.5.1
+    Properties:
+      Text: |-
+        =With(
+            {
+                a: If(dpStatFrom.SelectedDate <= dpStatTo.SelectedDate, dpStatFrom.SelectedDate, dpStatTo.SelectedDate),
+                b: If(dpStatFrom.SelectedDate <= dpStatTo.SelectedDate, dpStatTo.SelectedDate, dpStatFrom.SelectedDate)
+            },
+            Switch(
+                gStatPeriod,
+                "year", Text((gStatYear - 1) * 10000 + 101),
+                "month", Text(Date(gStatYear, gStatMonth - 1, 1), "yyyymmdd"),
+                "range", Text(DateAdd(a, -(DateDiff(a, b, TimeUnit.Days) + 1), TimeUnit.Days), "yyyymmdd"),
+                "-1"
+            )
+        )
+      X: =0
+      Y: =0
+      Width: =1
+      Height: =1
+      Font: =fnt
+      Size: =10.5
+      Color: =cInk
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      Visible: =false
+- lblStatPE:
+    Control: Label@2.5.1
+    Properties:
+      Text: |-
+        =With(
+            {a: If(dpStatFrom.SelectedDate <= dpStatTo.SelectedDate, dpStatFrom.SelectedDate, dpStatTo.SelectedDate)},
+            Switch(
+                gStatPeriod,
+                "year", Text((gStatYear - 1) * 10000 + 1231),
+                "month", Text(DateAdd(Date(gStatYear, gStatMonth, 1), -1, TimeUnit.Days), "yyyymmdd"),
+                "range", Text(DateAdd(a, -1, TimeUnit.Days), "yyyymmdd"),
+                "-1"
+            )
+        )
+      X: =0
+      Y: =0
+      Width: =1
+      Height: =1
+      Font: =fnt
+      Size: =10.5
+      Color: =cInk
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      Visible: =false
+- conStatFilter:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      X: =24
+      Y: =72
+      Width: =1318
+      Height: =52
+      Fill: =cSurface
+      BorderColor: =cLine
+      BorderThickness: =1
+      DropShadow: =DropShadow.None
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+    Children:
+      - btnStatYear:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="연간"
+            X: =16
+            Y: =10
+            Width: =84
+            Height: =32
+            OnSelect: =Set(gStatPeriod, "year")
+            Font: =fnt
+            Size: =9.75
+            Fill: =If(gStatPeriod = "year", cPrimary, cSurface)
+            Color: =If(gStatPeriod = "year", cSurface, cInk)
+            HoverFill: =If(gStatPeriod = "year", cPrimaryHover, cSoft)
+            HoverColor: =If(gStatPeriod = "year", cSurface, cInk)
+            PressedFill: =If(gStatPeriod = "year", cPrimaryHover, cSoft)
+            PressedColor: =If(gStatPeriod = "year", cSurface, cInk)
+            BorderColor: =If(gStatPeriod = "year", cPrimary, cLine)
+            HoverBorderColor: =If(gStatPeriod = "year", cPrimary, cInk3)
+            BorderThickness: =1
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+      - btnStatMonth:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="월별"
+            X: =104
+            Y: =10
+            Width: =84
+            Height: =32
+            OnSelect: =Set(gStatPeriod, "month")
+            Font: =fnt
+            Size: =9.75
+            Fill: =If(gStatPeriod = "month", cPrimary, cSurface)
+            Color: =If(gStatPeriod = "month", cSurface, cInk)
+            HoverFill: =If(gStatPeriod = "month", cPrimaryHover, cSoft)
+            HoverColor: =If(gStatPeriod = "month", cSurface, cInk)
+            PressedFill: =If(gStatPeriod = "month", cPrimaryHover, cSoft)
+            PressedColor: =If(gStatPeriod = "month", cSurface, cInk)
+            BorderColor: =If(gStatPeriod = "month", cPrimary, cLine)
+            HoverBorderColor: =If(gStatPeriod = "month", cPrimary, cInk3)
+            BorderThickness: =1
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+      - btnStatRange:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="기간 지정"
+            X: =192
+            Y: =10
+            Width: =84
+            Height: =32
+            OnSelect: =Set(gStatPeriod, "range")
+            Font: =fnt
+            Size: =9.75
+            Fill: =If(gStatPeriod = "range", cPrimary, cSurface)
+            Color: =If(gStatPeriod = "range", cSurface, cInk)
+            HoverFill: =If(gStatPeriod = "range", cPrimaryHover, cSoft)
+            HoverColor: =If(gStatPeriod = "range", cSurface, cInk)
+            PressedFill: =If(gStatPeriod = "range", cPrimaryHover, cSoft)
+            PressedColor: =If(gStatPeriod = "range", cSurface, cInk)
+            BorderColor: =If(gStatPeriod = "range", cPrimary, cLine)
+            HoverBorderColor: =If(gStatPeriod = "range", cPrimary, cInk3)
+            BorderThickness: =1
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+      - btnStatAll:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="전체 기간"
+            X: =280
+            Y: =10
+            Width: =84
+            Height: =32
+            OnSelect: =Set(gStatPeriod, "all")
+            Font: =fnt
+            Size: =9.75
+            Fill: =If(gStatPeriod = "all", cPrimary, cSurface)
+            Color: =If(gStatPeriod = "all", cSurface, cInk)
+            HoverFill: =If(gStatPeriod = "all", cPrimaryHover, cSoft)
+            HoverColor: =If(gStatPeriod = "all", cSurface, cInk)
+            PressedFill: =If(gStatPeriod = "all", cPrimaryHover, cSoft)
+            PressedColor: =If(gStatPeriod = "all", cSurface, cInk)
+            BorderColor: =If(gStatPeriod = "all", cPrimary, cLine)
+            HoverBorderColor: =If(gStatPeriod = "all", cPrimary, cInk3)
+            BorderThickness: =1
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+      - btnStatPrev:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="‹"
+            X: =384
+            Y: =10
+            Width: =32
+            Height: =32
+            OnSelect: =If(gStatPeriod = "year", Set(gStatYear, gStatYear - 1), If(gStatMonth = 1, Set(gStatYear, gStatYear - 1); Set(gStatMonth, 12), Set(gStatMonth, gStatMonth - 1)))
+            Font: =fnt
+            Size: =10.5
+            FontWeight: =FontWeight.Semibold
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            Fill: =cSurface
+            Color: =cInk
+            HoverFill: =cSoft
+            PressedFill: =cSoft
+            HoverColor: =cInk
+            PressedColor: =cInk
+            BorderColor: =cLine
+            HoverBorderColor: =cInk3
+            BorderThickness: =1
+            DisabledFill: =cSurface
+            DisabledColor: =cInk3
+            DisabledBorderColor: =cLine
+            Visible: =gStatPeriod = "year" || gStatPeriod = "month"
+      - lblStatNav:
+          Control: Label@2.5.1
+          Properties:
+            Text: =If(gStatPeriod = "year", gStatYear & "년", gStatYear & "년 " & gStatMonth & "월")
+            X: =420
+            Y: =10
+            Width: =130
+            Height: =32
+            Font: =fnt
+            Size: =10.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+            Align: =Align.Center
+            VerticalAlign: =VerticalAlign.Middle
+            Visible: =gStatPeriod = "year" || gStatPeriod = "month"
+      - btnStatNext:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="›"
+            X: =554
+            Y: =10
+            Width: =32
+            Height: =32
+            OnSelect: =If(gStatPeriod = "year", Set(gStatYear, gStatYear + 1), If(gStatMonth = 12, Set(gStatYear, gStatYear + 1); Set(gStatMonth, 1), Set(gStatMonth, gStatMonth + 1)))
+            Font: =fnt
+            Size: =10.5
+            FontWeight: =FontWeight.Semibold
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+            Fill: =cSurface
+            Color: =cInk
+            HoverFill: =cSoft
+            PressedFill: =cSoft
+            HoverColor: =cInk
+            PressedColor: =cInk
+            BorderColor: =cLine
+            HoverBorderColor: =cInk3
+            BorderThickness: =1
+            DisabledFill: =cSurface
+            DisabledColor: =cInk3
+            DisabledBorderColor: =cLine
+            Visible: =gStatPeriod = "year" || gStatPeriod = "month"
+      - dpStatFrom:
+          Control: Classic/DatePicker@2.6.0
+          Properties:
+            X: =384
+            Y: =8
+            Width: =150
+            Height: =36
+            DefaultDate: =Date(Year(Today()), Month(Today()), 1)
+            Format: =DateTimeFormat.ShortDate
+            Font: =fnt
+            Size: =9.75
+            Color: =cInk
+            BorderColor: =cLine
+            IconFill: =cInk
+            IconBackground: =cSurface
+            Visible: =gStatPeriod = "range"
+      - lblStatTilde:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="~"
+            X: =538
+            Y: =10
+            Width: =20
+            Height: =32
+            Font: =fnt
+            Size: =10.5
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            Align: =Align.Center
+            VerticalAlign: =VerticalAlign.Middle
+            Visible: =gStatPeriod = "range"
+      - dpStatTo:
+          Control: Classic/DatePicker@2.6.0
+          Properties:
+            X: =562
+            Y: =8
+            Width: =150
+            Height: =36
+            DefaultDate: =Today()
+            Format: =DateTimeFormat.ShortDate
+            Font: =fnt
+            Size: =9.75
+            Color: =cInk
+            BorderColor: =cLine
+            IconFill: =cInk
+            IconBackground: =cSurface
+            Visible: =gStatPeriod = "range"
+      - lblStatBasis:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="집계 기준"
+            X: =980
+            Y: =16
+            Width: =70
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - btnBasisAll:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="전체"
+            X: =1050
+            Y: =10
+            Width: =110
+            Height: =32
+            OnSelect: =Set(gStatBasis, "all")
+            Font: =fnt
+            Size: =9.75
+            Fill: =If(gStatBasis = "all", cPrimary, cSurface)
+            Color: =If(gStatBasis = "all", cSurface, cInk)
+            HoverFill: =If(gStatBasis = "all", cPrimaryHover, cSoft)
+            HoverColor: =If(gStatBasis = "all", cSurface, cInk)
+            PressedFill: =If(gStatBasis = "all", cPrimaryHover, cSoft)
+            PressedColor: =If(gStatBasis = "all", cSurface, cInk)
+            BorderColor: =If(gStatBasis = "all", cPrimary, cLine)
+            HoverBorderColor: =If(gStatBasis = "all", cPrimary, cInk3)
+            BorderThickness: =1
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+      - btnBasisOk:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="승인 · 완료만"
+            X: =1166
+            Y: =10
+            Width: =132
+            Height: =32
+            OnSelect: =Set(gStatBasis, "approved")
+            Font: =fnt
+            Size: =9.75
+            Fill: =If(gStatBasis = "approved", cPrimary, cSurface)
+            Color: =If(gStatBasis = "approved", cSurface, cInk)
+            HoverFill: =If(gStatBasis = "approved", cPrimaryHover, cSoft)
+            HoverColor: =If(gStatBasis = "approved", cSurface, cInk)
+            PressedFill: =If(gStatBasis = "approved", cPrimaryHover, cSoft)
+            PressedColor: =If(gStatBasis = "approved", cSurface, cInk)
+            BorderColor: =If(gStatBasis = "approved", cPrimary, cLine)
+            HoverBorderColor: =If(gStatBasis = "approved", cPrimary, cInk3)
+            BorderThickness: =1
+            RadiusTopLeft: =6
+            RadiusTopRight: =6
+            RadiusBottomLeft: =6
+            RadiusBottomRight: =6
+- conKpiCount:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      X: =24
+      Y: =136
+      Width: =320
+      Height: =92
+      Fill: =cSurface
+      BorderColor: =cLine
+      BorderThickness: =1
+      DropShadow: =DropShadow.None
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+    Children:
+      - lblKpiCountTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: =If(gStatBasis = "approved", "승인 · 완료 건수", "신청 건수")
+            X: =18
+            Y: =14
+            Width: =290
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - lblKpiCountValue:
+          Control: Label@2.5.1
+          Properties:
+            Text: =CountRows(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text))) & "건"
+            X: =18
+            Y: =34
+            Width: =290
+            Height: =30
+            Font: =fnt
+            Size: =18
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblKpiCountNote:
+          Control: Label@2.5.1
+          Properties:
+            Text: |-
+              =If(Value(lblStatPS.Text) < 0, "비교 기간 없음", With({d: CountRows(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text))) - CountRows(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatPS.Text) && DayNum <= Value(lblStatPE.Text)))}, Switch(gStatPeriod, "year", "전년", "month", "전월", "직전 동기간") & " 대비 " & If(d > 0, "▲ ", d < 0, "▼ ", "– ") & Abs(d)))
+            X: =18
+            Y: =66
+            Width: =290
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk3
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+- conKpiPeople:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      X: =356
+      Y: =136
+      Width: =320
+      Height: =92
+      Fill: =cSurface
+      BorderColor: =cLine
+      BorderThickness: =1
+      DropShadow: =DropShadow.None
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+    Children:
+      - lblKpiPeopleTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: =If(gStatBasis = "approved", "방문 인원", "신청 인원 (대기 포함)")
+            X: =18
+            Y: =14
+            Width: =290
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - lblKpiPeopleValue:
+          Control: Label@2.5.1
+          Properties:
+            Text: =Sum(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Heads) & "명"
+            X: =18
+            Y: =34
+            Width: =290
+            Height: =30
+            Font: =fnt
+            Size: =18
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblKpiPeopleNote:
+          Control: Label@2.5.1
+          Properties:
+            Text: |-
+              =If(Value(lblStatPS.Text) < 0, "비교 기간 없음", With({d: Sum(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Heads) - Sum(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatPS.Text) && DayNum <= Value(lblStatPE.Text)), Heads)}, Switch(gStatPeriod, "year", "전년", "month", "전월", "직전 동기간") & " 대비 " & If(d > 0, "▲ ", d < 0, "▼ ", "– ") & Abs(d)))
+            X: =18
+            Y: =66
+            Width: =290
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk3
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+- conKpiRate:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      X: =688
+      Y: =136
+      Width: =320
+      Height: =92
+      Fill: =cSurface
+      BorderColor: =cLine
+      BorderThickness: =1
+      DropShadow: =DropShadow.None
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+    Children:
+      - lblKpiRateTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="승인률"
+            X: =18
+            Y: =14
+            Width: =290
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - lblKpiRateValue:
+          Control: Label@2.5.1
+          Properties:
+            Text: |-
+              =With({d: CountRows(Filter(Filter(colStatAll, DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Status = "승인" || Status = "완료" || Status = "거절"))}, If(d > 0, Round(CountRows(Filter(Filter(colStatAll, DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Status = "승인" || Status = "완료")) / d * 100, 0), 0)) & "%"
+            X: =18
+            Y: =34
+            Width: =290
+            Height: =30
+            Font: =fnt
+            Size: =18
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblKpiRateNote:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="처리 " & CountRows(Filter(Filter(colStatAll, DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Status = "승인" || Status = "완료" || Status = "거절")) & "건 중 승인 " & CountRows(Filter(Filter(colStatAll, DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Status = "승인" || Status = "완료")) & "건"
+            X: =18
+            Y: =66
+            Width: =290
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk3
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+- conKpiAvg:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      X: =1020
+      Y: =136
+      Width: =320
+      Height: =92
+      Fill: =cSurface
+      BorderColor: =cLine
+      BorderThickness: =1
+      DropShadow: =DropShadow.None
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+    Children:
+      - lblKpiAvgTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="건당 평균 인원"
+            X: =18
+            Y: =14
+            Width: =290
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - lblKpiAvgValue:
+          Control: Label@2.5.1
+          Properties:
+            Text: |-
+              =With({c: CountRows(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)))}, If(c > 0, Round(Sum(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Heads) / c, 1), 0)) & "명"
+            X: =18
+            Y: =34
+            Width: =290
+            Height: =30
+            Font: =fnt
+            Size: =18
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblKpiAvgNote:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="인원 = 제출된 참석자 수 (없으면 예상 인원)"
+            X: =18
+            Y: =66
+            Width: =290
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk3
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+- btnTabOverview:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="추이 · 센터"
+      X: =24
+      Y: =240
+      Width: =140
+      Height: =32
+      OnSelect: =Set(gStatTab, "overview")
+      Font: =fnt
+      Size: =9.75
+      Fill: =If(gStatTab = "overview", cPrimary, cSurface)
+      Color: =If(gStatTab = "overview", cSurface, cInk)
+      HoverFill: =If(gStatTab = "overview", cPrimaryHover, cSoft)
+      HoverColor: =If(gStatTab = "overview", cSurface, cInk)
+      PressedFill: =If(gStatTab = "overview", cPrimaryHover, cSoft)
+      PressedColor: =If(gStatTab = "overview", cSurface, cInk)
+      BorderColor: =If(gStatTab = "overview", cPrimary, cLine)
+      HoverBorderColor: =If(gStatTab = "overview", cPrimary, cInk3)
+      BorderThickness: =1
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+- btnTabKind:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="유형 · 목적 · 업종"
+      X: =170
+      Y: =240
+      Width: =140
+      Height: =32
+      OnSelect: =Set(gStatTab, "kind")
+      Font: =fnt
+      Size: =9.75
+      Fill: =If(gStatTab = "kind", cPrimary, cSurface)
+      Color: =If(gStatTab = "kind", cSurface, cInk)
+      HoverFill: =If(gStatTab = "kind", cPrimaryHover, cSoft)
+      HoverColor: =If(gStatTab = "kind", cSurface, cInk)
+      PressedFill: =If(gStatTab = "kind", cPrimaryHover, cSoft)
+      PressedColor: =If(gStatTab = "kind", cSurface, cInk)
+      BorderColor: =If(gStatTab = "kind", cPrimary, cLine)
+      HoverBorderColor: =If(gStatTab = "kind", cPrimary, cInk3)
+      BorderThickness: =1
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+- btnTabOrg:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="담당 · 언어 · 직무"
+      X: =316
+      Y: =240
+      Width: =140
+      Height: =32
+      OnSelect: =Set(gStatTab, "org")
+      Font: =fnt
+      Size: =9.75
+      Fill: =If(gStatTab = "org", cPrimary, cSurface)
+      Color: =If(gStatTab = "org", cSurface, cInk)
+      HoverFill: =If(gStatTab = "org", cPrimaryHover, cSoft)
+      HoverColor: =If(gStatTab = "org", cSurface, cInk)
+      PressedFill: =If(gStatTab = "org", cPrimaryHover, cSoft)
+      PressedColor: =If(gStatTab = "org", cSurface, cInk)
+      BorderColor: =If(gStatTab = "org", cPrimary, cLine)
+      HoverBorderColor: =If(gStatTab = "org", cPrimary, cInk3)
+      BorderThickness: =1
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+- lblStatPeriod:
+    Control: Label@2.5.1
+    Properties:
+      Text: =Switch(gStatPeriod, "year", gStatYear & "년", "month", gStatYear & "년 " & gStatMonth & "월", "range", If(lblStatS.Text = lblStatE.Text, Text(Date(Int(Value(lblStatS.Text) / 10000), Mod(Int(Value(lblStatS.Text) / 100), 100), Mod(Value(lblStatS.Text), 100)), "yyyy.mm.dd"), Text(Date(Int(Value(lblStatS.Text) / 10000), Mod(Int(Value(lblStatS.Text) / 100), 100), Mod(Value(lblStatS.Text), 100)), "yyyy.mm.dd") & "~" & Text(Date(Int(Value(lblStatE.Text) / 10000), Mod(Int(Value(lblStatE.Text) / 100), 100), Mod(Value(lblStatE.Text), 100)), "yyyy.mm.dd")), "전체 기간") · 거절 · 취소 제외
+      X: =760
+      Y: =244
+      Width: =582
+      Height: =24
+      Font: =fnt
+      Size: =9.75
+      Color: =cInk2
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      Align: =Align.Right
+- conStatTrend:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      X: =24
+      Y: =282
+      Width: =860
+      Height: =470
+      Fill: =cSurface
+      BorderColor: =cLine
+      BorderThickness: =1
+      DropShadow: =DropShadow.None
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+      Visible: =gStatTab = "overview"
+    Children:
+      - lblTrendTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="월별 추이"
+            X: =20
+            Y: =16
+            Width: =300
+            Height: =24
+            Font: =fnt
+            Size: =11.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblTrendSub:
+          Control: Label@2.5.1
+          Properties:
+            Text: =If(gStatPeriod = "range", Int(Value(lblStatE.Text) / 10000), gStatYear) & "년 · 월별 " & If(gStatBasis = "approved", "승인", "신청") & " 건수 · 선택 기간 밖의 달은 흐리게"
+            X: =20
+            Y: =42
+            Width: =600
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk2
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - galTrend:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Items: |-
+              =With(
+                  {cy: If(gStatPeriod = "range", Int(Value(lblStatE.Text) / 10000), gStatYear)},
+                  With(
+                      {
+                          rows: ForAll(
+                              Sequence(12) As m,
+                              {
+                                  Label: m.Value & "월",
+                                  N: CountRows(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= cy * 10000 + m.Value * 100 + 1 && DayNum <= cy * 10000 + m.Value * 100 + 31)),
+                                  Dim: cy * 10000 + m.Value * 100 + 31 < Value(lblStatS.Text) || cy * 10000 + m.Value * 100 + 1 > Value(lblStatE.Text)
+                              }
+                          )
+                      },
+                      With({mx: Max(rows, N)}, AddColumns(rows, Mx, mx))
+                  )
+              )
+            X: =20
+            Y: =76
+            Width: =820
+            Height: =370
+            TemplateSize: =370
+            TemplatePadding: =0
+            ShowScrollbar: =false
+            BorderThickness: =0
+            Fill: =Color.Transparent
+            WrapCount: =12
+          Children:
+            - lblTrendValue:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =If(ThisItem.N > 0, ThisItem.N, "")
+                  X: =0
+                  Y: =300 - 300 * ThisItem.N / Max(1, ThisItem.Mx)
+                  Width: =Parent.TemplateWidth
+                  Height: =20
+                  Font: =fnt
+                  Size: =9
+                  Color: =If(ThisItem.Dim, cInk3, cInk)
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  Align: =Align.Center
+            - rctTrendBar:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =(Parent.TemplateWidth - 36) / 2
+                  Y: =322 - 300 * ThisItem.N / Max(1, ThisItem.Mx)
+                  Width: =36
+                  Height: =300 * ThisItem.N / Max(1, ThisItem.Mx)
+                  Fill: =If(ThisItem.Dim, cLine, cPrimary)
+            - rctTrendBase:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =0
+                  Y: =322
+                  Width: =Parent.TemplateWidth
+                  Height: =1
+                  Fill: =cLine
+            - lblTrendMonth:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.Label
+                  X: =0
+                  Y: =330
+                  Width: =Parent.TemplateWidth
+                  Height: =20
+                  Font: =fnt
+                  Size: =9
+                  Color: =If(ThisItem.Dim, cInk3, cInk2)
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  Align: =Align.Center
+- conStatPlaces:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      X: =896
+      Y: =282
+      Width: =446
+      Height: =470
+      Fill: =cSurface
+      BorderColor: =cLine
+      BorderThickness: =1
+      DropShadow: =DropShadow.None
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+      Visible: =gStatTab = "overview"
+    Children:
+      - lblPlacesTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="센터별 방문 건수"
+            X: =20
+            Y: =16
+            Width: =300
+            Height: =24
+            Font: =fnt
+            Size: =11.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblPlacesSub:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="복합 투어는 들르는 센터마다 1건씩"
+            X: =20
+            Y: =42
+            Width: =400
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk3
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - galPlaces:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Items: |-
+              =With(
+                  {rows: Filter(
+                  Table(
+                      {Label: "메가와이즈 센터", N: CountRows(Filter(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Tour in ["center", "combined", "center_mtv", "all3"]))},
+                      {Label: "TDL Lab", N: CountRows(Filter(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Tour in ["lab", "combined", "all3"]))},
+                      {Label: "시화MTV", N: CountRows(Filter(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Tour in ["mtv", "center_mtv", "all3"]))}
+                  ),
+                  MtvEnabled || Label <> "시화MTV"
+              )},
+                  With({mx: Max(rows, N)}, AddColumns(rows, Mx, mx))
+              )
+            X: =20
+            Y: =70
+            Width: =406
+            Height: =100
+            TemplateSize: =30
+            TemplatePadding: =0
+            ShowScrollbar: =true
+            BorderThickness: =0
+            Fill: =Color.Transparent
+          Children:
+            - galPlacesLabel:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.Label
+                  X: =0
+                  Y: =0
+                  Width: =130
+                  Height: =28
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk2
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  VerticalAlign: =VerticalAlign.Middle
+                  Wrap: =false
+            - galPlacesTrack:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =138
+                  Y: =10
+                  Width: =206
+                  Height: =8
+                  Fill: =cSoft
+            - galPlacesBar:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =138
+                  Y: =10
+                  Width: =206 * ThisItem.N / Max(1, ThisItem.Mx)
+                  Height: =8
+                  Fill: =cPrimary
+            - galPlacesValue:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.N & "건"
+                  X: =352
+                  Y: =0
+                  Width: =54
+                  Height: =28
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  Align: =Align.Right
+                  VerticalAlign: =VerticalAlign.Middle
+                  FontWeight: =FontWeight.Semibold
+      - rctPlacesLine:
+          Control: Rectangle@2.3.0
+          Properties:
+            X: =20
+            Y: =190
+            Width: =406
+            Height: =1
+            Fill: =cLine
+      - lblToursStatTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="투어 종류"
+            X: =20
+            Y: =206
+            Width: =300
+            Height: =24
+            Font: =fnt
+            Size: =11.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - galToursStat:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Items: |-
+              =With(
+                  {rows: ForAll(OpenTours As t, {Label: t.Name, N: CountRows(Filter(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Tour = t.Id))})},
+                  With({mx: Max(rows, N)}, AddColumns(rows, Mx, mx))
+              )
+            X: =20
+            Y: =240
+            Width: =406
+            Height: =210
+            TemplateSize: =30
+            TemplatePadding: =0
+            ShowScrollbar: =true
+            BorderThickness: =0
+            Fill: =Color.Transparent
+          Children:
+            - galToursStatLabel:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.Label
+                  X: =0
+                  Y: =0
+                  Width: =150
+                  Height: =28
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk2
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  VerticalAlign: =VerticalAlign.Middle
+                  Wrap: =false
+            - galToursStatTrack:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =158
+                  Y: =10
+                  Width: =186
+                  Height: =8
+                  Fill: =cSoft
+            - galToursStatBar:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =158
+                  Y: =10
+                  Width: =186 * ThisItem.N / Max(1, ThisItem.Mx)
+                  Height: =8
+                  Fill: =cPrimary
+            - galToursStatValue:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.N & "건"
+                  X: =352
+                  Y: =0
+                  Width: =54
+                  Height: =28
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  Align: =Align.Right
+                  VerticalAlign: =VerticalAlign.Middle
+                  FontWeight: =FontWeight.Semibold
+- conStatSeg:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      X: =24
+      Y: =282
+      Width: =426
+      Height: =470
+      Fill: =cSurface
+      BorderColor: =cLine
+      BorderThickness: =1
+      DropShadow: =DropShadow.None
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+      Visible: =gStatTab = "kind"
+    Children:
+      - lblStatSegTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="방문 유형"
+            X: =20
+            Y: =16
+            Width: =300
+            Height: =24
+            Font: =fnt
+            Size: =11.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblStatSegSub:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="고객 기존 · 신규 · 내부"
+            X: =20
+            Y: =42
+            Width: =386
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk3
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - galStatSeg:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Items: |-
+              =With(
+                  {rows: ForAll(["고객 · 기존", "고객 · 신규", "내부 방문", "고객 · 미분류"] As g, {Label: g.Value, N: CountRows(Filter(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Seg = g.Value))})},
+                  With({mx: Max(rows, N)}, AddColumns(rows, Mx, mx))
+              )
+            X: =20
+            Y: =70
+            Width: =386
+            Height: =380
+            TemplateSize: =30
+            TemplatePadding: =0
+            ShowScrollbar: =true
+            BorderThickness: =0
+            Fill: =Color.Transparent
+          Children:
+            - galStatSegLabel:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.Label
+                  X: =0
+                  Y: =0
+                  Width: =130
+                  Height: =28
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk2
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  VerticalAlign: =VerticalAlign.Middle
+                  Wrap: =false
+            - galStatSegTrack:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =138
+                  Y: =10
+                  Width: =186
+                  Height: =8
+                  Fill: =cSoft
+            - galStatSegBar:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =138
+                  Y: =10
+                  Width: =186 * ThisItem.N / Max(1, ThisItem.Mx)
+                  Height: =8
+                  Fill: =cPrimary
+            - galStatSegValue:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.N & "건"
+                  X: =332
+                  Y: =0
+                  Width: =54
+                  Height: =28
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  Align: =Align.Right
+                  VerticalAlign: =VerticalAlign.Middle
+                  FontWeight: =FontWeight.Semibold
+- conStatPurpose:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      X: =470
+      Y: =282
+      Width: =426
+      Height: =470
+      Fill: =cSurface
+      BorderColor: =cLine
+      BorderThickness: =1
+      DropShadow: =DropShadow.None
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+      Visible: =gStatTab = "kind"
+    Children:
+      - lblStatPurposeTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="방문 목적"
+            X: =20
+            Y: =16
+            Width: =300
+            Height: =24
+            Font: =fnt
+            Size: =11.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblStatPurposeSub:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="한 건에 하나 · 기타는 직접 입력 포함"
+            X: =20
+            Y: =42
+            Width: =386
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk3
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - galStatPurpose:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Items: |-
+              =With(
+                  {rows: ForAll(Purposes As p, {Label: p.Value, N: CountRows(Filter(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), (Purpose = p.Value || (p.Value = "기타" && StartsWith(Purpose, "기타")))))})},
+                  With({mx: Max(rows, N)}, AddColumns(rows, Mx, mx))
+              )
+            X: =20
+            Y: =70
+            Width: =386
+            Height: =380
+            TemplateSize: =30
+            TemplatePadding: =0
+            ShowScrollbar: =true
+            BorderThickness: =0
+            Fill: =Color.Transparent
+          Children:
+            - galStatPurposeLabel:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.Label
+                  X: =0
+                  Y: =0
+                  Width: =150
+                  Height: =28
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk2
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  VerticalAlign: =VerticalAlign.Middle
+                  Wrap: =false
+            - galStatPurposeTrack:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =158
+                  Y: =10
+                  Width: =166
+                  Height: =8
+                  Fill: =cSoft
+            - galStatPurposeBar:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =158
+                  Y: =10
+                  Width: =166 * ThisItem.N / Max(1, ThisItem.Mx)
+                  Height: =8
+                  Fill: =cPrimary
+            - galStatPurposeValue:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.N & "건"
+                  X: =332
+                  Y: =0
+                  Width: =54
+                  Height: =28
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  Align: =Align.Right
+                  VerticalAlign: =VerticalAlign.Middle
+                  FontWeight: =FontWeight.Semibold
+- conStatIndustry:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      X: =916
+      Y: =282
+      Width: =426
+      Height: =470
+      Fill: =cSurface
+      BorderColor: =cLine
+      BorderThickness: =1
+      DropShadow: =DropShadow.None
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+      Visible: =gStatTab = "kind"
+    Children:
+      - lblStatIndustryTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="업종 (고객 방문)"
+            X: =20
+            Y: =16
+            Width: =300
+            Height: =24
+            Font: =fnt
+            Size: =11.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblStatIndustrySub:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="많은 순 · 0건은 숨김"
+            X: =20
+            Y: =42
+            Width: =386
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk3
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - galStatIndustry:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Items: |-
+              =With(
+                  {rows: SortByColumns(Filter(ForAll(Industries As i, {Label: i.Value, N: CountRows(Filter(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Category = "고객 방문" && (Industry = i.Value || (i.Value = "기타" && StartsWith(Industry, "기타")))))}), N > 0), "N", SortOrder.Descending)},
+                  With({mx: Max(rows, N)}, AddColumns(rows, Mx, mx))
+              )
+            X: =20
+            Y: =70
+            Width: =386
+            Height: =380
+            TemplateSize: =30
+            TemplatePadding: =0
+            ShowScrollbar: =true
+            BorderThickness: =0
+            Fill: =Color.Transparent
+          Children:
+            - galStatIndustryLabel:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.Label
+                  X: =0
+                  Y: =0
+                  Width: =130
+                  Height: =28
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk2
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  VerticalAlign: =VerticalAlign.Middle
+                  Wrap: =false
+            - galStatIndustryTrack:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =138
+                  Y: =10
+                  Width: =186
+                  Height: =8
+                  Fill: =cSoft
+            - galStatIndustryBar:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =138
+                  Y: =10
+                  Width: =186 * ThisItem.N / Max(1, ThisItem.Mx)
+                  Height: =8
+                  Fill: =cPrimary
+            - galStatIndustryValue:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.N & "건"
+                  X: =332
+                  Y: =0
+                  Width: =54
+                  Height: =28
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  Align: =Align.Right
+                  VerticalAlign: =VerticalAlign.Middle
+                  FontWeight: =FontWeight.Semibold
+- conStatDivision:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      X: =24
+      Y: =282
+      Width: =426
+      Height: =470
+      Fill: =cSurface
+      BorderColor: =cLine
+      BorderThickness: =1
+      DropShadow: =DropShadow.None
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+      Visible: =gStatTab = "org"
+    Children:
+      - lblStatDivisionTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="담당(실)별 방문 건수"
+            X: =20
+            Y: =16
+            Width: =300
+            Height: =24
+            Font: =fnt
+            Size: =11.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblStatDivisionSub:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="주요 6개 담당 + 기타 · 입력값을 자동 분류"
+            X: =20
+            Y: =42
+            Width: =386
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk3
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - galStatDivision:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Items: |-
+              =With(
+                  {rows: ForAll(DivisionGroups As g, {Label: g.Value, N: CountRows(Filter(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), DivGroup = g.Value))})},
+                  With({mx: Max(rows, N)}, AddColumns(rows, Mx, mx))
+              )
+            X: =20
+            Y: =70
+            Width: =386
+            Height: =380
+            TemplateSize: =30
+            TemplatePadding: =0
+            ShowScrollbar: =true
+            BorderThickness: =0
+            Fill: =Color.Transparent
+          Children:
+            - galStatDivisionLabel:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.Label
+                  X: =0
+                  Y: =0
+                  Width: =140
+                  Height: =28
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk2
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  VerticalAlign: =VerticalAlign.Middle
+                  Wrap: =false
+            - galStatDivisionTrack:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =148
+                  Y: =10
+                  Width: =176
+                  Height: =8
+                  Fill: =cSoft
+            - galStatDivisionBar:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =148
+                  Y: =10
+                  Width: =176 * ThisItem.N / Max(1, ThisItem.Mx)
+                  Height: =8
+                  Fill: =cPrimary
+            - galStatDivisionValue:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.N & "건"
+                  X: =332
+                  Y: =0
+                  Width: =54
+                  Height: =28
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  Align: =Align.Right
+                  VerticalAlign: =VerticalAlign.Middle
+                  FontWeight: =FontWeight.Semibold
+- conStatLang:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      X: =470
+      Y: =282
+      Width: =426
+      Height: =470
+      Fill: =cSurface
+      BorderColor: =cLine
+      BorderThickness: =1
+      DropShadow: =DropShadow.None
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+      Visible: =gStatTab = "org"
+    Children:
+      - lblStatLangTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="투어 언어"
+            X: =20
+            Y: =16
+            Width: =300
+            Height: =24
+            Font: =fnt
+            Size: =11.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblStatLangSub:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="진행 언어 · 한국어 투어의 통역 동반"
+            X: =20
+            Y: =42
+            Width: =386
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk3
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - galStatLang:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Items: |-
+              =With(
+                  {rows: ForAll(["한국어", "한국어 · 통역 동반", "영어", "중국어"] As l, {Label: l.Value, N: CountRows(Filter(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), LangLabel = l.Value))})},
+                  With({mx: Max(rows, N)}, AddColumns(rows, Mx, mx))
+              )
+            X: =20
+            Y: =70
+            Width: =386
+            Height: =380
+            TemplateSize: =30
+            TemplatePadding: =0
+            ShowScrollbar: =true
+            BorderThickness: =0
+            Fill: =Color.Transparent
+          Children:
+            - galStatLangLabel:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.Label
+                  X: =0
+                  Y: =0
+                  Width: =150
+                  Height: =28
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk2
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  VerticalAlign: =VerticalAlign.Middle
+                  Wrap: =false
+            - galStatLangTrack:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =158
+                  Y: =10
+                  Width: =166
+                  Height: =8
+                  Fill: =cSoft
+            - galStatLangBar:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =158
+                  Y: =10
+                  Width: =166 * ThisItem.N / Max(1, ThisItem.Mx)
+                  Height: =8
+                  Fill: =cPrimary
+            - galStatLangValue:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.N & "건"
+                  X: =332
+                  Y: =0
+                  Width: =54
+                  Height: =28
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  Align: =Align.Right
+                  VerticalAlign: =VerticalAlign.Middle
+                  FontWeight: =FontWeight.Semibold
+- conStatJobs:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      X: =916
+      Y: =282
+      Width: =426
+      Height: =470
+      Fill: =cSurface
+      BorderColor: =cLine
+      BorderThickness: =1
+      DropShadow: =DropShadow.None
+      RadiusTopLeft: =8
+      RadiusTopRight: =8
+      RadiusBottomLeft: =8
+      RadiusBottomRight: =8
+      Visible: =gStatTab = "org"
+    Children:
+      - lblStatJobsTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="방문자 직무"
+            X: =20
+            Y: =16
+            Width: =300
+            Height: =24
+            Font: =fnt
+            Size: =11.5
+            Color: =cInk
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+            FontWeight: =FontWeight.Semibold
+      - lblStatJobsSub:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="참석자 Forms 의 직무 · 방문자 수 기준"
+            X: =20
+            Y: =42
+            Width: =386
+            Height: =20
+            Font: =fnt
+            Size: =9
+            Color: =cInk3
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            PaddingBottom: =0
+      - galStatJobs:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Items: |-
+              =With(
+                  {rows: With(
+                  {nos: Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)).Title},
+                  ForAll(JobOptions As j, {Label: j.Value, N: CountRows(Filter(colStatAtt, RequestNo in nos && j.Value in Jobs))})
+              )},
+                  With({mx: Max(rows, N)}, AddColumns(rows, Mx, mx))
+              )
+            X: =20
+            Y: =70
+            Width: =386
+            Height: =380
+            TemplateSize: =30
+            TemplatePadding: =0
+            ShowScrollbar: =true
+            BorderThickness: =0
+            Fill: =Color.Transparent
+          Children:
+            - galStatJobsLabel:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.Label
+                  X: =0
+                  Y: =0
+                  Width: =130
+                  Height: =28
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk2
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  VerticalAlign: =VerticalAlign.Middle
+                  Wrap: =false
+            - galStatJobsTrack:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =138
+                  Y: =10
+                  Width: =186
+                  Height: =8
+                  Fill: =cSoft
+            - galStatJobsBar:
+                Control: Rectangle@2.3.0
+                Properties:
+                  X: =138
+                  Y: =10
+                  Width: =186 * ThisItem.N / Max(1, ThisItem.Mx)
+                  Height: =8
+                  Fill: =cPrimary
+            - galStatJobsValue:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =ThisItem.N & "명"
+                  X: =332
+                  Y: =0
+                  Width: =54
+                  Height: =28
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cInk
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  Align: =Align.Right
+                  VerticalAlign: =VerticalAlign.Middle
+                  FontWeight: =FontWeight.Semibold
