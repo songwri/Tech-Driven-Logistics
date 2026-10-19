@@ -205,6 +205,12 @@ export function partnerStats(requests: VisitRequest[]): PartnerRow[] {
     .sort((a, b) => b.count - a.count || b.visitors - a.visitors || a.name.localeCompare(b.name, 'ko'))
 }
 
+/** 이미 기록된 파트너사 이름 (많이 소개한 순). 입력칸 제안과 같은 곳이 다르게 적히지 않게 하는 데 쓴다. */
+export const partnerNames = (requests: VisitRequest[]) =>
+  partnerStats(requests)
+    .map((row) => row.name)
+    .filter((name) => name !== NO_PARTNER_NAME)
+
 function partnerSheet(name: string, requests: VisitRequest[]): Sheet {
   const rows = partnerStats(requests)
   return {

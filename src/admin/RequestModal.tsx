@@ -23,6 +23,8 @@ import {
 import { SiteApprovals, StatusBadge, TourTag } from './status'
 import { ManualVisitModal, OpsFields } from './ManualVisitModal'
 import { opsFromRequest, opsToRequest } from './opsRecord'
+import { ClientTypeEditor } from './ClientTypeEditor'
+import { partnerNames } from './statsData'
 
 // 달력 라이브러리(react-day-picker)는 '정보 수정'을 열 때만 받는다.
 const SchedulePicker = lazy(() =>
@@ -61,6 +63,8 @@ export function RequestModal({ site, readOnly, request, requests, onClose, onSet
   const [editingOps, setEditingOps] = useState(false)
   const [ops, setOps] = useState(() => opsFromRequest(request))
   const manual = request.source === 'manual'
+  const [editingClient, setEditingClient] = useState(false)
+  const partnerSuggestions = partnerNames(requests)
 
   const run = async (task: () => Promise<void>) => {
     setPending(true)
@@ -106,6 +110,7 @@ export function RequestModal({ site, readOnly, request, requests, onClose, onSet
       <ManualVisitModal
         site={site}
         initial={request}
+        partnerSuggestions={partnerSuggestions}
         onClose={() => setEditing(false)}
         onSubmit={(input) => onUpdate({ ...request, ...input, status: request.status })}
       />
@@ -138,7 +143,11 @@ export function RequestModal({ site, readOnly, request, requests, onClose, onSet
               </div>
               <div>
                 <SectionTitle>방문 정보</SectionTitle>
-                <VisitInfoFields draft={draft} onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))} />
+                <VisitInfoFields
+                  draft={draft}
+                  onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
+                  partnerSuggestions={partnerSuggestions}
+                />
               </div>
             </section>
           </div>
@@ -175,6 +184,9 @@ export function RequestModal({ site, readOnly, request, requests, onClose, onSet
   const tour = TOUR_BY_ID[request.tour]
   const headcount = headcountLabel(request)
   const hasHost = Boolean(request.host.name || request.host.org || request.host.phone || request.host.email)
+  const saveClient = async (clientType: VisitRequest['clientType'], partnerName: string) => {
+    if (await run(() => onUpdate({ ...request, clientType, partnerName, adminMemo: memo }))) setEditingClient(false)
+  }
   const saveOps = async () => {
     if (await run(() => onUpdate({ ...request, ...opsToRequest(ops), adminMemo: memo }))) setEditingOps(false)
   }
@@ -279,8 +291,39 @@ export function RequestModal({ site, readOnly, request, requests, onClose, onSet
         </div>
         <div>
           <SectionTitle>방문 정보</SectionTitle>
-          <Row label="구분">{clientSegment(request)}</Row>
-          {request.clientType === 'partner' && <Row label="파트너사">{request.partnerName || '(파트너사명 미입력)'}</Row>}
+          {editingClient ? (
+            <div className="py-2">
+              <ClientTypeEditor
+                clientType={request.clientType}
+                partnerName={request.partnerName ?? ''}
+                suggestions={partnerSuggestions}
+                pending={pending}
+                onSave={(clientType, partnerName) => void saveClient(clientType, partnerName)}
+                onCancel={() => setEditingClient(false)}
+              />
+            </div>
+          ) : (
+            <>
+              <Row label="구분">
+                <span className="inline-flex flex-wrap items-center gap-2">
+                  {clientSegment(request)}
+                  {request.category === 'external' && !readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setError(null)
+                        setEditingClient(true)
+                      }}
+                      className="border border-warm-300/60 px-2 py-0.5 text-[11px] font-semibold text-warm-600 transition hover:border-warm-800 hover:text-warm-800"
+                    >
+                      구분 변경
+                    </button>
+                  )}
+                </span>
+              </Row>
+              {request.clientType === 'partner' && <Row label="파트너사">{request.partnerName || '(파트너사명 미입력)'}</Row>}
+            </>
+          )}
           <Row label="투어 언어">
             <span className={request.language === 'foreign' ? 'font-semibold text-brand' : undefined}>
               {languageSummary(request)}
