@@ -21,7 +21,8 @@ export type VisitStatus = 'pending' | 'approved' | 'completed' | 'rejected' | 'c
 /** web: 예약 페이지 신청 / manual: 관리자 수기 등록 · 기존 이력 가져오기 */
 export type VisitSource = 'web' | 'manual'
 export type VisitCategory = 'internal' | 'external'
-export type ClientType = 'existing' | 'new'
+/** existing: 기존 고객사 / new: 신규(잠재) 고객사 / partner: 파트너사가 소개해 함께 방문하는 고객 */
+export type ClientType = 'existing' | 'new' | 'partner'
 export type TourLanguage = 'ko' | 'foreign'
 /** 투어 공간. 공간마다 한 번에 한 팀만 안내합니다. 메가와이즈 센터와 TDL Lab 은 같은 건물, 시화MTV 는 떨어진 센터. */
 export type Resource = 'center' | 'lab' | 'mtv'
@@ -318,6 +319,7 @@ export const CATEGORY_LABEL: Record<VisitCategory, string> = {
 export const CLIENT_TYPE_LABEL: Record<ClientType, string> = {
   existing: '기존 고객사',
   new: '신규 고객사',
+  partner: '파트너사 소개 고객',
 }
 
 /**
@@ -825,7 +827,7 @@ export const hasLanguageNote = (request: Pick<VisitDraft, 'language' | 'interpre
 export function clientSegment(request: Pick<VisitDraft, 'category' | 'clientType'>) {
   if (request.category === 'internal') return '내부 방문'
   if (!request.clientType) return '고객 · 미분류' // 기존 방문 이력처럼 신규/기존 구분이 없는 기록
-  return request.clientType === 'new' ? '고객 · 신규' : '고객 · 기존'
+  return request.clientType === 'new' ? '고객 · 신규' : request.clientType === 'partner' ? '고객 · 파트너사' : '고객 · 기존'
 }
 
 /* ------------------------------------------------------- 입력 검사 */

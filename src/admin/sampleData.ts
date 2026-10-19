@@ -92,7 +92,7 @@ function mock(
   slot: string,
   status: VisitStatus,
   company: string,
-  clientType: 'existing' | 'new' | undefined,
+  clientType: 'existing' | 'new' | 'partner' | undefined,
   industries: string[],
   purposes: string[],
   hostComment: string,
@@ -252,7 +252,7 @@ function generate(): VisitRequest[] {
           date: key,
           slot,
           category: internal ? 'internal' : 'external',
-          clientType: internal ? undefined : random() < 0.55 ? 'existing' : 'new',
+          clientType: internal ? undefined : ((roll) => (roll < 0.5 ? 'existing' : roll < 0.88 ? 'new' : 'partner'))(random()),
           company: internal ? pick(['CL사업담당', '경영지원팀', 'IT전략팀', '해외법인 교육단']) : company,
           ...(random() < 0.2
             ? { language: 'foreign' as const, foreignLanguage: '영어', interpreter: random() < 0.5 }

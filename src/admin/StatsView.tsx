@@ -39,6 +39,7 @@ const PLACES: { id: Resource; label: string; color: string }[] = [
 const SEGMENTS = [
   { label: '고객 · 기존', color: '#30405f' },
   { label: '고객 · 신규', color: '#a72b2b' },
+  { label: '고객 · 파트너사', color: '#3f8f8a' },
   { label: '내부 방문', color: '#8e99ae' },
   { label: '고객 · 미분류', color: '#d5d9e0' },
 ]

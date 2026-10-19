@@ -862,7 +862,7 @@ function rowToRequest_(row, col) {
     slot: normalizeSlot_(get('시간')),
     category: category,
     clientType: category === 'external' && clientText
-      ? (clientText.indexOf('신규') !== -1 ? 'new' : 'existing') : undefined,
+      ? (clientText.indexOf('파트너') !== -1 ? 'partner' : clientText.indexOf('신규') !== -1 ? 'new' : 'existing') : undefined,
     language: foreign ? 'foreign' : 'ko',
     foreignLanguage: foreign ? String(get('외국어')) : '',
     // 통역 동반은 모든 진행 언어에서 받는다 (이전에는 외국어 투어만).
@@ -971,7 +971,7 @@ function fillVisitRow_(values, col, request, extra) {
   set('시간', request.slot);
   set('방문구분', request.category === 'internal' ? '내부 방문' : '고객 방문');
   set('고객구분', request.category === 'internal' || !request.clientType ? ''
-    : (request.clientType === 'new' ? '신규 고객사' : '기존 고객사'));
+    : (request.clientType === 'new' ? '신규 고객사' : request.clientType === 'partner' ? '파트너사 소개 고객' : '기존 고객사'));
   set('투어언어', request.language === 'foreign' ? '외국어' : '한국어');
   set('외국어', request.language === 'foreign' ? request.foreignLanguage : '');
   set('통역동반', request.interpreter ? '동반' : '없음');
@@ -1135,7 +1135,8 @@ function sanitizeVisit_(payload, requireConsent) {
   if (!tourOpenOn_(tour, weekday)) throw new Error('선택한 투어는 그 요일에 운영하지 않습니다. (월·수·금)');
 
   var category = payload.category === 'internal' ? 'internal' : 'external';
-  var clientType = category === 'external' ? (payload.clientType === 'new' ? 'new' : 'existing') : undefined;
+  var clientType = category === 'external'
+    ? (payload.clientType === 'new' ? 'new' : payload.clientType === 'partner' ? 'partner' : 'existing') : undefined;
   var language = payload.language === 'foreign' ? 'foreign' : 'ko';
   var foreignLanguage = language === 'foreign' ? optionalText_(payload.foreignLanguage, 40).replace(/,/g, ' ') : '';
   if (language === 'foreign' && (!foreignLanguage || foreignLanguage === '기타')) {
@@ -1340,7 +1341,7 @@ function sanitizeManual_(payload) {
     status: status,
     source: 'manual',
     category: category,
-    clientType: category === 'external' && (payload.clientType === 'new' || payload.clientType === 'existing')
+    clientType: category === 'external' && (payload.clientType === 'new' || payload.clientType === 'existing' || payload.clientType === 'partner')
       ? payload.clientType : undefined,
     language: language,
     foreignLanguage: language === 'foreign' ? optionalText_(payload.foreignLanguage, 40).replace(/,/g, ' ') : '',
@@ -1777,7 +1778,7 @@ function reservationMailHtml_(r, site) {
 
   var detail = rows_([
     ['방문 유형', r.category === 'internal' ? '내부 방문'
-      : '고객 방문 · ' + (r.clientType === 'new' ? '신규 고객사' : '기존 고객사')],
+      : '고객 방문 · ' + (r.clientType === 'new' ? '신규 고객사' : r.clientType === 'partner' ? '파트너사 소개 고객' : '기존 고객사')],
     ['투어 언어', languageText_(r)],
     [r.category === 'internal' ? '방문 조직' : '업체명', escapeHtml_(r.company)],
     ['업종', listOrNone_(r.industries)],
