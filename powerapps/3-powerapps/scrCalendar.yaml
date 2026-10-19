@@ -2,7 +2,7 @@
 # 날짜 칸마다 예약을 '시간 · 투어 · 업체' 칩으로 3건까지 보여주고, 더 있으면 '+n건 더보기'.
 # 칩 색 = 상태(대기 노랑 · 승인 초록 · 완료 파랑 · 거절/취소 회색 취소선), 왼쪽 띠 = 투어 색, 막힌 일정은 '막힘' 칩.
 # 칩을 누르면 관리자 화면에서 그 신청이 열리고, 칸을 누르면 오른쪽에 그날 전체 목록 · 일정 막기 · 해제.
-# 1) 새 화면(빈 화면) → 이름 scrCalendar, 화면 Fill = cBg
+# 1) 새 화면(빈 화면) → 이름 scrCalendar, 화면 Fill = cBg, Width = sw, Height = sh
 #    OnVisible =
 #      If(IsBlank(gAdminSite), Notify("관리자 권한이 없습니다.", NotificationType.Error); Navigate(scrBook),
 #         With(
@@ -46,848 +46,59 @@
 #     )
 # ))
 # 2) 이 파일 내용을 전부 복사 → 트리 뷰에서 scrCalendar 오른쪽 클릭 → '붙여넣기'
-- hdrCBar:
-    Control: Rectangle@2.3.0
-    Properties:
-      X: =0
-      Y: =0
-      Width: =1366
-      Height: =56
-      Fill: =cSurface
-- hdrCLine:
-    Control: Rectangle@2.3.0
-    Properties:
-      X: =0
-      Y: =55
-      Width: =1366
-      Height: =1
-      Fill: =cLine
-- hdrCMark:
-    Control: Label@2.5.1
-    Properties:
-      Text: ="TDL"
-      X: =24
-      Y: =16
-      Width: =24
-      Height: =24
-      Font: =fnt
-      Size: =7
-      Color: =cSurface
-      PaddingLeft: =0
-      PaddingRight: =0
-      PaddingTop: =0
-      PaddingBottom: =0
-      FontWeight: =FontWeight.Bold
-      Align: =Align.Center
-      Fill: =cBrand
-- hdrCTitle:
-    Control: Label@2.5.1
-    Properties:
-      Text: ="TDL 방문 예약"
-      X: =58
-      Y: =16
-      Width: =200
-      Height: =24
-      Font: =fnt
-      Size: =12
-      Color: =cInk
-      PaddingLeft: =0
-      PaddingRight: =0
-      PaddingTop: =0
-      PaddingBottom: =0
-      FontWeight: =FontWeight.Semibold
-- hdrCNavBook:
-    Control: Classic/Button@2.2.0
-    Properties:
-      Text: ="방문 신청"
-      X: =520
-      Y: =12
-      Width: =96
-      Height: =32
-      OnSelect: =Navigate(scrBook, ScreenTransition.None)
-      Font: =fnt
-      Size: =10.5
-      FontWeight: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, FontWeight.Semibold, FontWeight.Normal)
-      Fill: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cSoft, Color.Transparent)
-      Color: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cInk, cInk2)
-      HoverFill: =cSoft
-      HoverColor: =cInk
-      PressedFill: =cSoft
-      PressedColor: =cInk
-      BorderThickness: =0
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
-      Visible: =true
-- hdrCNavMy:
-    Control: Classic/Button@2.2.0
-    Properties:
-      Text: ="내 신청"
-      X: =624
-      Y: =12
-      Width: =96
-      Height: =32
-      OnSelect: =Navigate(scrMy, ScreenTransition.None)
-      Font: =fnt
-      Size: =10.5
-      FontWeight: =If(App.ActiveScreen = scrMy, FontWeight.Semibold, FontWeight.Normal)
-      Fill: =If(App.ActiveScreen = scrMy, cSoft, Color.Transparent)
-      Color: =If(App.ActiveScreen = scrMy, cInk, cInk2)
-      HoverFill: =cSoft
-      HoverColor: =cInk
-      PressedFill: =cSoft
-      PressedColor: =cInk
-      BorderThickness: =0
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
-      Visible: =true
-- hdrCNavAdmin:
-    Control: Classic/Button@2.2.0
-    Properties:
-      Text: ="관리자"
-      X: =728
-      Y: =12
-      Width: =96
-      Height: =32
-      OnSelect: =Navigate(scrAdmin, ScreenTransition.None)
-      Font: =fnt
-      Size: =10.5
-      FontWeight: =If(App.ActiveScreen = scrAdmin, FontWeight.Semibold, FontWeight.Normal)
-      Fill: =If(App.ActiveScreen = scrAdmin, cSoft, Color.Transparent)
-      Color: =If(App.ActiveScreen = scrAdmin, cInk, cInk2)
-      HoverFill: =cSoft
-      HoverColor: =cInk
-      PressedFill: =cSoft
-      PressedColor: =cInk
-      BorderThickness: =0
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
-      Visible: =!IsBlank(gAdminSite)
-- hdrCNavCal:
-    Control: Classic/Button@2.2.0
-    Properties:
-      Text: ="달력"
-      X: =832
-      Y: =12
-      Width: =96
-      Height: =32
-      OnSelect: =Navigate(scrCalendar, ScreenTransition.None)
-      Font: =fnt
-      Size: =10.5
-      FontWeight: =If(App.ActiveScreen = scrCalendar, FontWeight.Semibold, FontWeight.Normal)
-      Fill: =If(App.ActiveScreen = scrCalendar, cSoft, Color.Transparent)
-      Color: =If(App.ActiveScreen = scrCalendar, cInk, cInk2)
-      HoverFill: =cSoft
-      HoverColor: =cInk
-      PressedFill: =cSoft
-      PressedColor: =cInk
-      BorderThickness: =0
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
-      Visible: =!IsBlank(gAdminSite)
-- hdrCNavStats:
-    Control: Classic/Button@2.2.0
-    Properties:
-      Text: ="통계"
-      X: =936
-      Y: =12
-      Width: =96
-      Height: =32
-      OnSelect: =Navigate(scrStats, ScreenTransition.None)
-      Font: =fnt
-      Size: =10.5
-      FontWeight: =If(App.ActiveScreen = scrStats, FontWeight.Semibold, FontWeight.Normal)
-      Fill: =If(App.ActiveScreen = scrStats, cSoft, Color.Transparent)
-      Color: =If(App.ActiveScreen = scrStats, cInk, cInk2)
-      HoverFill: =cSoft
-      HoverColor: =cInk
-      PressedFill: =cSoft
-      PressedColor: =cInk
-      BorderThickness: =0
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
-      Visible: =!IsBlank(gAdminSite)
-- hdrCUser:
-    Control: Label@2.5.1
-    Properties:
-      Text: =gMe.displayName & If(IsBlank(gMe.department), "", " · " & gMe.department)
-      X: =1042
-      Y: =18
-      Width: =300
-      Height: =20
-      Font: =fnt
-      Size: =9.75
-      Color: =cInk2
-      PaddingLeft: =0
-      PaddingRight: =0
-      PaddingTop: =0
-      PaddingBottom: =0
-      Align: =Align.Right
-- lblCalTitleMonth:
-    Control: Label@2.5.1
-    Properties:
-      Text: =Year(gCalMonth) & "년 " & Month(gCalMonth) & "월"
-      X: =24
-      Y: =72
-      Width: =170
-      Height: =36
-      Font: =fnt
-      Size: =15
-      Color: =cInk
-      PaddingLeft: =0
-      PaddingRight: =0
-      PaddingTop: =0
-      PaddingBottom: =0
-      FontWeight: =FontWeight.Semibold
-      VerticalAlign: =VerticalAlign.Middle
-- btnCalPrev:
-    Control: Classic/Button@2.2.0
-    Properties:
-      Text: ="‹"
-      X: =196
-      Y: =74
-      Width: =36
-      Height: =32
-      OnSelect: |-
-        =Set(gCalMonth, DateAdd(gCalMonth, -1, TimeUnit.Months));
-        With(
-            {a: DateAdd(gCalMonth, -7, TimeUnit.Days), b: DateAdd(gCalMonth, 45, TimeUnit.Days)},
-            ClearCollect(
-                colCalItems,
-                ForAll(
-                    Filter(Filter(VisitRequests, VisitDate >= a && VisitDate <= b), (gAdminSite = "hq" || (gAdminSite = "main" && ForMain = "Y") || (gAdminSite = "mtv" && ForMtv = "Y"))) As r,
-                    {
-                        Key: r.DateKey,
-                        Kind: "req",
-                        ReqId: r.ID,
-                        BlockId: 0,
-                        Tour: r.Tour,
-                        Sort: Value(Left(r.Slot, 2)) * 60 + Value(Mid(r.Slot, 4, 2)),
-                        Status: r.Status,
-                        Color: Coalesce(LookUp(Tours, Id = r.Tour, Color), cInk3),
-                        Chip: Left(r.Slot, 5) & " " & Switch(r.Tour, "lab", "Lab", "center", "센터", "mtv", "시화", "combined", "센터+Lab", "center_mtv", "센터+시화", "all3", "3곳", "기타") & " " & r.Company,
-                        Title: r.Company,
-                        Sub: r.ScheduleText & " · " & r.TourName,
-                        Lang: If(r.Language = "영어", "EN", r.Language = "중국어", "ZH", r.Interpreter = "Y", "통역", "")
-                    }
-                ),
-                ForAll(
-                    Filter(TourBusy, Kind = "막기" && (MonthKey = Text(a, "yyyy-mm") || MonthKey = Text(gCalMonth, "yyyy-mm") || MonthKey = Text(b, "yyyy-mm"))) As k,
-                    {
-                        Key: k.DateKey,
-                        Kind: "block",
-                        ReqId: 0,
-                        BlockId: k.ID,
-                        Tour: "",
-                        Sort: -1,
-                        Status: "막기",
-                        Color: cInk2,
-                        Chip: "막힘 · " & k.Reason,
-                        Title: "일정 막힘",
-                        Sub: k.Reason,
-                        Lang: ""
-                    }
-                )
-            )
-        )
-      Font: =fnt
-      Size: =10.5
-      FontWeight: =FontWeight.Semibold
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
-      Fill: =cSurface
-      Color: =cInk
-      HoverFill: =cSoft
-      PressedFill: =cSoft
-      HoverColor: =cInk
-      PressedColor: =cInk
-      BorderColor: =cLine
-      HoverBorderColor: =cInk3
-      BorderThickness: =1
-      DisabledFill: =cSurface
-      DisabledColor: =cInk3
-      DisabledBorderColor: =cLine
-- btnCalNext:
-    Control: Classic/Button@2.2.0
-    Properties:
-      Text: ="›"
-      X: =238
-      Y: =74
-      Width: =36
-      Height: =32
-      OnSelect: |-
-        =Set(gCalMonth, DateAdd(gCalMonth, 1, TimeUnit.Months));
-        With(
-            {a: DateAdd(gCalMonth, -7, TimeUnit.Days), b: DateAdd(gCalMonth, 45, TimeUnit.Days)},
-            ClearCollect(
-                colCalItems,
-                ForAll(
-                    Filter(Filter(VisitRequests, VisitDate >= a && VisitDate <= b), (gAdminSite = "hq" || (gAdminSite = "main" && ForMain = "Y") || (gAdminSite = "mtv" && ForMtv = "Y"))) As r,
-                    {
-                        Key: r.DateKey,
-                        Kind: "req",
-                        ReqId: r.ID,
-                        BlockId: 0,
-                        Tour: r.Tour,
-                        Sort: Value(Left(r.Slot, 2)) * 60 + Value(Mid(r.Slot, 4, 2)),
-                        Status: r.Status,
-                        Color: Coalesce(LookUp(Tours, Id = r.Tour, Color), cInk3),
-                        Chip: Left(r.Slot, 5) & " " & Switch(r.Tour, "lab", "Lab", "center", "센터", "mtv", "시화", "combined", "센터+Lab", "center_mtv", "센터+시화", "all3", "3곳", "기타") & " " & r.Company,
-                        Title: r.Company,
-                        Sub: r.ScheduleText & " · " & r.TourName,
-                        Lang: If(r.Language = "영어", "EN", r.Language = "중국어", "ZH", r.Interpreter = "Y", "통역", "")
-                    }
-                ),
-                ForAll(
-                    Filter(TourBusy, Kind = "막기" && (MonthKey = Text(a, "yyyy-mm") || MonthKey = Text(gCalMonth, "yyyy-mm") || MonthKey = Text(b, "yyyy-mm"))) As k,
-                    {
-                        Key: k.DateKey,
-                        Kind: "block",
-                        ReqId: 0,
-                        BlockId: k.ID,
-                        Tour: "",
-                        Sort: -1,
-                        Status: "막기",
-                        Color: cInk2,
-                        Chip: "막힘 · " & k.Reason,
-                        Title: "일정 막힘",
-                        Sub: k.Reason,
-                        Lang: ""
-                    }
-                )
-            )
-        )
-      Font: =fnt
-      Size: =10.5
-      FontWeight: =FontWeight.Semibold
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
-      Fill: =cSurface
-      Color: =cInk
-      HoverFill: =cSoft
-      PressedFill: =cSoft
-      HoverColor: =cInk
-      PressedColor: =cInk
-      BorderColor: =cLine
-      HoverBorderColor: =cInk3
-      BorderThickness: =1
-      DisabledFill: =cSurface
-      DisabledColor: =cInk3
-      DisabledBorderColor: =cLine
-- btnCalToday:
-    Control: Classic/Button@2.2.0
-    Properties:
-      Text: ="오늘"
-      X: =280
-      Y: =74
-      Width: =60
-      Height: =32
-      OnSelect: |-
-        =Set(gCalMonth, Date(Year(Today()), Month(Today()), 1));
-        With(
-            {a: DateAdd(gCalMonth, -7, TimeUnit.Days), b: DateAdd(gCalMonth, 45, TimeUnit.Days)},
-            ClearCollect(
-                colCalItems,
-                ForAll(
-                    Filter(Filter(VisitRequests, VisitDate >= a && VisitDate <= b), (gAdminSite = "hq" || (gAdminSite = "main" && ForMain = "Y") || (gAdminSite = "mtv" && ForMtv = "Y"))) As r,
-                    {
-                        Key: r.DateKey,
-                        Kind: "req",
-                        ReqId: r.ID,
-                        BlockId: 0,
-                        Tour: r.Tour,
-                        Sort: Value(Left(r.Slot, 2)) * 60 + Value(Mid(r.Slot, 4, 2)),
-                        Status: r.Status,
-                        Color: Coalesce(LookUp(Tours, Id = r.Tour, Color), cInk3),
-                        Chip: Left(r.Slot, 5) & " " & Switch(r.Tour, "lab", "Lab", "center", "센터", "mtv", "시화", "combined", "센터+Lab", "center_mtv", "센터+시화", "all3", "3곳", "기타") & " " & r.Company,
-                        Title: r.Company,
-                        Sub: r.ScheduleText & " · " & r.TourName,
-                        Lang: If(r.Language = "영어", "EN", r.Language = "중국어", "ZH", r.Interpreter = "Y", "통역", "")
-                    }
-                ),
-                ForAll(
-                    Filter(TourBusy, Kind = "막기" && (MonthKey = Text(a, "yyyy-mm") || MonthKey = Text(gCalMonth, "yyyy-mm") || MonthKey = Text(b, "yyyy-mm"))) As k,
-                    {
-                        Key: k.DateKey,
-                        Kind: "block",
-                        ReqId: 0,
-                        BlockId: k.ID,
-                        Tour: "",
-                        Sort: -1,
-                        Status: "막기",
-                        Color: cInk2,
-                        Chip: "막힘 · " & k.Reason,
-                        Title: "일정 막힘",
-                        Sub: k.Reason,
-                        Lang: ""
-                    }
-                )
-            )
-        );
-        Set(gCalDay, Text(Today(), "yyyy-mm-dd"))
-      Font: =fnt
-      Size: =9.75
-      FontWeight: =FontWeight.Semibold
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
-      Fill: =cSurface
-      Color: =cInk
-      HoverFill: =cSoft
-      PressedFill: =cSoft
-      HoverColor: =cInk
-      PressedColor: =cInk
-      BorderColor: =cLine
-      HoverBorderColor: =cInk3
-      BorderThickness: =1
-      DisabledFill: =cSurface
-      DisabledColor: =cInk3
-      DisabledBorderColor: =cLine
-- lblCalFilter:
-    Control: Label@2.5.1
-    Properties:
-      Text: ="투어"
-      X: =372
-      Y: =82
-      Width: =60
-      Height: =20
-      Font: =fnt
-      Size: =9
-      Color: =cInk2
-      PaddingLeft: =0
-      PaddingRight: =0
-      PaddingTop: =0
-      PaddingBottom: =0
-- galCalTours:
-    Control: Gallery@2.15.0
-    Variant: Vertical
-    Properties:
-      Items: =OpenTours
-      X: =410
-      Y: =74
-      Width: =594
-      Height: =32
-      TemplateSize: =32
-      TemplatePadding: =0
-      ShowScrollbar: =false
-      BorderThickness: =0
-      Fill: =Color.Transparent
-      WrapCount: =Max(3, CountRows(OpenTours))
-    Children:
-      - btnCalTour:
-          Control: Classic/Button@2.2.0
-          Properties:
-            Text: =ThisItem.Name
-            X: =0
-            Y: =0
-            Width: =Parent.TemplateWidth - 6
-            Height: =32
-            OnSelect: =Set(gCalTour, If(gCalTour = ThisItem.Id, "", ThisItem.Id))
-            Font: =fnt
-            Size: =9
-            Fill: =If(gCalTour = ThisItem.Id, ThisItem.Color, cSurface)
-            Color: =If(gCalTour = ThisItem.Id, cSurface, If(gCalTour = "", cInk, cInk3))
-            HoverFill: =If(gCalTour = ThisItem.Id, ThisItem.Color, cSoft)
-            HoverColor: =If(gCalTour = ThisItem.Id, cSurface, cInk)
-            PressedFill: =cSoft
-            BorderColor: =ThisItem.Color
-            BorderThickness: =1
-            FontWeight: =If(gCalTour = ThisItem.Id, FontWeight.Semibold, FontWeight.Normal)
-            RadiusTopLeft: =6
-            RadiusTopRight: =6
-            RadiusBottomLeft: =6
-            RadiusBottomRight: =6
-- galCalWeek:
-    Control: Gallery@2.15.0
-    Variant: Vertical
-    Properties:
-      Items: =["일", "월", "화", "수", "목", "금", "토"]
-      X: =24
-      Y: =120
-      Width: =980
-      Height: =26
-      TemplateSize: =26
-      TemplatePadding: =0
-      ShowScrollbar: =false
-      BorderThickness: =0
-      Fill: =Color.Transparent
-      WrapCount: =7
-    Children:
-      - lblCalWeekday:
-          Control: Label@2.5.1
-          Properties:
-            Text: =ThisItem.Value
-            X: =0
-            Y: =0
-            Width: =140
-            Height: =26
-            Font: =fnt
-            Size: =9
-            Color: =If(ThisItem.Value = "일", cRed, cInk2)
-            PaddingLeft: =0
-            PaddingRight: =0
-            PaddingTop: =0
-            PaddingBottom: =0
-            Align: =Align.Center
-            VerticalAlign: =VerticalAlign.Middle
-            Fill: =cBg
-- galCalGrid:
-    Control: Gallery@2.15.0
-    Variant: Vertical
-    Properties:
-      Items: |-
-        =With(
-            {start: DateAdd(gCalMonth, 1 - Weekday(gCalMonth), TimeUnit.Days)},
-            ForAll(
-                Sequence(42, 0) As n,
-                With(
-                    {d: DateAdd(start, n.Value, TimeUnit.Days)},
-                    {
-                        D: d,
-                        Key: Text(d, "yyyy-mm-dd"),
-                        InMonth: Month(d) = Month(gCalMonth),
-                        Open: Weekday(d) in [2, 4, 6],
-                        Holiday: Text(d, "yyyy-mm-dd") in HolidayKeys.Value,
-                        IsToday: d = Today()
-                    }
-                )
-            )
-        )
-      X: =24
-      Y: =150
-      Width: =980
-      Height: =600
-      TemplateSize: =100
-      TemplatePadding: =0
-      ShowScrollbar: =false
-      BorderThickness: =0
-      Fill: =Color.Transparent
-      WrapCount: =7
-    Children:
-      - btnCalCell:
-          Control: Classic/Button@2.2.0
-          Properties:
-            Text: =""
-            X: =0
-            Y: =0
-            Width: =140
-            Height: =100
-            OnSelect: =Set(gCalDay, ThisItem.Key)
-            Fill: =If(ThisItem.Key = gCalDay, cSoft, ThisItem.InMonth && ThisItem.Open && !ThisItem.Holiday, cSurface, cBg)
-            HoverFill: =cSoft
-            PressedFill: =cSoft
-            BorderColor: =If(ThisItem.Key = gCalDay, cInk, cLine)
-            BorderThickness: =If(ThisItem.Key = gCalDay, 2, 1)
-            RadiusTopLeft: =0
-            RadiusTopRight: =0
-            RadiusBottomLeft: =0
-            RadiusBottomRight: =0
-      - btnCalDayNum:
-          Control: Classic/Button@2.2.0
-          Properties:
-            Text: =Day(ThisItem.D)
-            X: =5
-            Y: =5
-            Width: =22
-            Height: =22
-            DisplayMode: =DisplayMode.View
-            OnSelect: =false
-            Font: =fnt
-            Size: =8.5
-            FontWeight: =FontWeight.Semibold
-            Fill: =If(ThisItem.IsToday, cBrand, Color.Transparent)
-            Color: =If(ThisItem.IsToday, cSurface, !ThisItem.InMonth, cInk3, ThisItem.Holiday || Weekday(ThisItem.D) = 1, cRed, cInk)
-            BorderThickness: =0
-            RadiusTopLeft: =11
-            RadiusTopRight: =11
-            RadiusBottomLeft: =11
-            RadiusBottomRight: =11
-      - lblCalHoliday:
-          Control: Label@2.5.1
-          Properties:
-            Text: =If(ThisItem.Holiday, "공휴일", "")
-            X: =30
-            Y: =7
-            Width: =50
-            Height: =18
-            Font: =fnt
-            Size: =7
-            Color: =cRed
-            PaddingLeft: =0
-            PaddingRight: =0
-            PaddingTop: =0
-            PaddingBottom: =0
-            OnSelect: =Select(btnCalCell)
-      - tagCalPending:
-          Control: Classic/Button@2.2.0
-          Properties:
-            Text: ="대기 " & CountRows(Filter(colCalItems, Key = ThisItem.Key && Status = "대기" && (gCalTour = "" || Kind = "block" || Tour = gCalTour)))
-            X: =82
-            Y: =6
-            Width: =54
-            Height: =18
-            DisplayMode: =DisplayMode.View
-            Font: =fnt
-            Size: =8
-            FontWeight: =FontWeight.Semibold
-            Fill: =ColorValue("#FBF3DB")
-            Color: =ColorValue("#956400")
-            BorderThickness: =0
-            RadiusTopLeft: =11
-            RadiusTopRight: =11
-            RadiusBottomLeft: =11
-            RadiusBottomRight: =11
-            OnSelect: =false
-            Visible: =CountRows(Filter(colCalItems, Key = ThisItem.Key && Status = "대기" && (gCalTour = "" || Kind = "block" || Tour = gCalTour))) > 0
-      - galCalChips:
-          Control: Gallery@2.15.0
-          Variant: Vertical
-          Properties:
-            Items: |-
-              =With({all: SortByColumns(Filter(colCalItems, Key = ThisItem.Key && (gCalTour = "" || Kind = "block" || Tour = gCalTour)), "Sort")}, FirstN(all, If(CountRows(all) > 3, 2, 3)))
-            X: =4
-            Y: =28
-            Width: =132
-            Height: =66
-            TemplateSize: =22
-            TemplatePadding: =0
-            ShowScrollbar: =false
-            BorderThickness: =0
-            Fill: =Color.Transparent
-          Children:
-            - btnCalChip:
-                Control: Classic/Button@2.2.0
-                Properties:
-                  Text: =""
-                  X: =0
-                  Y: =0
-                  Width: =132
-                  Height: =20
-                  OnSelect: =If(ThisItem.Kind = "req", Set(gOpenId, ThisItem.ReqId); Navigate(scrAdmin, ScreenTransition.None), Set(gCalDay, ThisItem.Key))
-                  Fill: =Switch(ThisItem.Status, "대기", ColorValue("#FBF3DB"), "승인", ColorValue("#EDF3EC"), "완료", ColorValue("#E1F3FE"), "막기", cSoft, ColorValue("#EFEFED"))
-                  HoverFill: =Switch(ThisItem.Status, "대기", ColorValue("#FBF3DB"), "승인", ColorValue("#EDF3EC"), "완료", ColorValue("#E1F3FE"), "막기", cSoft, ColorValue("#EFEFED"))
-                  PressedFill: =Switch(ThisItem.Status, "대기", ColorValue("#FBF3DB"), "승인", ColorValue("#EDF3EC"), "완료", ColorValue("#E1F3FE"), "막기", cSoft, ColorValue("#EFEFED"))
-                  BorderThickness: =0
-                  RadiusTopLeft: =3
-                  RadiusTopRight: =3
-                  RadiusBottomLeft: =3
-                  RadiusBottomRight: =3
-            - rctCalChipBar:
-                Control: Rectangle@2.3.0
-                Properties:
-                  X: =0
-                  Y: =0
-                  Width: =4
-                  Height: =20
-                  Fill: =ThisItem.Color
-                  OnSelect: =Select(btnCalChip)
-            - lblCalChip:
-                Control: Label@2.5.1
-                Properties:
-                  Text: =ThisItem.Chip & If(IsBlank(ThisItem.Lang), "", " · " & ThisItem.Lang)
-                  X: =8
-                  Y: =0
-                  Width: =122
-                  Height: =20
-                  Font: =fnt
-                  Size: =7.5
-                  Color: =If(ThisItem.Status = "거절" || ThisItem.Status = "취소", cInk3, cInk)
-                  PaddingLeft: =0
-                  PaddingRight: =0
-                  PaddingTop: =0
-                  PaddingBottom: =0
-                  VerticalAlign: =VerticalAlign.Middle
-                  Wrap: =false
-                  Strikethrough: =ThisItem.Status = "거절" || ThisItem.Status = "취소"
-                  OnSelect: =Select(btnCalChip)
-      - lblCalMore:
-          Control: Label@2.5.1
-          Properties:
-            Text: ="+" & (CountRows(Filter(colCalItems, Key = ThisItem.Key && (gCalTour = "" || Kind = "block" || Tour = gCalTour))) - 2) & "건 더보기"
-            X: =8
-            Y: =74
-            Width: =128
-            Height: =18
-            Font: =fnt
-            Size: =7.5
-            Color: =cInk2
-            PaddingLeft: =0
-            PaddingRight: =0
-            PaddingTop: =0
-            PaddingBottom: =0
-            Visible: =CountRows(Filter(colCalItems, Key = ThisItem.Key && (gCalTour = "" || Kind = "block" || Tour = gCalTour))) > 3
-            OnSelect: =Select(btnCalCell)
-- conCalDay:
+- conCBody:
     Control: GroupContainer@1.3.0
-    Variant: ManualLayout
+    Variant: AutoLayout
     Properties:
-      X: =1020
-      Y: =120
-      Width: =322
-      Height: =630
-      Fill: =cSurface
-      BorderColor: =cLine
-      BorderThickness: =1
+      X: =0
+      Y: =56
+      Width: =sw
+      Height: =sh - 56
+      LayoutDirection: =LayoutDirection.Vertical
+      LayoutAlignItems: =LayoutAlignItems.Center
+      LayoutOverflowY: =LayoutOverflow.Scroll
+      Fill: =Color.Transparent
+      BorderThickness: =0
       DropShadow: =DropShadow.None
-      RadiusTopLeft: =8
-      RadiusTopRight: =8
-      RadiusBottomLeft: =8
-      RadiusBottomRight: =8
     Children:
-      - lblCalDayTitle:
-          Control: Label@2.5.1
+      - conCPage:
+          Control: GroupContainer@1.3.0
+          Variant: ManualLayout
           Properties:
-            Text: =Month(DateValue(gCalDay)) & "월 " & Day(DateValue(gCalDay)) & "일 (" & Text(DateValue(gCalDay), "ddd", "ko-KR") & ")"
-            X: =20
-            Y: =16
-            Width: =282
-            Height: =28
-            Font: =fnt
-            Size: =13
-            Color: =cInk
-            PaddingLeft: =0
-            PaddingRight: =0
-            PaddingTop: =0
-            PaddingBottom: =0
-            FontWeight: =FontWeight.Semibold
-      - lblCalDaySub:
-          Control: Label@2.5.1
-          Properties:
-            Text: ="예약 " & CountRows(Filter(colCalItems, Key = gCalDay && Kind = "req" && (gCalTour = "" || Kind = "block" || Tour = gCalTour))) & "건 · 대기 " & CountRows(Filter(colCalItems, Key = gCalDay && Status = "대기" && (gCalTour = "" || Kind = "block" || Tour = gCalTour))) & "건"
-            X: =20
-            Y: =46
-            Width: =282
-            Height: =20
-            Font: =fnt
-            Size: =9
-            Color: =cInk2
-            PaddingLeft: =0
-            PaddingRight: =0
-            PaddingTop: =0
-            PaddingBottom: =0
-      - galCalDay:
-          Control: Gallery@2.15.0
-          Variant: Vertical
-          Properties:
-            Items: =SortByColumns(Filter(colCalItems, Key = gCalDay && (gCalTour = "" || Kind = "block" || Tour = gCalTour)), "Sort")
-            X: =12
-            Y: =76
-            Width: =298
-            Height: =400
-            TemplateSize: =64
-            TemplatePadding: =0
-            ShowScrollbar: =false
-            BorderThickness: =0
+            Width: =1366
+            Height: =710
+            FillPortions: =0
             Fill: =Color.Transparent
+            BorderThickness: =0
+            DropShadow: =DropShadow.None
           Children:
-            - btnCalDayItem:
-                Control: Classic/Button@2.2.0
-                Properties:
-                  Text: =""
-                  X: =0
-                  Y: =0
-                  Width: =298
-                  Height: =60
-                  OnSelect: =If(ThisItem.Kind = "req", Set(gOpenId, ThisItem.ReqId); Navigate(scrAdmin, ScreenTransition.None))
-                  Fill: =cSurface
-                  HoverFill: =cSoft
-                  PressedFill: =cSoft
-                  BorderColor: =cLine
-                  BorderThickness: =1
-                  RadiusTopLeft: =6
-                  RadiusTopRight: =6
-                  RadiusBottomLeft: =6
-                  RadiusBottomRight: =6
-            - rctCalDayBar:
-                Control: Rectangle@2.3.0
-                Properties:
-                  X: =1
-                  Y: =1
-                  Width: =4
-                  Height: =58
-                  Fill: =ThisItem.Color
-                  OnSelect: =Select(btnCalDayItem)
-            - lblCalDayItemTitle:
+            - lblCalTitleMonth:
                 Control: Label@2.5.1
                 Properties:
-                  Text: =ThisItem.Title
-                  X: =14
-                  Y: =8
-                  Width: =200
-                  Height: =22
+                  Text: =Year(gCalMonth) & "년 " & Month(gCalMonth) & "월"
+                  X: =24
+                  Y: =16
+                  Width: =170
+                  Height: =36
                   Font: =fnt
-                  Size: =10.5
-                  Color: =If(ThisItem.Status = "거절" || ThisItem.Status = "취소", cInk3, cInk)
+                  Size: =15
+                  Color: =cInk
                   PaddingLeft: =0
                   PaddingRight: =0
                   PaddingTop: =0
                   PaddingBottom: =0
                   FontWeight: =FontWeight.Semibold
-                  Wrap: =false
-                  OnSelect: =Select(btnCalDayItem)
-            - lblCalDayItemSub:
-                Control: Label@2.5.1
-                Properties:
-                  Text: =ThisItem.Sub & If(IsBlank(ThisItem.Lang), "", " · " & ThisItem.Lang)
-                  X: =14
-                  Y: =32
-                  Width: =270
-                  Height: =20
-                  Font: =fnt
-                  Size: =8.5
-                  Color: =cInk2
-                  PaddingLeft: =0
-                  PaddingRight: =0
-                  PaddingTop: =0
-                  PaddingBottom: =0
-                  Wrap: =false
-                  OnSelect: =Select(btnCalDayItem)
-            - tagCalDayStatus:
+                  VerticalAlign: =VerticalAlign.Middle
+            - btnCalPrev:
                 Control: Classic/Button@2.2.0
                 Properties:
-                  Text: =ThisItem.Status
-                  X: =228
-                  Y: =8
-                  Width: =56
-                  Height: =22
-                  DisplayMode: =DisplayMode.View
-                  Font: =fnt
-                  Size: =8
-                  FontWeight: =FontWeight.Semibold
-                  Fill: =Switch(ThisItem.Status, "대기", ColorValue("#FBF3DB"), "승인", ColorValue("#EDF3EC"), "완료", ColorValue("#E1F3FE"), "막기", cSoft, ColorValue("#EFEFED"))
-                  Color: =If(ThisItem.Status = "막기", cInk2, LookUp(StatusStyle, S = ThisItem.Status, Fg))
-                  BorderThickness: =0
-                  RadiusTopLeft: =11
-                  RadiusTopRight: =11
-                  RadiusBottomLeft: =11
-                  RadiusBottomRight: =11
-                  OnSelect: =false
-                  Visible: =ThisItem.Kind = "req"
-            - btnCalUnblock:
-                Control: Classic/Button@2.2.0
-                Properties:
-                  Text: ="해제"
-                  X: =228
-                  Y: =8
-                  Width: =56
-                  Height: =24
+                  Text: ="‹"
+                  X: =196
+                  Y: =18
+                  Width: =36
+                  Height: =32
                   OnSelect: |-
-                    =Remove(TourBusy, LookUp(TourBusy, ID = ThisItem.BlockId));
-                    Notify("막힌 일정을 해제했습니다.", NotificationType.Success);
+                    =Set(gCalMonth, DateAdd(gCalMonth, -1, TimeUnit.Months));
                     With(
                         {a: DateAdd(gCalMonth, -7, TimeUnit.Days), b: DateAdd(gCalMonth, 45, TimeUnit.Days)},
                         ClearCollect(
@@ -929,7 +140,7 @@
                         )
                     )
                   Font: =fnt
-                  Size: =8.5
+                  Size: =10.5
                   FontWeight: =FontWeight.Semibold
                   RadiusTopLeft: =6
                   RadiusTopRight: =6
@@ -947,192 +158,1007 @@
                   DisabledFill: =cSurface
                   DisabledColor: =cInk3
                   DisabledBorderColor: =cLine
-                  Visible: =ThisItem.Kind = "block" && gAdminSite <> "hq"
-      - lblCalEmpty:
-          Control: Label@2.5.1
-          Properties:
-            Text: ="이 날은 예약이 없습니다."
-            X: =20
-            Y: =90
-            Width: =282
-            Height: =20
-            Font: =fnt
-            Size: =9
-            Color: =cInk3
-            PaddingLeft: =0
-            PaddingRight: =0
-            PaddingTop: =0
-            PaddingBottom: =0
-            Visible: =IsEmpty(galCalDay.AllItems)
-      - btnCalBlockDay:
-          Control: Classic/Button@2.2.0
-          Properties:
-            Text: ="이 날 일정 막기"
-            X: =20
-            Y: =488
-            Width: =282
-            Height: =36
-            OnSelect: |-
-              =Set(gBlockDate, DateValue(gCalDay));
-              Set(gBlockTarget, If(gAdminSite = "mtv", "시화MTV", "메가와이즈"));
-              Set(gBlockTime, "종일");
-              Set(gShowBlock, true);
-              Navigate(scrAdmin, ScreenTransition.None)
-            Font: =fnt
-            Size: =10.5
-            FontWeight: =FontWeight.Semibold
-            RadiusTopLeft: =6
-            RadiusTopRight: =6
-            RadiusBottomLeft: =6
-            RadiusBottomRight: =6
-            Fill: =cSurface
-            Color: =cInk
-            HoverFill: =cSoft
-            PressedFill: =cSoft
-            HoverColor: =cInk
-            PressedColor: =cInk
-            BorderColor: =cLine
-            HoverBorderColor: =cInk3
-            BorderThickness: =1
-            DisabledFill: =cSurface
-            DisabledColor: =cInk3
-            DisabledBorderColor: =cLine
-            Visible: =gAdminSite <> "hq"
-      - rctCalLegendLine:
-          Control: Rectangle@2.3.0
-          Properties:
-            X: =20
-            Y: =538
-            Width: =282
-            Height: =1
-            Fill: =cLine
-      - lblCalLegend:
-          Control: Label@2.5.1
-          Properties:
-            Text: ="칩 색 = 상태 · 왼쪽 띠 = 투어"
-            X: =20
-            Y: =548
-            Width: =282
-            Height: =20
-            Font: =fnt
-            Size: =8.5
-            Color: =cInk2
-            PaddingLeft: =0
-            PaddingRight: =0
-            PaddingTop: =0
-            PaddingBottom: =0
-      - tagLgWait:
-          Control: Classic/Button@2.2.0
-          Properties:
-            Text: ="대기"
-            X: =20
-            Y: =572
-            Width: =50
-            Height: =22
-            DisplayMode: =DisplayMode.View
-            Font: =fnt
-            Size: =8
-            FontWeight: =FontWeight.Semibold
-            Fill: =ColorValue("#FBF3DB")
-            Color: =ColorValue("#956400")
-            BorderThickness: =0
-            RadiusTopLeft: =11
-            RadiusTopRight: =11
-            RadiusBottomLeft: =11
-            RadiusBottomRight: =11
-            OnSelect: =false
-      - tagLgOk:
-          Control: Classic/Button@2.2.0
-          Properties:
-            Text: ="승인"
-            X: =76
-            Y: =572
-            Width: =50
-            Height: =22
-            DisplayMode: =DisplayMode.View
-            Font: =fnt
-            Size: =8
-            FontWeight: =FontWeight.Semibold
-            Fill: =ColorValue("#EDF3EC")
-            Color: =ColorValue("#346538")
-            BorderThickness: =0
-            RadiusTopLeft: =11
-            RadiusTopRight: =11
-            RadiusBottomLeft: =11
-            RadiusBottomRight: =11
-            OnSelect: =false
-      - tagLgDone:
-          Control: Classic/Button@2.2.0
-          Properties:
-            Text: ="완료"
-            X: =132
-            Y: =572
-            Width: =50
-            Height: =22
-            DisplayMode: =DisplayMode.View
-            Font: =fnt
-            Size: =8
-            FontWeight: =FontWeight.Semibold
-            Fill: =ColorValue("#E1F3FE")
-            Color: =ColorValue("#1F6C9F")
-            BorderThickness: =0
-            RadiusTopLeft: =11
-            RadiusTopRight: =11
-            RadiusBottomLeft: =11
-            RadiusBottomRight: =11
-            OnSelect: =false
-      - tagLgNo:
-          Control: Classic/Button@2.2.0
-          Properties:
-            Text: ="거절"
-            X: =188
-            Y: =572
-            Width: =50
-            Height: =22
-            DisplayMode: =DisplayMode.View
-            Font: =fnt
-            Size: =8
-            FontWeight: =FontWeight.Semibold
-            Fill: =ColorValue("#EFEFED")
-            Color: =cInk3
-            BorderThickness: =0
-            RadiusTopLeft: =11
-            RadiusTopRight: =11
-            RadiusBottomLeft: =11
-            RadiusBottomRight: =11
-            OnSelect: =false
-      - tagLgBlock:
-          Control: Classic/Button@2.2.0
-          Properties:
-            Text: ="막힘"
-            X: =244
-            Y: =572
-            Width: =58
-            Height: =22
-            DisplayMode: =DisplayMode.View
-            Font: =fnt
-            Size: =8
-            FontWeight: =FontWeight.Semibold
-            Fill: =cSoft
-            Color: =cInk2
-            BorderThickness: =0
-            RadiusTopLeft: =11
-            RadiusTopRight: =11
-            RadiusBottomLeft: =11
-            RadiusBottomRight: =11
-            OnSelect: =false
-      - lblCalLegend2:
-          Control: Label@2.5.1
-          Properties:
-            Text: ="EN · ZH · 통역 = 외국어 투어 / 통역 동반"
-            X: =20
-            Y: =600
-            Width: =282
-            Height: =20
-            Font: =fnt
-            Size: =8.5
-            Color: =cInk3
-            PaddingLeft: =0
-            PaddingRight: =0
-            PaddingTop: =0
-            PaddingBottom: =0
+            - btnCalNext:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  Text: ="›"
+                  X: =238
+                  Y: =18
+                  Width: =36
+                  Height: =32
+                  OnSelect: |-
+                    =Set(gCalMonth, DateAdd(gCalMonth, 1, TimeUnit.Months));
+                    With(
+                        {a: DateAdd(gCalMonth, -7, TimeUnit.Days), b: DateAdd(gCalMonth, 45, TimeUnit.Days)},
+                        ClearCollect(
+                            colCalItems,
+                            ForAll(
+                                Filter(Filter(VisitRequests, VisitDate >= a && VisitDate <= b), (gAdminSite = "hq" || (gAdminSite = "main" && ForMain = "Y") || (gAdminSite = "mtv" && ForMtv = "Y"))) As r,
+                                {
+                                    Key: r.DateKey,
+                                    Kind: "req",
+                                    ReqId: r.ID,
+                                    BlockId: 0,
+                                    Tour: r.Tour,
+                                    Sort: Value(Left(r.Slot, 2)) * 60 + Value(Mid(r.Slot, 4, 2)),
+                                    Status: r.Status,
+                                    Color: Coalesce(LookUp(Tours, Id = r.Tour, Color), cInk3),
+                                    Chip: Left(r.Slot, 5) & " " & Switch(r.Tour, "lab", "Lab", "center", "센터", "mtv", "시화", "combined", "센터+Lab", "center_mtv", "센터+시화", "all3", "3곳", "기타") & " " & r.Company,
+                                    Title: r.Company,
+                                    Sub: r.ScheduleText & " · " & r.TourName,
+                                    Lang: If(r.Language = "영어", "EN", r.Language = "중국어", "ZH", r.Interpreter = "Y", "통역", "")
+                                }
+                            ),
+                            ForAll(
+                                Filter(TourBusy, Kind = "막기" && (MonthKey = Text(a, "yyyy-mm") || MonthKey = Text(gCalMonth, "yyyy-mm") || MonthKey = Text(b, "yyyy-mm"))) As k,
+                                {
+                                    Key: k.DateKey,
+                                    Kind: "block",
+                                    ReqId: 0,
+                                    BlockId: k.ID,
+                                    Tour: "",
+                                    Sort: -1,
+                                    Status: "막기",
+                                    Color: cInk2,
+                                    Chip: "막힘 · " & k.Reason,
+                                    Title: "일정 막힘",
+                                    Sub: k.Reason,
+                                    Lang: ""
+                                }
+                            )
+                        )
+                    )
+                  Font: =fnt
+                  Size: =10.5
+                  FontWeight: =FontWeight.Semibold
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  Fill: =cSurface
+                  Color: =cInk
+                  HoverFill: =cSoft
+                  PressedFill: =cSoft
+                  HoverColor: =cInk
+                  PressedColor: =cInk
+                  BorderColor: =cLine
+                  HoverBorderColor: =cInk3
+                  BorderThickness: =1
+                  DisabledFill: =cSurface
+                  DisabledColor: =cInk3
+                  DisabledBorderColor: =cLine
+            - btnCalToday:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  Text: ="오늘"
+                  X: =280
+                  Y: =18
+                  Width: =60
+                  Height: =32
+                  OnSelect: |-
+                    =Set(gCalMonth, Date(Year(Today()), Month(Today()), 1));
+                    With(
+                        {a: DateAdd(gCalMonth, -7, TimeUnit.Days), b: DateAdd(gCalMonth, 45, TimeUnit.Days)},
+                        ClearCollect(
+                            colCalItems,
+                            ForAll(
+                                Filter(Filter(VisitRequests, VisitDate >= a && VisitDate <= b), (gAdminSite = "hq" || (gAdminSite = "main" && ForMain = "Y") || (gAdminSite = "mtv" && ForMtv = "Y"))) As r,
+                                {
+                                    Key: r.DateKey,
+                                    Kind: "req",
+                                    ReqId: r.ID,
+                                    BlockId: 0,
+                                    Tour: r.Tour,
+                                    Sort: Value(Left(r.Slot, 2)) * 60 + Value(Mid(r.Slot, 4, 2)),
+                                    Status: r.Status,
+                                    Color: Coalesce(LookUp(Tours, Id = r.Tour, Color), cInk3),
+                                    Chip: Left(r.Slot, 5) & " " & Switch(r.Tour, "lab", "Lab", "center", "센터", "mtv", "시화", "combined", "센터+Lab", "center_mtv", "센터+시화", "all3", "3곳", "기타") & " " & r.Company,
+                                    Title: r.Company,
+                                    Sub: r.ScheduleText & " · " & r.TourName,
+                                    Lang: If(r.Language = "영어", "EN", r.Language = "중국어", "ZH", r.Interpreter = "Y", "통역", "")
+                                }
+                            ),
+                            ForAll(
+                                Filter(TourBusy, Kind = "막기" && (MonthKey = Text(a, "yyyy-mm") || MonthKey = Text(gCalMonth, "yyyy-mm") || MonthKey = Text(b, "yyyy-mm"))) As k,
+                                {
+                                    Key: k.DateKey,
+                                    Kind: "block",
+                                    ReqId: 0,
+                                    BlockId: k.ID,
+                                    Tour: "",
+                                    Sort: -1,
+                                    Status: "막기",
+                                    Color: cInk2,
+                                    Chip: "막힘 · " & k.Reason,
+                                    Title: "일정 막힘",
+                                    Sub: k.Reason,
+                                    Lang: ""
+                                }
+                            )
+                        )
+                    );
+                    Set(gCalDay, Text(Today(), "yyyy-mm-dd"))
+                  Font: =fnt
+                  Size: =9.75
+                  FontWeight: =FontWeight.Semibold
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  Fill: =cSurface
+                  Color: =cInk
+                  HoverFill: =cSoft
+                  PressedFill: =cSoft
+                  HoverColor: =cInk
+                  PressedColor: =cInk
+                  BorderColor: =cLine
+                  HoverBorderColor: =cInk3
+                  BorderThickness: =1
+                  DisabledFill: =cSurface
+                  DisabledColor: =cInk3
+                  DisabledBorderColor: =cLine
+            - lblCalFilter:
+                Control: Label@2.5.1
+                Properties:
+                  Text: ="투어"
+                  X: =372
+                  Y: =26
+                  Width: =60
+                  Height: =20
+                  Font: =fnt
+                  Size: =9
+                  Color: =cInk2
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+            - galCalTours:
+                Control: Gallery@2.15.0
+                Variant: Vertical
+                Properties:
+                  Items: =OpenTours
+                  X: =410
+                  Y: =18
+                  Width: =594
+                  Height: =32
+                  TemplateSize: =32
+                  TemplatePadding: =0
+                  ShowScrollbar: =false
+                  BorderThickness: =0
+                  Fill: =Color.Transparent
+                  WrapCount: =Max(3, CountRows(OpenTours))
+                Children:
+                  - btnCalTour:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: =ThisItem.Name
+                        X: =0
+                        Y: =0
+                        Width: =Parent.TemplateWidth - 6
+                        Height: =32
+                        OnSelect: =Set(gCalTour, If(gCalTour = ThisItem.Id, "", ThisItem.Id))
+                        Font: =fnt
+                        Size: =9
+                        Fill: =If(gCalTour = ThisItem.Id, ThisItem.Color, cSurface)
+                        Color: =If(gCalTour = ThisItem.Id, cSurface, If(gCalTour = "", cInk, cInk3))
+                        HoverFill: =If(gCalTour = ThisItem.Id, ThisItem.Color, cSoft)
+                        HoverColor: =If(gCalTour = ThisItem.Id, cSurface, cInk)
+                        PressedFill: =cSoft
+                        BorderColor: =ThisItem.Color
+                        BorderThickness: =1
+                        FontWeight: =If(gCalTour = ThisItem.Id, FontWeight.Semibold, FontWeight.Normal)
+                        RadiusTopLeft: =6
+                        RadiusTopRight: =6
+                        RadiusBottomLeft: =6
+                        RadiusBottomRight: =6
+            - galCalWeek:
+                Control: Gallery@2.15.0
+                Variant: Vertical
+                Properties:
+                  Items: =["일", "월", "화", "수", "목", "금", "토"]
+                  X: =24
+                  Y: =64
+                  Width: =980
+                  Height: =26
+                  TemplateSize: =26
+                  TemplatePadding: =0
+                  ShowScrollbar: =false
+                  BorderThickness: =0
+                  Fill: =Color.Transparent
+                  WrapCount: =7
+                Children:
+                  - lblCalWeekday:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =ThisItem.Value
+                        X: =0
+                        Y: =0
+                        Width: =140
+                        Height: =26
+                        Font: =fnt
+                        Size: =9
+                        Color: =If(ThisItem.Value = "일", cRed, cInk2)
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Center
+                        VerticalAlign: =VerticalAlign.Middle
+                        Fill: =cBg
+            - galCalGrid:
+                Control: Gallery@2.15.0
+                Variant: Vertical
+                Properties:
+                  Items: |-
+                    =With(
+                        {start: DateAdd(gCalMonth, 1 - Weekday(gCalMonth), TimeUnit.Days)},
+                        ForAll(
+                            Sequence(42, 0) As n,
+                            With(
+                                {d: DateAdd(start, n.Value, TimeUnit.Days)},
+                                {
+                                    D: d,
+                                    Key: Text(d, "yyyy-mm-dd"),
+                                    InMonth: Month(d) = Month(gCalMonth),
+                                    Open: Weekday(d) in [2, 4, 6],
+                                    Holiday: Text(d, "yyyy-mm-dd") in HolidayKeys.Value,
+                                    IsToday: d = Today()
+                                }
+                            )
+                        )
+                    )
+                  X: =24
+                  Y: =94
+                  Width: =980
+                  Height: =600
+                  TemplateSize: =100
+                  TemplatePadding: =0
+                  ShowScrollbar: =false
+                  BorderThickness: =0
+                  Fill: =Color.Transparent
+                  WrapCount: =7
+                Children:
+                  - btnCalCell:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: =""
+                        X: =0
+                        Y: =0
+                        Width: =140
+                        Height: =100
+                        OnSelect: =Set(gCalDay, ThisItem.Key)
+                        Fill: =If(ThisItem.Key = gCalDay, cSoft, ThisItem.InMonth && ThisItem.Open && !ThisItem.Holiday, cSurface, cBg)
+                        HoverFill: =cSoft
+                        PressedFill: =cSoft
+                        BorderColor: =If(ThisItem.Key = gCalDay, cInk, cLine)
+                        BorderThickness: =If(ThisItem.Key = gCalDay, 2, 1)
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                  - btnCalDayNum:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: =Day(ThisItem.D)
+                        X: =5
+                        Y: =5
+                        Width: =22
+                        Height: =22
+                        DisplayMode: =DisplayMode.View
+                        OnSelect: =false
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Fill: =If(ThisItem.IsToday, cBrand, Color.Transparent)
+                        Color: =If(ThisItem.IsToday, cSurface, !ThisItem.InMonth, cInk3, ThisItem.Holiday || Weekday(ThisItem.D) = 1, cRed, cInk)
+                        BorderThickness: =0
+                        RadiusTopLeft: =11
+                        RadiusTopRight: =11
+                        RadiusBottomLeft: =11
+                        RadiusBottomRight: =11
+                  - lblCalHoliday:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =If(ThisItem.Holiday, "공휴일", "")
+                        X: =30
+                        Y: =7
+                        Width: =50
+                        Height: =18
+                        Font: =fnt
+                        Size: =9
+                        Color: =cRed
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        OnSelect: =Select(btnCalCell)
+                  - tagCalPending:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="대기 " & CountRows(Filter(colCalItems, Key = ThisItem.Key && Status = "대기" && (gCalTour = "" || Kind = "block" || Tour = gCalTour)))
+                        X: =82
+                        Y: =6
+                        Width: =54
+                        Height: =18
+                        DisplayMode: =DisplayMode.View
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Fill: =ColorValue("#FBF3DB")
+                        Color: =ColorValue("#956400")
+                        BorderThickness: =0
+                        RadiusTopLeft: =11
+                        RadiusTopRight: =11
+                        RadiusBottomLeft: =11
+                        RadiusBottomRight: =11
+                        OnSelect: =false
+                        Visible: =CountRows(Filter(colCalItems, Key = ThisItem.Key && Status = "대기" && (gCalTour = "" || Kind = "block" || Tour = gCalTour))) > 0
+                  - galCalChips:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        Items: |-
+                          =With({all: SortByColumns(Filter(colCalItems, Key = ThisItem.Key && (gCalTour = "" || Kind = "block" || Tour = gCalTour)), "Sort")}, FirstN(all, If(CountRows(all) > 3, 2, 3)))
+                        X: =4
+                        Y: =28
+                        Width: =132
+                        Height: =66
+                        TemplateSize: =22
+                        TemplatePadding: =0
+                        ShowScrollbar: =false
+                        BorderThickness: =0
+                        Fill: =Color.Transparent
+                      Children:
+                        - btnCalChip:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              Text: =""
+                              X: =0
+                              Y: =0
+                              Width: =132
+                              Height: =20
+                              OnSelect: =If(ThisItem.Kind = "req", Set(gOpenId, ThisItem.ReqId); Navigate(scrAdmin, ScreenTransition.None), Set(gCalDay, ThisItem.Key))
+                              Fill: =Switch(ThisItem.Status, "대기", ColorValue("#FBF3DB"), "승인", ColorValue("#EDF3EC"), "완료", ColorValue("#E1F3FE"), "막기", cSoft, ColorValue("#EFEFED"))
+                              HoverFill: =Switch(ThisItem.Status, "대기", ColorValue("#FBF3DB"), "승인", ColorValue("#EDF3EC"), "완료", ColorValue("#E1F3FE"), "막기", cSoft, ColorValue("#EFEFED"))
+                              PressedFill: =Switch(ThisItem.Status, "대기", ColorValue("#FBF3DB"), "승인", ColorValue("#EDF3EC"), "완료", ColorValue("#E1F3FE"), "막기", cSoft, ColorValue("#EFEFED"))
+                              BorderThickness: =0
+                              RadiusTopLeft: =3
+                              RadiusTopRight: =3
+                              RadiusBottomLeft: =3
+                              RadiusBottomRight: =3
+                        - rctCalChipBar:
+                            Control: Rectangle@2.3.0
+                            Properties:
+                              X: =0
+                              Y: =0
+                              Width: =4
+                              Height: =20
+                              Fill: =ThisItem.Color
+                              OnSelect: =Select(btnCalChip)
+                        - lblCalChip:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =ThisItem.Chip & If(IsBlank(ThisItem.Lang), "", " · " & ThisItem.Lang)
+                              X: =8
+                              Y: =0
+                              Width: =122
+                              Height: =20
+                              Font: =fnt
+                              Size: =9
+                              Color: =If(ThisItem.Status = "거절" || ThisItem.Status = "취소", cInk3, cInk)
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                              Strikethrough: =ThisItem.Status = "거절" || ThisItem.Status = "취소"
+                              OnSelect: =Select(btnCalChip)
+                  - lblCalMore:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="+" & (CountRows(Filter(colCalItems, Key = ThisItem.Key && (gCalTour = "" || Kind = "block" || Tour = gCalTour))) - 2) & "건 더보기"
+                        X: =8
+                        Y: =74
+                        Width: =128
+                        Height: =18
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Visible: =CountRows(Filter(colCalItems, Key = ThisItem.Key && (gCalTour = "" || Kind = "block" || Tour = gCalTour))) > 3
+                        OnSelect: =Select(btnCalCell)
+            - conCalDay:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  X: =1020
+                  Y: =64
+                  Width: =322
+                  Height: =630
+                  Fill: =cSurface
+                  BorderColor: =cLine
+                  BorderThickness: =1
+                  DropShadow: =DropShadow.None
+                  RadiusTopLeft: =8
+                  RadiusTopRight: =8
+                  RadiusBottomLeft: =8
+                  RadiusBottomRight: =8
+                Children:
+                  - lblCalDayTitle:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =Month(DateValue(gCalDay)) & "월 " & Day(DateValue(gCalDay)) & "일 (" & Text(DateValue(gCalDay), "ddd", "ko-KR") & ")"
+                        X: =20
+                        Y: =16
+                        Width: =282
+                        Height: =28
+                        Font: =fnt
+                        Size: =13
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        FontWeight: =FontWeight.Semibold
+                  - lblCalDaySub:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="예약 " & CountRows(Filter(colCalItems, Key = gCalDay && Kind = "req" && (gCalTour = "" || Kind = "block" || Tour = gCalTour))) & "건 · 대기 " & CountRows(Filter(colCalItems, Key = gCalDay && Status = "대기" && (gCalTour = "" || Kind = "block" || Tour = gCalTour))) & "건"
+                        X: =20
+                        Y: =46
+                        Width: =282
+                        Height: =20
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                  - galCalDay:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        Items: =SortByColumns(Filter(colCalItems, Key = gCalDay && (gCalTour = "" || Kind = "block" || Tour = gCalTour)), "Sort")
+                        X: =12
+                        Y: =76
+                        Width: =298
+                        Height: =400
+                        TemplateSize: =64
+                        TemplatePadding: =0
+                        ShowScrollbar: =true
+                        BorderThickness: =0
+                        Fill: =Color.Transparent
+                      Children:
+                        - btnCalDayItem:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              Text: =""
+                              X: =0
+                              Y: =0
+                              Width: =298
+                              Height: =60
+                              OnSelect: =If(ThisItem.Kind = "req", Set(gOpenId, ThisItem.ReqId); Navigate(scrAdmin, ScreenTransition.None))
+                              Fill: =cSurface
+                              HoverFill: =cSoft
+                              PressedFill: =cSoft
+                              BorderColor: =cLine
+                              BorderThickness: =1
+                              RadiusTopLeft: =6
+                              RadiusTopRight: =6
+                              RadiusBottomLeft: =6
+                              RadiusBottomRight: =6
+                        - rctCalDayBar:
+                            Control: Rectangle@2.3.0
+                            Properties:
+                              X: =1
+                              Y: =1
+                              Width: =4
+                              Height: =58
+                              Fill: =ThisItem.Color
+                              OnSelect: =Select(btnCalDayItem)
+                        - lblCalDayItemTitle:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =ThisItem.Title
+                              X: =14
+                              Y: =8
+                              Width: =200
+                              Height: =22
+                              Font: =fnt
+                              Size: =10.5
+                              Color: =If(ThisItem.Status = "거절" || ThisItem.Status = "취소", cInk3, cInk)
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              FontWeight: =FontWeight.Semibold
+                              Wrap: =false
+                              OnSelect: =Select(btnCalDayItem)
+                        - lblCalDayItemSub:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =ThisItem.Sub & If(IsBlank(ThisItem.Lang), "", " · " & ThisItem.Lang)
+                              X: =14
+                              Y: =32
+                              Width: =270
+                              Height: =20
+                              Font: =fnt
+                              Size: =9
+                              Color: =cInk2
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Wrap: =false
+                              OnSelect: =Select(btnCalDayItem)
+                        - tagCalDayStatus:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              Text: =ThisItem.Status
+                              X: =228
+                              Y: =8
+                              Width: =56
+                              Height: =22
+                              DisplayMode: =DisplayMode.View
+                              Font: =fnt
+                              Size: =9
+                              FontWeight: =FontWeight.Semibold
+                              Fill: =Switch(ThisItem.Status, "대기", ColorValue("#FBF3DB"), "승인", ColorValue("#EDF3EC"), "완료", ColorValue("#E1F3FE"), "막기", cSoft, ColorValue("#EFEFED"))
+                              Color: =If(ThisItem.Status = "막기", cInk2, LookUp(StatusStyle, S = ThisItem.Status, Fg))
+                              BorderThickness: =0
+                              RadiusTopLeft: =11
+                              RadiusTopRight: =11
+                              RadiusBottomLeft: =11
+                              RadiusBottomRight: =11
+                              OnSelect: =false
+                              Visible: =ThisItem.Kind = "req"
+                        - btnCalUnblock:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              Text: ="해제"
+                              X: =228
+                              Y: =8
+                              Width: =56
+                              Height: =24
+                              OnSelect: |-
+                                =Remove(TourBusy, LookUp(TourBusy, ID = ThisItem.BlockId));
+                                Notify("막힌 일정을 해제했습니다.", NotificationType.Success);
+                                With(
+                                    {a: DateAdd(gCalMonth, -7, TimeUnit.Days), b: DateAdd(gCalMonth, 45, TimeUnit.Days)},
+                                    ClearCollect(
+                                        colCalItems,
+                                        ForAll(
+                                            Filter(Filter(VisitRequests, VisitDate >= a && VisitDate <= b), (gAdminSite = "hq" || (gAdminSite = "main" && ForMain = "Y") || (gAdminSite = "mtv" && ForMtv = "Y"))) As r,
+                                            {
+                                                Key: r.DateKey,
+                                                Kind: "req",
+                                                ReqId: r.ID,
+                                                BlockId: 0,
+                                                Tour: r.Tour,
+                                                Sort: Value(Left(r.Slot, 2)) * 60 + Value(Mid(r.Slot, 4, 2)),
+                                                Status: r.Status,
+                                                Color: Coalesce(LookUp(Tours, Id = r.Tour, Color), cInk3),
+                                                Chip: Left(r.Slot, 5) & " " & Switch(r.Tour, "lab", "Lab", "center", "센터", "mtv", "시화", "combined", "센터+Lab", "center_mtv", "센터+시화", "all3", "3곳", "기타") & " " & r.Company,
+                                                Title: r.Company,
+                                                Sub: r.ScheduleText & " · " & r.TourName,
+                                                Lang: If(r.Language = "영어", "EN", r.Language = "중국어", "ZH", r.Interpreter = "Y", "통역", "")
+                                            }
+                                        ),
+                                        ForAll(
+                                            Filter(TourBusy, Kind = "막기" && (MonthKey = Text(a, "yyyy-mm") || MonthKey = Text(gCalMonth, "yyyy-mm") || MonthKey = Text(b, "yyyy-mm"))) As k,
+                                            {
+                                                Key: k.DateKey,
+                                                Kind: "block",
+                                                ReqId: 0,
+                                                BlockId: k.ID,
+                                                Tour: "",
+                                                Sort: -1,
+                                                Status: "막기",
+                                                Color: cInk2,
+                                                Chip: "막힘 · " & k.Reason,
+                                                Title: "일정 막힘",
+                                                Sub: k.Reason,
+                                                Lang: ""
+                                            }
+                                        )
+                                    )
+                                )
+                              Font: =fnt
+                              Size: =9
+                              FontWeight: =FontWeight.Semibold
+                              RadiusTopLeft: =6
+                              RadiusTopRight: =6
+                              RadiusBottomLeft: =6
+                              RadiusBottomRight: =6
+                              Fill: =cSurface
+                              Color: =cInk
+                              HoverFill: =cSoft
+                              PressedFill: =cSoft
+                              HoverColor: =cInk
+                              PressedColor: =cInk
+                              BorderColor: =cLine
+                              HoverBorderColor: =cInk3
+                              BorderThickness: =1
+                              DisabledFill: =cSurface
+                              DisabledColor: =cInk3
+                              DisabledBorderColor: =cLine
+                              Visible: =ThisItem.Kind = "block" && gAdminSite <> "hq"
+                  - lblCalEmpty:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="이 날은 예약이 없습니다."
+                        X: =20
+                        Y: =90
+                        Width: =282
+                        Height: =20
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk3
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Visible: =IsEmpty(galCalDay.AllItems)
+                  - btnCalBlockDay:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="이 날 일정 막기"
+                        X: =20
+                        Y: =488
+                        Width: =282
+                        Height: =36
+                        OnSelect: |-
+                          =Set(gBlockDate, DateValue(gCalDay));
+                          Set(gBlockTarget, If(gAdminSite = "mtv", "시화MTV", "메가와이즈"));
+                          Set(gBlockTime, "종일");
+                          Set(gShowBlock, true);
+                          Navigate(scrAdmin, ScreenTransition.None)
+                        Font: =fnt
+                        Size: =10.5
+                        FontWeight: =FontWeight.Semibold
+                        RadiusTopLeft: =6
+                        RadiusTopRight: =6
+                        RadiusBottomLeft: =6
+                        RadiusBottomRight: =6
+                        Fill: =cSurface
+                        Color: =cInk
+                        HoverFill: =cSoft
+                        PressedFill: =cSoft
+                        HoverColor: =cInk
+                        PressedColor: =cInk
+                        BorderColor: =cLine
+                        HoverBorderColor: =cInk3
+                        BorderThickness: =1
+                        DisabledFill: =cSurface
+                        DisabledColor: =cInk3
+                        DisabledBorderColor: =cLine
+                        Visible: =gAdminSite <> "hq"
+                  - rctCalLegendLine:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        X: =20
+                        Y: =538
+                        Width: =282
+                        Height: =1
+                        Fill: =cLine
+                  - lblCalLegend:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="칩 색 = 상태 · 왼쪽 띠 = 투어"
+                        X: =20
+                        Y: =548
+                        Width: =282
+                        Height: =20
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                  - tagLgWait:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="대기"
+                        X: =20
+                        Y: =572
+                        Width: =50
+                        Height: =22
+                        DisplayMode: =DisplayMode.View
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Fill: =ColorValue("#FBF3DB")
+                        Color: =ColorValue("#956400")
+                        BorderThickness: =0
+                        RadiusTopLeft: =11
+                        RadiusTopRight: =11
+                        RadiusBottomLeft: =11
+                        RadiusBottomRight: =11
+                        OnSelect: =false
+                  - tagLgOk:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="승인"
+                        X: =76
+                        Y: =572
+                        Width: =50
+                        Height: =22
+                        DisplayMode: =DisplayMode.View
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Fill: =ColorValue("#EDF3EC")
+                        Color: =ColorValue("#346538")
+                        BorderThickness: =0
+                        RadiusTopLeft: =11
+                        RadiusTopRight: =11
+                        RadiusBottomLeft: =11
+                        RadiusBottomRight: =11
+                        OnSelect: =false
+                  - tagLgDone:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="완료"
+                        X: =132
+                        Y: =572
+                        Width: =50
+                        Height: =22
+                        DisplayMode: =DisplayMode.View
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Fill: =ColorValue("#E1F3FE")
+                        Color: =ColorValue("#1F6C9F")
+                        BorderThickness: =0
+                        RadiusTopLeft: =11
+                        RadiusTopRight: =11
+                        RadiusBottomLeft: =11
+                        RadiusBottomRight: =11
+                        OnSelect: =false
+                  - tagLgNo:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="거절"
+                        X: =188
+                        Y: =572
+                        Width: =50
+                        Height: =22
+                        DisplayMode: =DisplayMode.View
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Fill: =ColorValue("#EFEFED")
+                        Color: =cInk3
+                        BorderThickness: =0
+                        RadiusTopLeft: =11
+                        RadiusTopRight: =11
+                        RadiusBottomLeft: =11
+                        RadiusBottomRight: =11
+                        OnSelect: =false
+                  - tagLgBlock:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="막힘"
+                        X: =244
+                        Y: =572
+                        Width: =58
+                        Height: =22
+                        DisplayMode: =DisplayMode.View
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Fill: =cSoft
+                        Color: =cInk2
+                        BorderThickness: =0
+                        RadiusTopLeft: =11
+                        RadiusTopRight: =11
+                        RadiusBottomLeft: =11
+                        RadiusBottomRight: =11
+                        OnSelect: =false
+                  - lblCalLegend2:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="EN · ZH · 통역 = 외국어 투어 / 통역 동반"
+                        X: =20
+                        Y: =600
+                        Width: =282
+                        Height: =20
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk3
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+- hdrCBar:
+    Control: Rectangle@2.3.0
+    Properties:
+      X: =0
+      Y: =0
+      Width: =sw
+      Height: =56
+      Fill: =cSurface
+- hdrCLine:
+    Control: Rectangle@2.3.0
+    Properties:
+      X: =0
+      Y: =55
+      Width: =sw
+      Height: =1
+      Fill: =cLine
+- hdrCMark:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="TDL"
+      X: =ox + 24
+      Y: =16
+      Width: =24
+      Height: =24
+      Font: =fnt
+      Size: =7
+      Color: =cSurface
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      FontWeight: =FontWeight.Bold
+      Align: =Align.Center
+      Fill: =cBrand
+- hdrCTitle:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="TDL 방문 예약"
+      X: =ox + 58
+      Y: =16
+      Width: =200
+      Height: =24
+      Font: =fnt
+      Size: =12
+      Color: =cInk
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      FontWeight: =FontWeight.Semibold
+- hdrCNavBook:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="방문 신청"
+      X: =ox + 520
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrBook, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =true
+- hdrCNavMy:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="내 신청"
+      X: =ox + 624
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrMy, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrMy, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrMy, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrMy, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =true
+- hdrCNavAdmin:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="관리자"
+      X: =ox + 728
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrAdmin, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrAdmin, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrAdmin, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrAdmin, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =!IsBlank(gAdminSite)
+- hdrCNavCal:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="달력"
+      X: =ox + 832
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrCalendar, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrCalendar, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrCalendar, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrCalendar, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =!IsBlank(gAdminSite)
+- hdrCNavStats:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="통계"
+      X: =ox + 936
+      Y: =12
+      Width: =96
+      Height: =32
+      OnSelect: =Navigate(scrStats, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrStats, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrStats, cSoft, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrStats, cInk, cInk2)
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderThickness: =0
+      RadiusTopLeft: =6
+      RadiusTopRight: =6
+      RadiusBottomLeft: =6
+      RadiusBottomRight: =6
+      Visible: =!IsBlank(gAdminSite)
+- hdrCUser:
+    Control: Label@2.5.1
+    Properties:
+      Text: =gMe.displayName & If(IsBlank(gMe.department), "", " · " & gMe.department)
+      X: =ox + 1042
+      Y: =18
+      Width: =300
+      Height: =20
+      Font: =fnt
+      Size: =9.75
+      Color: =cInk2
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      Align: =Align.Right

@@ -65,4 +65,16 @@ Set-PnPList -Identity 'VisitAttendees' -BreakRoleInheritance -CopyRoleAssignment
 $owners = Get-PnPGroup -AssociatedOwnerGroup
 Set-PnPListPermission -Identity 'VisitAttendees' -Group $owners.Title -AddRole 'Full Control'
 Write-Host "VisitAttendees: 사이트 소유자 그룹만 접근하도록 바꿨습니다. 관리자를 소유자 그룹(또는 별도 그룹)에 추가하세요."
+# 항목 수준 권한 (가이드 3-4)
+#  - VisitRequests: 신청자는 자기 신청만 읽고 고친다 (관리자는 소유자 그룹이라 전체가 보임)
+#  - TourBusy: 모두 읽고, 신청할 때 '대기' 행을 추가하며, 자기가 만든 행만 고칠 수 있다
+#    (ReadSecurity 1 = 모든 항목, 2 = 자기 항목만 / WriteSecurity 1 = 모든 항목, 2 = 자기 항목만)
+foreach ($pair in @(@('VisitRequests', 2, 2), @('TourBusy', 1, 2))) {
+    $list = Get-PnPList -Identity $pair[0]
+    $list.ReadSecurity = $pair[1]
+    $list.WriteSecurity = $pair[2]
+    $list.Update()
+}
+Invoke-PnPQuery
+
 Write-Host '완료'
