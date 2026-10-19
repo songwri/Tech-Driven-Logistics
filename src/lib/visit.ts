@@ -440,6 +440,8 @@ export interface VisitDraft {
   category: VisitCategory
   /** 고객 방문일 때만 */
   clientType?: ClientType
+  /** 고객 유형이 '파트너사 소개 고객'일 때 소개한 파트너사 이름 */
+  partnerName?: string
   /** 투어 진행 언어 */
   language: TourLanguage
   /** 외국어 투어일 때 언어 ('영어', '기타: 태국어' 등) */
@@ -889,7 +891,9 @@ export function sectionProblems(draft: VisitDraft, options: DraftCheckOptions = 
       ? external ? '업체명을 입력해 주세요.' : '방문 조직명을 입력해 주세요.'
       : external && draft.industries.length === 0
         ? '업종을 선택해 주세요.'
-        : null
+        : external && draft.clientType === 'partner' && blank(draft.partnerName ?? '')
+          ? '소개한 파트너사명을 입력해 주세요.'
+          : null
 
   const purpose = draft.purposes.length === 0
     ? '방문 목적을 선택해 주세요.'
@@ -951,6 +955,7 @@ export function missingFields(draft: VisitDraft): Set<string> {
   mark('host.email', !EMAIL.test(draft.host.email.trim()))
   const external = draft.category === 'external'
   mark('clientType', external && !draft.clientType)
+  mark('partnerName', external && draft.clientType === 'partner' && blank(draft.partnerName ?? ''))
   mark('company', blank(draft.company))
   mark('industries', external && draft.industries.length === 0)
   mark('purposes', draft.purposes.length === 0 || draft.purposes.includes(OTHER))

@@ -237,7 +237,7 @@ var VISIT_HEADERS = [
   '방문인원', '방문자명단', '요청사항', '개인정보동의', '관리자메모', '토큰', '수정일시', '방문자JSON',
   '투어언어', '외국어', '통역동반', '출처', '주요인원', '가이드', '유관부서', '후속진행',
   // 새 열은 기존 시트와 맞도록 맨 뒤에 붙인다 (시트를 열면 제목이 자동으로 추가된다).
-  '담당(실)', '통역언어', '실제방문인원', '센터별승인', '방문자동의확인',
+  '담당(실)', '통역언어', '실제방문인원', '센터별승인', '방문자동의확인', '파트너사명',
 ];
 var BLOCKED_HEADERS = ['날짜', '시간대(비우면 종일)', '사유', '대상(all/center/lab/mtv)', 'id'];
 
@@ -892,6 +892,7 @@ function rowToRequest_(row, col) {
     departments: splitList_(get('유관부서')),
     followUp: String(get('후속진행')),
     actualHeadcount: headcountFromCell_(get('실제방문인원')),
+    partnerName: String(get('파트너사명')).trim(),
     approvals: approvalsFromText_(get('센터별승인')),
   };
 }
@@ -999,6 +1000,7 @@ function fillVisitRow_(values, col, request, extra) {
   set('후속진행', request.followUp || '');
   set('실제방문인원', typeof request.actualHeadcount === 'number' ? request.actualHeadcount : '');
   set('센터별승인', needsSiteApproval_(request) ? approvalsText_(request.approvals) : '');
+  set('파트너사명', request.clientType === 'partner' ? (request.partnerName || '') : '');
   for (var key in (extra || {})) set(key, extra[key]);
 }
 
@@ -1164,6 +1166,9 @@ function sanitizeVisit_(payload, requireConsent) {
     slot: slot,
     category: category,
     clientType: clientType,
+    // 신청 화면에서는 파트너사명을 꼭 받고, 관리자 수정(requireConsent=false)은 이전에 이름 없이 저장된 기록도 고칠 수 있게 비워 둘 수 있다.
+    partnerName: clientType === 'partner'
+      ? (requireConsent ? requireText_(payload.partnerName, '파트너사명', 40) : optionalText_(payload.partnerName, 40)).replace(/,/g, ' ') : '',
     language: language,
     foreignLanguage: foreignLanguage,
     interpreter: payload.interpreter === true,
@@ -1343,6 +1348,7 @@ function sanitizeManual_(payload) {
     category: category,
     clientType: category === 'external' && (payload.clientType === 'new' || payload.clientType === 'existing' || payload.clientType === 'partner')
       ? payload.clientType : undefined,
+    partnerName: category === 'external' && payload.clientType === 'partner' ? optionalText_(payload.partnerName, 40).replace(/,/g, ' ') : '',
     language: language,
     foreignLanguage: language === 'foreign' ? optionalText_(payload.foreignLanguage, 40).replace(/,/g, ' ') : '',
     interpreter: payload.interpreter === true,
@@ -1778,7 +1784,9 @@ function reservationMailHtml_(r, site) {
 
   var detail = rows_([
     ['방문 유형', r.category === 'internal' ? '내부 방문'
-      : '고객 방문 · ' + (r.clientType === 'new' ? '신규 고객사' : r.clientType === 'partner' ? '파트너사 소개 고객' : '기존 고객사')],
+      : '고객 방문 · ' + (r.clientType === 'new' ? '신규 고객사'
+        : r.clientType === 'partner' ? '파트너사 소개 고객' + (r.partnerName ? ' (' + escapeHtml_(r.partnerName) + ')' : '')
+        : '기존 고객사')],
     ['투어 언어', languageText_(r)],
     [r.category === 'internal' ? '방문 조직' : '업체명', escapeHtml_(r.company)],
     ['업종', listOrNone_(r.industries)],

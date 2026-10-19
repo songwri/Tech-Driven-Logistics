@@ -34,6 +34,7 @@ const initialDraft = (): VisitDraft => ({
   slot: '',
   category: 'external',
   clientType: 'existing',
+  partnerName: '',
   language: 'ko',
   foreignLanguage: '',
   interpreter: false,
