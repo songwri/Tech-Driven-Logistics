@@ -519,7 +519,7 @@ export function CompanyFields({
                   key={clientType}
                   multi={false}
                   selected={draft.clientType === clientType}
-                  onClick={() => onChange({ clientType })}
+                  onClick={() => onChange({ clientType, partnerName: clientType === 'partner' ? draft.partnerName : '' })}
                   className="min-w-28 justify-center"
                 >
                   {CLIENT_TYPE_LABEL[clientType]}
@@ -527,9 +527,22 @@ export function CompanyFields({
               ))}
             </div>
             {draft.clientType === 'partner' && (
-              <p className="mt-2 text-[12px] leading-relaxed text-warm-600">
-                파트너사가 소개해 함께 오는 고객입니다. 업체명에는 방문하는 고객사를 적고, 소개한 파트너사는 아래 '담당자 의견'에 남겨 주세요.
-              </p>
+              <div className="mt-3">
+                <Field
+                  label="파트너사명"
+                  required
+                  hint="소개해 주신 파트너사 이름입니다. 업체명에는 방문하는 고객사를 적어 주세요."
+                  error={errors?.has('partnerName') ? '소개한 파트너사명을 입력해 주세요.' : null}
+                >
+                  <Input
+                    value={draft.partnerName ?? ''}
+                    onChange={(e) => onChange({ partnerName: e.target.value })}
+                    placeholder="예) 한국물류파트너스"
+                    maxLength={40}
+                    invalid={errors?.has('partnerName')}
+                  />
+                </Field>
+              </div>
             )}
             <GroupError show={Boolean(errors?.has('clientType'))}>고객 유형을 선택해 주세요.</GroupError>
           </div>

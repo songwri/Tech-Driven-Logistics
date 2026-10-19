@@ -132,6 +132,7 @@ export function ManualVisitModal({
   const [tour, setTour] = useState(initial?.tour ?? (site === 'mtv' ? 'mtv' : 'other'))
   const [status, setStatus] = useState<VisitStatus>(initial?.status ?? 'approved')
   const [category, setCategory] = useState(initial?.category ?? 'external')
+  const [partnerName, setPartnerName] = useState(initial?.partnerName ?? '')
   const [clientType, setClientType] = useState<'none' | 'existing' | 'new' | 'partner'>(initial?.clientType ?? 'none')
   const [company, setCompany] = useState(initial?.company ?? '')
   const [purposes, setPurposes] = useState((initial?.purposes ?? []).join(', '))
@@ -169,6 +170,7 @@ export function ManualVisitModal({
       source: 'manual',
       category,
       clientType: category === 'external' && clientType !== 'none' ? clientType : undefined,
+      partnerName: category === 'external' && clientType === 'partner' ? partnerName.trim().replace(/,/g, ' ') : '',
       language: language === 'ko' ? 'ko' : 'foreign',
       foreignLanguage: language === 'en' ? '영어' : language === 'zh' ? '중국어' : language === 'keep' ? initialForeign : '',
       interpreter,
@@ -285,6 +287,16 @@ export function ManualVisitModal({
                     ['partner', '파트너사'],
                   ]}
                 />
+                {clientType === 'partner' && (
+                  <Input
+                    className="mt-2"
+                    value={partnerName}
+                    onChange={(e) => setPartnerName(e.target.value)}
+                    placeholder="소개한 파트너사명"
+                    maxLength={40}
+                    aria-label="파트너사명"
+                  />
+                )}
               </div>
             )}
             <div>

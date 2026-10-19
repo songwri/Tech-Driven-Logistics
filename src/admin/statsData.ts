@@ -162,6 +162,65 @@ export function divisionStats(requests: VisitRequest[]) {
   return [...map.values()]
 }
 
+/* ---------------------------------------------------------- 파트너사별 실적 */
+
+const NO_PARTNER_NAME = '(파트너사명 미입력)'
+
+/** 파트너사명 비교용 키: 공백 · (주) · 대소문자 차이는 같은 곳으로 본다 */
+const partnerKey = (name: string) => name.toLowerCase().replace(/\s+|\(주\)|㈜|주식회사/g, '')
+
+export interface PartnerRow {
+  /** 가장 최근 방문에 적힌 표기 */
+  name: string
+  /** 소개한 방문 건 */
+  requests: VisitRequest[]
+  count: number
+  /** 방문 인원 합계 (명) */
+  visitors: number
+  /** 소개한 고객사 수 (같은 업체는 한 곳) */
+  companies: number
+  /** 가장 최근 방문일 */
+  last: string
+}
+
+/** 파트너사가 소개한 고객 방문을 파트너사별로 묶는다. 건수가 많은 순. */
+export function partnerStats(requests: VisitRequest[]): PartnerRow[] {
+  const groups = new Map<string, VisitRequest[]>()
+  const sorted = requests
+    .filter((request) => request.category === 'external' && request.clientType === 'partner')
+    .sort((a, b) => b.date.localeCompare(a.date))
+  for (const request of sorted) {
+    const key = partnerKey(request.partnerName ?? '') || NO_PARTNER_NAME
+    groups.set(key, [...(groups.get(key) ?? []), request])
+  }
+  return [...groups.values()]
+    .map((list) => ({
+      name: (list[0].partnerName ?? '').trim() || NO_PARTNER_NAME,
+      requests: list,
+      count: list.length,
+      visitors: list.reduce((sum, request) => sum + headcountOf(request), 0),
+      companies: new Set(list.map((request) => partnerKey(request.company))).size,
+      last: list[0].date,
+    }))
+    .sort((a, b) => b.count - a.count || b.visitors - a.visitors || a.name.localeCompare(b.name, 'ko'))
+}
+
+function partnerSheet(name: string, requests: VisitRequest[]): Sheet {
+  const rows = partnerStats(requests)
+  return {
+    name,
+    columns: [
+      { header: '순위', width: 6 },
+      { header: '파트너사', width: 24 },
+      { header: '소개 방문 건수', width: 14 },
+      { header: '방문 인원', width: 10 },
+      { header: '소개 고객사 수', width: 14 },
+      { header: '최근 방문일', width: 14 },
+    ],
+    rows: rows.map((row, index) => [index + 1, row.name, row.count, row.visitors, row.companies, formatDateShort(row.last)]),
+  }
+}
+
 function divisionSheet(name: string, requests: VisitRequest[]): Sheet {
   const rows = divisionStats(requests)
   const count = rows.reduce((sum, row) => sum + row.count, 0)
@@ -232,6 +291,7 @@ function listSheet(name: string, requests: VisitRequest[]): Sheet {
       { header: '투어', width: 13 },
       { header: '투어 언어', width: 18 },
       { header: '방문 유형', width: 12 },
+      { header: '파트너사', width: 18 },
       { header: '업체/조직', width: 22 },
       { header: '업종', width: 18 },
       { header: '방문 목적', width: 22 },
@@ -254,6 +314,7 @@ function listSheet(name: string, requests: VisitRequest[]): Sheet {
       TOUR_BY_ID[request.tour].label,
       languageSummary(request),
       clientSegment(request),
+      request.clientType === 'partner' ? (request.partnerName ?? '') : '',
       request.company,
       request.industries.join(', '),
       request.purposes.join(', '),
@@ -299,6 +360,7 @@ export function buildStatsSheets({
     periodSheet('연도별', '연도', yearlyRows(requests, years), metrics),
     distributionSheet(`항목별 분포(${periodLabel})`, scoped),
     divisionSheet(`담당(실)별(${periodLabel})`, scoped),
+    partnerSheet(`파트너사별(${periodLabel})`, scoped),
     listSheet(`예약 목록(${periodLabel})`, periodRequests),
   ]
 }

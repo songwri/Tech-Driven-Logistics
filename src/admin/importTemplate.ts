@@ -47,6 +47,7 @@ const GUIDE: Record<Header, [string, string]> = {
   실제방문인원: ['단체 방문 등 명단과 다른 실제 인원 (비우면 명단 · 방문인원)', ''],
   센터별승인: ['비워 두세요 (복합 투어 웹 예약의 센터별 승인, 자동)', ''],
   방문자동의확인: ['비워 두세요 (웹 예약에서 신청자가 방문자 동의를 확인한 기록, 자동)', ''],
+  파트너사명: ['고객구분이 파트너사 소개 고객일 때 소개한 파트너사 이름', ''],
 }
 
 const WIDTHS: Partial<Record<Header, number>> = {
@@ -124,6 +125,7 @@ function toSheetRow(request: VisitRequest): CellValue[] {
     실제방문인원: request.actualHeadcount ?? '',
     센터별승인: approvalsText(request.approvals),
     방문자동의확인: request.visitorConsent ? '확인' : '',
+    파트너사명: request.clientType === 'partner' ? (request.partnerName ?? '') : '',
   }
   return VISIT_SHEET_HEADERS.map((header) => values[header])
 }

@@ -280,6 +280,7 @@ export function RequestModal({ site, readOnly, request, requests, onClose, onSet
         <div>
           <SectionTitle>방문 정보</SectionTitle>
           <Row label="구분">{clientSegment(request)}</Row>
+          {request.clientType === 'partner' && <Row label="파트너사">{request.partnerName || '(파트너사명 미입력)'}</Row>}
           <Row label="투어 언어">
             <span className={request.language === 'foreign' ? 'font-semibold text-brand' : undefined}>
               {languageSummary(request)}

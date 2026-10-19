@@ -165,6 +165,8 @@ const COMPANIES: [string, string[]][] = [
   ['미래모빌리티', ['오토(Auto)']], ['메디팜', ['헬스케어']], ['우드앤홈', ['건자재']],
   ['오션로지스', ['기타']], ['뷰티랩코리아', ['패션&뷰티']], ['신선마켓', ['식품용품']],
 ]
+/** 데모: 고객을 소개해 주는 파트너사 (많이 소개하는 곳이 앞에 오도록 가중치를 둔다) */
+const PARTNERS = ['한국물류파트너스', '한국물류파트너스', '한국물류파트너스', '스마트로지스', '스마트로지스', '넥스트로직', '글로벌SCM']
 const HOSTS: [string, string, string][] = [
   ['김도현', '책임', 'CL사업담당 풀필먼트팀'],
   ['최유리', '선임', 'CL사업담당 신사업팀'],
@@ -252,7 +254,13 @@ function generate(): VisitRequest[] {
           date: key,
           slot,
           category: internal ? 'internal' : 'external',
-          clientType: internal ? undefined : ((roll) => (roll < 0.5 ? 'existing' : roll < 0.88 ? 'new' : 'partner'))(random()),
+          ...(() => {
+            if (internal) return { clientType: undefined }
+            const roll = random()
+            if (roll < 0.5) return { clientType: 'existing' as const }
+            if (roll < 0.88) return { clientType: 'new' as const }
+            return { clientType: 'partner' as const, partnerName: pick(PARTNERS) }
+          })(),
           company: internal ? pick(['CL사업담당', '경영지원팀', 'IT전략팀', '해외법인 교육단']) : company,
           ...(random() < 0.2
             ? { language: 'foreign' as const, foreignLanguage: '영어', interpreter: random() < 0.5 }

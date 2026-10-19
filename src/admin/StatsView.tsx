@@ -26,7 +26,8 @@ import { BarList, ColumnChart, DonutChart, type Datum } from './charts'
 import { LanguageFlag } from './flags'
 import { StatsGrid } from './StatsGrid'
 import { VisitListModal } from './VisitListModal'
-import { buildStatsSheets, divisionStats, metricColumns, monthlyRows, yearlyRows } from './statsData'
+import { buildStatsSheets, divisionStats, metricColumns, monthlyRows, partnerStats, yearlyRows } from './statsData'
+import { PartnerPerformance } from './PartnerPerformance'
 
 /** 통합 관제의 센터별 방문: 복합 투어는 들르는 센터마다 한 번씩 센다. */
 const PLACES: { id: Resource; label: string; color: string }[] = [
@@ -235,6 +236,7 @@ export function StatsView({ requests, site }: { requests: VisitRequest[]; site: 
     requests: scoped.filter((request) => request.visitors.some((visitor) => visitor.jobs.includes(job))),
   }))
 
+  const partners = partnerStats(scoped)
   const divisions = divisionStats(scoped)
   const divisionCounts: Datum[] = divisions.map((row) =>
     withList(row.label, scoped.filter((request) => divisionGroup(request.host.division) === row.label)),
@@ -456,6 +458,13 @@ export function StatsView({ requests, site }: { requests: VisitRequest[]; site: 
           <BarList data={byValue(tours)} onSelect={select('투어 종류')} />
         </Card>
       </div>
+
+      <Card title="파트너사별 실적" subtitle={`${periodLabel} · 파트너사가 소개해 함께 온 고객 방문 · 많은 순`}>
+        <PartnerPerformance
+          rows={partners}
+          onSelect={(row) => setDetail({ title: `파트너사 · ${row.name}`, requests: row.requests })}
+        />
+      </Card>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <Card title="업종 (고객 방문)" subtitle={`${periodLabel} · 많은 순`}>
