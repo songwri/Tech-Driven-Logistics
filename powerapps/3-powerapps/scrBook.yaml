@@ -1,4 +1,10 @@
 # scrBook — 방문 신청 (3단계)
+# ── [PA 전용] 웹앱에 없는 기능 · 수정하면 이 목록과 수식 속 '// [PA 전용]' 주석도 함께 고칠 것 (README 14) ──
+#   · btnNext(신청하기): 연속 클릭 잠금 · 신청 직전 재확인 · 동시 신청은 먼저 저장된 쪽만 · 신청번호 무작위 4자리 · 메일 흐름 실패 경고
+#   · galCal: 공휴일 목록(HolidayKeys)이 끝난 해 뒤 날짜는 닫음
+#   · 신청 담당자 칸: 회사 계정(Office 365)에서 자동 입력
+#   · 참석자 명단 대신 예상 인원 + Forms 링크 (참석자 본인이 입력 · 동의)
+#   · conBBody: 본문만 스크롤 (머리말 · 바닥 버튼 고정)
 # 1) 트리 뷰에서 새 화면(빈 화면)을 만들고 이름을 scrBook 으로 바꿉니다.
 # 2) 화면 속성: Fill = cBg, Width = sw, Height = sh
 #    OnVisible = If(gNeedReset, Reset(txtHostName); Reset(txtHostTitle); Reset(txtHostDivision); Reset(txtHostOrg); Reset(txtHostPhone); Reset(txtHostEmail); Reset(txtCompany); Reset(txtIndustryEtc); Reset(txtPurposeEtc); Reset(txtInterpLang); Reset(chkInterp); Reset(txtHeadcount); Reset(txtComment); Reset(txtAttendeeEmails); Reset(chkConsent); Set(gNeedReset, false))
@@ -13,7 +19,7 @@
       Height: =sh - 120
       LayoutDirection: =LayoutDirection.Vertical
       LayoutAlignItems: =LayoutAlignItems.Center
-      LayoutOverflowY: =LayoutOverflow.Scroll
+      LayoutOverflowY: =LayoutOverflow.Scroll // [PA 전용] 본문 스크롤 레이아웃. 웹은 페이지 스크롤
       Fill: =Color.Transparent
       BorderThickness: =0
       DropShadow: =DropShadow.None
@@ -452,7 +458,8 @@
                       Variant: Vertical
                       Properties:
                         Items: |-
-                          =With(
+                          =// [PA 전용] Year(d) <= HolidayLastYear 로 공휴일 목록이 끝난 해 뒤 날짜를 닫음. 웹은 공휴일을 해마다 계산(src/lib/holidays.ts)
+                          With(
                               {start: DateAdd(gMonth, 1 - Weekday(gMonth), TimeUnit.Days), earliest: If(gTour.Mtv, EarliestMtv, EarliestBase)},
                               ForAll(
                                   Sequence(42, 0) As n,
@@ -897,7 +904,7 @@
                   - txtHostName:
                       Control: Classic/TextInput@2.3.2
                       Properties:
-                        Default: =gMe.displayName
+                        Default: =gMe.displayName // [PA 전용] 회사 계정 자동 입력. 웹은 직접 입력
                         HintText: =""
                         X: =20
                         Y: =76
@@ -2306,7 +2313,8 @@
       Width: =120
       Height: =40
       OnSelect: |-
-        =Switch(
+        =// [PA 전용] 연속 클릭 잠금(locSubmitting), 3단계 신청 직전 SharePoint 재확인, TourBusy 에 대기 자리를 먼저 잡고 ID 가 작은 쪽만 남김, 신청번호 뒤 무작위 4자리, 흐름 실패 경고. 웹은 Apps Script 잠금(LockService) 안에서 확인 후 저장
+        Switch(
             gStep,
             1, If(IsBlank(gDate) || IsBlank(gSlot), Notify("방문일과 시간을 선택해 주세요.", NotificationType.Warning), Set(gStep, 2)),
             2, With(
@@ -2440,4 +2448,4 @@
       BorderThickness: =0
       DisabledFill: =cSoft
       DisabledColor: =cInk3
-      DisplayMode: =If(locSubmitting, DisplayMode.Disabled, DisplayMode.Edit)
+      DisplayMode: =If(locSubmitting, DisplayMode.Disabled, DisplayMode.Edit) // [PA 전용] 저장 중 버튼 잠금. 웹에는 없음

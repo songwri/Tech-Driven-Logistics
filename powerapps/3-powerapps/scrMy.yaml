@@ -1,4 +1,8 @@
 # scrMy — 내 신청 (신청자 본인 것만)
+# ── [PA 전용] 웹앱에 없는 기능 · 수정하면 이 목록과 수식 속 '// [PA 전용]' 주석도 함께 고칠 것 (README 14) ──
+#   · 화면 전체: 신청자 본인의 신청 목록 · 참석자 제출 현황 · 대기 건 취소 (웹에는 신청자용 조회 화면이 없음)
+#   · btnMyCancel: 취소하면 TourBusy 의 대기 자리도 지움
+#   · conMBody: 본문만 스크롤
 # 1) 새 화면(빈 화면) → 이름 scrMy, 화면 Fill = cBg, Width = sw, Height = sh
 #    OnVisible = Refresh(VisitRequests); UpdateContext({locCancelArm: false})
 # 2) 이 파일 내용을 전부 복사 → 트리 뷰에서 scrMy 오른쪽 클릭 → '붙여넣기'
@@ -12,7 +16,7 @@
       Height: =sh - 56
       LayoutDirection: =LayoutDirection.Vertical
       LayoutAlignItems: =LayoutAlignItems.Center
-      LayoutOverflowY: =LayoutOverflow.Scroll
+      LayoutOverflowY: =LayoutOverflow.Scroll // [PA 전용] 본문 스크롤 레이아웃. 웹은 페이지 스크롤
       Fill: =Color.Transparent
       BorderThickness: =0
       DropShadow: =DropShadow.None
@@ -673,7 +677,8 @@
                         Width: =200
                         Height: =40
                         OnSelect: |-
-                          =If(
+                          =// [PA 전용] 신청자 본인 취소 + TourBusy 대기 자리 해제. 웹에는 신청자 취소 기능이 없음
+                          If(
                               locCancelArm,
                               With(
                                   {sel: galMy.Selected},

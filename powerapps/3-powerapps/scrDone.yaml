@@ -1,4 +1,7 @@
 # scrDone — 신청 완료
+# ── [PA 전용] 웹앱에 없는 기능 · 수정하면 이 목록과 수식 속 '// [PA 전용]' 주석도 함께 고칠 것 (README 14) ──
+#   · 완료 화면의 Forms 링크 복사: 참석자가 Forms 로 직접 입력 · 동의 (웹은 신청자가 명단 대리 입력)
+#   · conDBody: 본문만 스크롤
 # 1) 새 화면(빈 화면) → 이름 scrDone, 화면 Fill = cBg, Width = sw, Height = sh
 # 2) 이 파일 내용을 전부 복사 → 트리 뷰에서 scrDone 오른쪽 클릭 → '붙여넣기'
 - conDBody:
@@ -11,7 +14,7 @@
       Height: =sh - 56
       LayoutDirection: =LayoutDirection.Vertical
       LayoutAlignItems: =LayoutAlignItems.Center
-      LayoutOverflowY: =LayoutOverflow.Scroll
+      LayoutOverflowY: =LayoutOverflow.Scroll // [PA 전용] 본문 스크롤 레이아웃. 웹은 페이지 스크롤
       Fill: =Color.Transparent
       BorderThickness: =0
       DropShadow: =DropShadow.None
@@ -143,7 +146,8 @@
                         Width: =108
                         Height: =40
                         OnSelect: |-
-                          =Copy(gSaved.FormsLink);
+                          =// [PA 전용] 참석자 Forms 링크 복사. 웹은 신청자가 방문자 명단을 직접 입력
+                          Copy(gSaved.FormsLink);
                           Notify("링크를 복사했습니다. 참석자에게 전달해 주세요.", NotificationType.Success)
                         Font: =fnt
                         Size: =10.5

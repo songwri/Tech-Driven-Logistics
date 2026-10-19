@@ -1,4 +1,11 @@
 # scrAdmin — 관리자 (TourAdmins 목록에 있는 사람만 들어올 수 있음)
+# ── [PA 전용] 웹앱에 없는 기능 · 수정하면 이 목록과 수식 속 '// [PA 전용]' 주석도 함께 고칠 것 (README 14) ──
+#   · 승인 · 거절 · 일정 취소 · 방문 완료: 처리 중 버튼 잠금 · 누르는 순간 최신 상태 재확인 · 메일 흐름 실패 경고
+#   · 승인: 복합 투어에서 자기 센터 칸만 저장 + 두 센터 모두 승인이면 바로 확정 (동시 승인 덮어쓰기 방지)
+#   · 일정 막기: 막기 번호 무작위 4자리
+#   · OnVisible: 공휴일 목록이 끝나 가면 알림
+#   · 관리자 구분: 키 입력 대신 회사 로그인 + TourAdmins 목록
+#   · conABody: 본문만 스크롤
 # 1) 새 화면(빈 화면) → 이름 scrAdmin, 화면 Fill = cBg, Width = sw, Height = sh
 #    OnVisible =
 #      If(IsBlank(gAdminSite), Notify("관리자 권한이 없습니다.", NotificationType.Error); Navigate(scrBook),
@@ -17,7 +24,7 @@
       Height: =sh - 56
       LayoutDirection: =LayoutDirection.Vertical
       LayoutAlignItems: =LayoutAlignItems.Center
-      LayoutOverflowY: =LayoutOverflow.Scroll
+      LayoutOverflowY: =LayoutOverflow.Scroll // [PA 전용] 본문 스크롤 레이아웃. 웹은 페이지 스크롤
       Fill: =Color.Transparent
       BorderThickness: =0
       DropShadow: =DropShadow.None
@@ -409,7 +416,8 @@
                         Width: =110
                         Height: =40
                         OnSelect: |-
-                          =If(
+                          =// [PA 전용] 연속 클릭 잠금, 최신 상태 재확인, TourBusy 대기 자리 해제, 흐름 실패 경고
+                          If(
                               !locWorking,
                               UpdateContext({locWorking: true});
                               With(
@@ -454,7 +462,7 @@
                         DisabledColor: =cInk3
                         DisabledBorderColor: =cLine
                         Visible: =gSel.Status = "대기" && Switch(gAdminSite, "main", gSel.ApproveMain, "mtv", gSel.ApproveMtv, "") = "대기"
-                        DisplayMode: =If(locWorking, DisplayMode.Disabled, DisplayMode.Edit)
+                        DisplayMode: =If(locWorking, DisplayMode.Disabled, DisplayMode.Edit) // [PA 전용] 처리 중 버튼 잠금. 웹에는 없음
                   - btnApprove:
                       Control: Classic/Button@2.2.0
                       Properties:
@@ -464,7 +472,8 @@
                         Width: =110
                         Height: =40
                         OnSelect: |-
-                          =If(
+                          =// [PA 전용] 연속 클릭 잠금, 최신 상태 재확인, 자기 센터 칸만 저장 후 두 센터 모두 승인이면 확정, 대기 자리를 관리자 행(예약)으로 교체, 흐름 실패 경고. 웹은 서버 잠금 안에서 처리
+                          If(
                               !locWorking,
                               UpdateContext({locWorking: true});
                               With(
@@ -533,7 +542,7 @@
                         DisabledFill: =cSoft
                         DisabledColor: =cInk3
                         Visible: =gSel.Status = "대기" && Switch(gAdminSite, "main", gSel.ApproveMain, "mtv", gSel.ApproveMtv, "") = "대기"
-                        DisplayMode: =If(locWorking, DisplayMode.Disabled, DisplayMode.Edit)
+                        DisplayMode: =If(locWorking, DisplayMode.Disabled, DisplayMode.Edit) // [PA 전용] 처리 중 버튼 잠금. 웹에는 없음
                   - btnCancelVisit:
                       Control: Classic/Button@2.2.0
                       Properties:
@@ -543,7 +552,8 @@
                         Width: =110
                         Height: =40
                         OnSelect: |-
-                          =If(
+                          =// [PA 전용] 연속 클릭 잠금, 흐름 실패 경고
+                          If(
                               !locWorking,
                               UpdateContext({locWorking: true});
                               Patch(VisitRequests, LookUp(VisitRequests, ID = gSel.ID), {Status: "취소", AdminMemo: txtMemo.Text});
@@ -577,7 +587,7 @@
                         DisabledColor: =cInk3
                         DisabledBorderColor: =cLine
                         Visible: =gSel.Status = "승인" && gAdminSite <> "hq"
-                        DisplayMode: =If(locWorking, DisplayMode.Disabled, DisplayMode.Edit)
+                        DisplayMode: =If(locWorking, DisplayMode.Disabled, DisplayMode.Edit) // [PA 전용] 처리 중 버튼 잠금. 웹에는 없음
                   - btnComplete:
                       Control: Classic/Button@2.2.0
                       Properties:
@@ -587,7 +597,8 @@
                         Width: =110
                         Height: =40
                         OnSelect: |-
-                          =If(
+                          =// [PA 전용] 연속 클릭 잠금
+                          If(
                               !locWorking,
                               UpdateContext({locWorking: true});
                               Patch(VisitRequests, LookUp(VisitRequests, ID = gSel.ID), {Status: "완료", AdminMemo: txtMemo.Text});
@@ -613,7 +624,7 @@
                         DisabledFill: =cSoft
                         DisabledColor: =cInk3
                         Visible: =gSel.Status = "승인" && gAdminSite <> "hq"
-                        DisplayMode: =If(locWorking, DisplayMode.Disabled, DisplayMode.Edit)
+                        DisplayMode: =If(locWorking, DisplayMode.Disabled, DisplayMode.Edit) // [PA 전용] 처리 중 버튼 잠금. 웹에는 없음
                   - infoWhenKey:
                       Control: Label@2.5.1
                       Properties:
@@ -1802,7 +1813,8 @@
                   Width: =104
                   Height: =40
                   OnSelect: |-
-                    =If(
+                    =// [PA 전용] 막기 번호 뒤 무작위 4자리 (같은 초 충돌 방지)
+                    If(
                         IsBlank(dpBlock.SelectedDate),
                         Notify("날짜를 고르세요.", NotificationType.Warning),
                         With(

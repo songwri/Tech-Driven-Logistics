@@ -364,3 +364,40 @@ YAML 구조 · 컨트롤 이름 중복 · 수식 괄호는 스크립트로 검�
   코드 보기로 이름을 확인하고 바꾸거나, 직접 추가한 세로 컨테이너(스크롤 켜기)에 `con?Page` 를 옮겨 넣으면 됩니다.
 - 이름 붙인 수식에서 `App.Width` · `App.Height` 를 쓰는 `sw` · `sh`. 오류가 나면 각 화면의 `sw` → `Max(App.Width, 1366)`, `sh` → `Max(App.Height, 480)` 로 바꿉니다.
 처음 붙여넣을 때 막히는 오류 문구를 알려 주시면 바로 고쳐 드리겠습니다.
+
+## 14. Power Apps 전용 기능 표시 규칙 (`[PA 전용]`)
+
+웹앱(React + Apps Script)에는 없고 **Power Apps 에만 있는 기능**은 모두 `[PA 전용]` 으로 표시합니다.
+다른 개발자가 "웹에도 있나? 웹을 고치면 여기도 고쳐야 하나?" 를 바로 알 수 있게 하기 위해서입니다.
+
+| 어디에 | 어떻게 |
+| --- | --- |
+| 화면 YAML 맨 위 `#` 머리말 | `── [PA 전용] ──` 아래에 그 화면의 전용 기능 목록 (붙여넣으면 앱에는 안 들어가는 저장소용 설명) |
+| 수식 안 (Power Fx 주석) | 여러 줄 수식은 맨 앞 줄 `// [PA 전용] 무엇 · 웹은 어떻게`, 한 줄 수식은 끝에 `// [PA 전용] …`. 앱에 붙여넣은 뒤에도 Studio 에서 보입니다 |
+| `App.Formulas` · `App.OnStart` | 해당 이름 위 주석 `// [PA 전용] …` |
+| 흐름 (`flows.md`) | 표의 흐름 이름 옆 **[PA 전용]** |
+
+찾기: 저장소에서 `grep -rn "PA 전용" powerapps/`, Power Apps Studio 에서는 **검색(돋보기)** 에 `PA 전용`.
+
+**수정할 때 지킬 것**
+1. Power Apps 에 웹에 없는 기능을 넣거나 바꾸면 → 수식에 `// [PA 전용] 무엇을 하는지 · 웹은 어떻게 하는지(없으면 '웹에는 없음')` 주석, 그 화면 YAML 머리말 목록, 아래 표를 **함께** 고칩니다.
+2. 나중에 웹에도 같은 기능이 생기면 → `[PA 전용]` 표시를 지우고 아래 표에서 뺍니다.
+3. 반대로 웹에만 있고 Power Apps 에 아직 없는 기능은 12절 '남는 차이' 목록에 적습니다.
+
+현재 `[PA 전용]` 기능
+
+| 기능 | 위치 | 웹은 |
+| --- | --- | --- |
+| 본문만 스크롤 (머리말 · 바닥 버튼 고정), `sw` · `sh` · `ox` | 모든 화면 `con?Body`, `App.Formulas` | 브라우저 페이지 스크롤 |
+| 신청 담당자 자동 입력 | `App.OnStart` `gMe`, `scrBook` 담당자 칸 | 직접 입력 |
+| 관리자 구분을 회사 로그인 + `TourAdmins` 로 | `App.OnStart` `gAdminSite` | 관리자 키 입력 |
+| 참석자 Forms 직접 입력 · 동의 (흐름 B) | `App.Formulas` `FormsPrefillUrl`, `scrDone`, `flows.md` B | 신청자가 명단 대리 입력 |
+| 참석자 정보 1년 뒤 자동 삭제 (흐름 D) | `flows.md` D | 없음 |
+| 내 신청 화면 · 신청자 본인 취소 | `scrMy` | 없음 |
+| 연속 클릭 잠금 | `scrBook` btnNext, `scrAdmin` 승인 · 거절 · 취소 · 완료 | 없음 |
+| 신청 직전 재확인 + 먼저 저장된 쪽만 남김 | `scrBook` btnNext | 서버 잠금(LockService) 안에서 확인 |
+| 신청번호 · 막기 번호 무작위 4자리 | `scrBook` btnNext, `scrAdmin` btnBlockSave | 내부 ID 는 UUID |
+| 누르는 순간 최신 상태 재확인 · 복합 투어 동시 승인 보정 | `scrAdmin` btnApprove · btnReject | 서버 잠금 안에서 처리 |
+| 메일 흐름 실패 경고 · 흐름 실패 알림 메일 | `scrBook` · `scrAdmin` 수식, `flows.md` | Apps Script 오류로 표시 |
+| 통계를 해마다 나눠 읽기 | `scrStats` OnVisible | 시트 전체 읽기 |
+| 공휴일 목록이 끝난 해 뒤 날짜 닫기 · 관리자 알림 | `App.Formulas` `HolidayLastYear`, `scrBook` galCal, `scrAdmin` OnVisible | 공휴일 자동 계산 |

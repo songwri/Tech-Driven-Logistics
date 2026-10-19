@@ -1,4 +1,7 @@
 # scrStats — 방문 통계 (관리자만). 웹 관리자 '통계' 탭과 같은 기간 선택: 연간 · 월별 · 기간 지정 · 전체 기간
+# ── [PA 전용] 웹앱에 없는 기능 · 수정하면 이 목록과 수식 속 '// [PA 전용]' 주석도 함께 고칠 것 (README 14) ──
+#   · OnVisible: 목록을 해마다 나눠 읽음 (SharePoint 2000행 제한 회피, 웹은 시트 전체를 읽음)
+#   · conSBody: 본문만 스크롤
 # 1) 새 화면(빈 화면) → 이름 scrStats, 화면 Fill = cBg, Width = sw, Height = sh
 #    OnVisible =
 #      If(IsBlank(gAdminSite), Notify("관리자 권한이 없습니다.", NotificationType.Error); Navigate(scrBook),
@@ -43,7 +46,7 @@
       Height: =sh - 56
       LayoutDirection: =LayoutDirection.Vertical
       LayoutAlignItems: =LayoutAlignItems.Center
-      LayoutOverflowY: =LayoutOverflow.Scroll
+      LayoutOverflowY: =LayoutOverflow.Scroll // [PA 전용] 본문 스크롤 레이아웃. 웹은 페이지 스크롤
       Fill: =Color.Transparent
       BorderThickness: =0
       DropShadow: =DropShadow.None
