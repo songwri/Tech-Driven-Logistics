@@ -38,6 +38,7 @@ export interface PeriodRow extends Record<TourType, number> {
   internal: number
   existing: number
   newClient: number
+  partner: number
   unclassified: number
   korean: number
   foreign: number
@@ -68,6 +69,7 @@ export const METRIC_COLUMNS: MetricColumn[] = [
   { key: 'internal', label: '내부 방문', group: '방문 유형' },
   { key: 'existing', label: '고객·기존', group: '방문 유형' },
   { key: 'newClient', label: '고객·신규', group: '방문 유형' },
+  { key: 'partner', label: '고객·파트너사', group: '방문 유형' },
   { key: 'unclassified', label: '고객·미분류', group: '방문 유형' },
   { key: 'korean', label: '한국어', group: '투어 언어' },
   { key: 'foreign', label: '외국어', group: '투어 언어' },
@@ -107,6 +109,7 @@ export function summarize(label: string, all: VisitRequest[]): PeriodRow {
     internal: count((request) => request.category === 'internal'),
     existing: count((request) => request.category === 'external' && request.clientType === 'existing'),
     newClient: count((request) => request.category === 'external' && request.clientType === 'new'),
+    partner: count((request) => request.category === 'external' && request.clientType === 'partner'),
     unclassified: count((request) => request.category === 'external' && !request.clientType),
     korean: count((request) => request.language !== 'foreign'),
     foreign: count((request) => request.language === 'foreign'),
@@ -189,7 +192,7 @@ function distributionSheet(name: string, requests: VisitRequest[]): Sheet {
   const external = requests.filter((request) => request.category === 'external')
 
   push('방문 목적', tally((request) => request.purposes.map(baseOption), [...PURPOSES, OTHER]), requests.length)
-  push('방문 유형', tally((request) => [clientSegment(request)], ['고객 · 기존', '고객 · 신규', '내부 방문', '고객 · 미분류']), requests.length)
+  push('방문 유형', tally((request) => [clientSegment(request)], ['고객 · 기존', '고객 · 신규', '고객 · 파트너사', '내부 방문', '고객 · 미분류']), requests.length)
   push('투어 종류', tally((request) => [TOUR_BY_ID[request.tour].label], TOURS.map((tour) => tour.label)), requests.length)
   push(
     '투어 언어',

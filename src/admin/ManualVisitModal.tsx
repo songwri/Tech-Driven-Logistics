@@ -132,7 +132,7 @@ export function ManualVisitModal({
   const [tour, setTour] = useState(initial?.tour ?? (site === 'mtv' ? 'mtv' : 'other'))
   const [status, setStatus] = useState<VisitStatus>(initial?.status ?? 'approved')
   const [category, setCategory] = useState(initial?.category ?? 'external')
-  const [clientType, setClientType] = useState<'none' | 'existing' | 'new'>(initial?.clientType ?? 'none')
+  const [clientType, setClientType] = useState<'none' | 'existing' | 'new' | 'partner'>(initial?.clientType ?? 'none')
   const [company, setCompany] = useState(initial?.company ?? '')
   const [purposes, setPurposes] = useState((initial?.purposes ?? []).join(', '))
   // 업종: 목록에서만 고른다. 예전 업종 값은 현재 분류로 옮겨 보여 준다.
@@ -282,6 +282,7 @@ export function ManualVisitModal({
                     ['none', '미분류'],
                     ['existing', '기존'],
                     ['new', '신규'],
+                    ['partner', '파트너사'],
                   ]}
                 />
               </div>

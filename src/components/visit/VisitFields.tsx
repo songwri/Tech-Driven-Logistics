@@ -377,7 +377,7 @@ export function PrivacyConsent({
 
 const CATEGORY_HINT: Record<VisitCategory, string> = {
   internal: '임직원 · 사내 조직 · 해외법인 등',
-  external: '기존 고객사 · 신규(잠재) 고객사',
+  external: '기존 고객사 · 신규(잠재) 고객사 · 파트너사 소개 고객',
 }
 
 function RadioDot({ active }: { active: boolean }) {
@@ -526,6 +526,11 @@ export function CompanyFields({
                 </Chip>
               ))}
             </div>
+            {draft.clientType === 'partner' && (
+              <p className="mt-2 text-[12px] leading-relaxed text-warm-600">
+                파트너사가 소개해 함께 오는 고객입니다. 업체명에는 방문하는 고객사를 적고, 소개한 파트너사는 아래 '담당자 의견'에 남겨 주세요.
+              </p>
+            )}
             <GroupError show={Boolean(errors?.has('clientType'))}>고객 유형을 선택해 주세요.</GroupError>
           </div>
         )}

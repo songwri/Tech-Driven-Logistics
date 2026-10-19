@@ -26,7 +26,7 @@ export function normalizeRequest(value: unknown): VisitRequest {
     date: text(r.date).slice(0, 10),
     slot: text(r.slot),
     category: r.category === 'internal' ? 'internal' : 'external',
-    clientType: r.clientType === 'new' || r.clientType === 'existing' ? r.clientType : undefined,
+    clientType: r.clientType === 'new' || r.clientType === 'existing' || r.clientType === 'partner' ? r.clientType : undefined,
     language: r.language === 'foreign' ? 'foreign' : 'ko',
     foreignLanguage: text(r.foreignLanguage),
     interpreter: r.interpreter === true,

@@ -274,11 +274,13 @@ function parseVisitSheet(table: string[][], headerAt: number): ParsedRow[] {
         category,
         clientType:
           category === 'external' && clientText
-            ? clientText.includes('신규')
-              ? 'new'
-              : clientText.includes('기존')
-                ? 'existing'
-                : undefined
+            ? clientText.includes('파트너')
+              ? 'partner'
+              : clientText.includes('신규')
+                ? 'new'
+                : clientText.includes('기존')
+                  ? 'existing'
+                  : undefined
             : undefined,
         language: foreign ? 'foreign' : 'ko',
         foreignLanguage: foreign ? foreignName || '영어' : '',
