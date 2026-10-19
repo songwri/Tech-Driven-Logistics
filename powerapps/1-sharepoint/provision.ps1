@@ -52,6 +52,11 @@ New-ListWithFields 'TourBusy' (@(@('DateKey','Text'),@('MonthKey','Text')) + $se
 
 New-ListWithFields 'TourAdmins' @(@('Site','Text'))
 
+# [PA 전용] 센터별 오시는 길(약도). Title = main(메가와이즈 · Lab) 또는 mtv(시화MTV). 웹은 apps-script/Code.gs 의 VISIT_GUIDE 상수
+New-ListWithFields 'CenterGuides' @(
+    @('Address','Text'),@('MapUrl','Text'),@('MapImageUrl','Text'),@('Parking','Text'),@('Meeting','Text'),@('MeetingTours','Text'),@('ArriveBefore','Number')
+)
+
 # 자주 거르는 열에 인덱스 (목록이 커져도 빠르게)
 foreach ($pair in @(@('VisitRequests','Title'),@('VisitRequests','ApplicantEmail'),@('VisitRequests','VisitDate'),
                     @('VisitAttendees','RequestNo'),@('TourBusy','MonthKey'),@('TourBusy','DateKey'),@('TourBusy','Title'))) {

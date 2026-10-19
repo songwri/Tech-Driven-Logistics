@@ -7,7 +7,7 @@
 | --- | --- | --- |
 | A. `TDLVisitSubmitted` | 앱에서 [신청하기] | 신청자에게 접수 메일 + Forms 링크, (입력했다면) 참석자에게 링크, 센터 관리자에게 알림 |
 | B. `TDLAttendeeCollect` **[PA 전용]** | 참석자가 Forms 제출 | 응답을 `VisitAttendees` 에 저장, 신청 건의 제출 인원(`AttendeeCount`) 갱신 |
-| C. `TDLVisitDecision` | 관리자가 승인 · 거절 · 취소 | 신청자(와 제출한 참석자)에게 결과 메일 |
+| C. `TDLVisitDecision` | 관리자가 승인 · 거절 · 취소 (미리보기 창에서 [보내기]) | 신청자(와 제출한 참석자)에게 결과 메일. 승인 메일에는 센터별 오시는 길(약도) 포함 |
 | D. `TDLRetention` **[PA 전용]** | 매월 1일 | 방문일 1년 지난 참석자 개인정보 삭제 |
 
 > **[PA 전용]** = 웹(Apps Script)에는 없는 흐름. 고칠 때 `README.md` 14절 목록도 함께 고치세요.
@@ -130,13 +130,33 @@
 
 1. 입력: **숫자** `RequestId`, **텍스트** `Decision`, **텍스트** `Message`
 2. **항목 가져오기** (이름 `신청건`) — 목록 `VisitRequests`, ID `RequestId`
-3. **컨트롤 `전환(Switch)`** — 켜기: `[동적 콘텐츠: Decision]`
+3. **[PA 전용] 센터별 오시는 길 만들기** (승인일 때만 쓰지만 앞에 두어도 됩니다). 웹은 `Code.gs` 의 `visitGuideHtml_` 이 하는 일입니다.
+   1. **SharePoint `항목 가져오기(복수)`** (이름 `안내목록`) — 목록 `CenterGuides`
+   2. **데이터 작업 `배열 필터링`** (이름 `안내Main`) — 보낸 사람 `안내목록 > value`, 고급 모드: `@equals(item()?['Title'], 'main')`
+   3. **배열 필터링** (이름 `안내Mtv`) — 같은 방식, `@equals(item()?['Title'], 'mtv')`
+   4. **데이터 작업 `작성`** (이름 `블록Main`) — **본문에 `mail-templates.md` 의 `G-1`** 을 붙여넣기
+   5. **작성** (이름 `블록Mtv`) — **`G-2`** 붙여넣기
+   6. **작성** (이름 `시화먼저`) — 식: `@and(greaterOrEquals(body('신청건')?['MFrom'], 0), or(less(body('신청건')?['CFrom'], 0), less(body('신청건')?['MFrom'], body('신청건')?['CFrom'])), or(less(body('신청건')?['LFrom'], 0), less(body('신청건')?['MFrom'], body('신청건')?['LFrom'])))`
+      (오전에 시화MTV 를 먼저 가는 투어는 시화MTV 안내를 위에 적습니다. 웹의 `mtvFirst` 와 같은 규칙)
+   7. **작성** (이름 `오시는길`) — 식:
+      ```
+      @concat(
+        if(and(equals(outputs('시화먼저'), true), equals(body('신청건')?['ForMtv'], 'Y')), outputs('블록Mtv'), ''),
+        if(equals(body('신청건')?['ForMain'], 'Y'), outputs('블록Main'), ''),
+        if(and(equals(outputs('시화먼저'), false), equals(body('신청건')?['ForMtv'], 'Y')), outputs('블록Mtv'), '')
+      )
+      ```
+   - 센터 주소 · 약도 · 주차 안내를 바꿀 때는 **흐름이 아니라 `CenterGuides` 목록의 행만** 고칩니다. 시화MTV 는 행이 비어 있으면 '담당자가 별도로 안내' 문구가 나갑니다.
+4. **컨트롤 `전환(Switch)`** — 켜기: `[동적 콘텐츠: Decision]`
    - **사례 `승인`**
-     1. 메일 보내기 → 받는 사람 `HostEmail` · 제목 `[방문 확정] ` + `Company` + ` · ` + `DateKey` + ` ` + `ScheduleText` · 본문 **C-1**
+     1. 메일 보내기 → 받는 사람 `HostEmail` · 제목 `[방문 확정] ` + `Company` + ` · ` + `DateKey` + ` ` + `ScheduleText` · 본문 **C-1** (`@{outputs('오시는길')}` 자리에 3번 결과)
      2. (권장) **항목 가져오기(복수)** (이름 `참석자`) — `VisitAttendees`, 필터 `RequestNo eq '` + `Title` + `'`
-        → **각각에 적용** `[동적 콘텐츠: 참석자 > value]` → 메일 보내기: 받는 사람 `[식: items('각각에_적용')?['Email']]`, 본문 **C-2**
+        → **각각에 적용** `[동적 콘텐츠: 참석자 > value]` → 메일 보내기: 받는 사람 `[식: items('각각에_적용')?['Email']]`, 본문 **C-2** (같은 `오시는길`)
    - **사례 `거절`** → 메일 보내기 → `HostEmail` · 제목 `[방문 요청 결과] ` + `Company` · 본문 **C-3** (`Message` 가 사유로 들어감)
-   - **사례 `취소`** → 메일 보내기 → `HostEmail` · 제목 `[방문 일정 취소] ` + `Company` · 본문 **C-3** 의 문구를 '취소'로 바꿔 사용
+   - **사례 `취소`** → 메일 보내기 → `HostEmail` · 제목 `[방문 일정 취소] ` + `Company` · 본문 **C-4**
+
+> **[PA 전용] 미리보기와 같은 글이 나가야 합니다.** 앱 관리자 화면의 `conMail` 미리보기는 C-1 · C-3 · C-4 의 문구를 그대로 글로 옮긴 것입니다.
+> 메일 문구를 바꾸면 `scrAdmin.yaml` 의 `txtMailPreview` 수식도 같이 고치세요 (README 14절).
 
 ---
 

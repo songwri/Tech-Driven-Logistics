@@ -6,6 +6,7 @@
 #   · OnVisible: 공휴일 목록이 끝나 가면 알림
 #   · 관리자 구분: 키 입력 대신 회사 로그인 + TourAdmins 목록
 #   · conABody: 본문만 스크롤
+#   · 승인 · 거절 · 일정 취소: 바로 처리하지 않고 conMail(신청자 메일 미리보기 + 사유 입력) 창을 먼저 연다 · 거절 · 취소는 사유 필수 · 오시는 길(약도)은 CenterGuides 목록을 읽어 센터별로 미리보기에 표시
 # 1) 새 화면(빈 화면) → 이름 scrAdmin, 화면 Fill = cBg, Width = sw, Height = sh
 #    OnVisible =
 #      If(IsBlank(gAdminSite), Notify("관리자 권한이 없습니다.", NotificationType.Error); Navigate(scrBook),
@@ -416,32 +417,9 @@
                         Width: =110
                         Height: =40
                         OnSelect: |-
-                          =// [PA 전용] 연속 클릭 잠금, 최신 상태 재확인, TourBusy 대기 자리 해제, 흐름 실패 경고
-                          If(
-                              !locWorking,
-                              UpdateContext({locWorking: true});
-                              With(
-                                  {cur: LookUp(VisitRequests, ID = gSel.ID)},
-                                  If(
-                                      cur.Status <> "대기",
-                                      Notify("다른 관리자가 먼저 처리한 건입니다. 최신 상태로 다시 불러왔습니다.", NotificationType.Warning),
-                                      If(
-                                          gAdminSite = "main",
-                                          Patch(VisitRequests, cur, {Status: "거절", ApproveMain: "거절", AdminMemo: txtMemo.Text}),
-                                          Patch(VisitRequests, cur, {Status: "거절", ApproveMtv: "거절", AdminMemo: txtMemo.Text})
-                                      );
-                                      Remove(TourBusy, Filter(TourBusy, Title = cur.Title));
-                                      IfError(
-                                          TDLVisitDecision.Run(cur.ID, "거절", Coalesce(txtMemo.Text, "-"));
-                                          Notify("거절했습니다. 신청자에게 메일이 발송됩니다.", NotificationType.Success),
-                                          Notify("거절은 저장됐지만 결과 메일을 보내지 못했습니다. 신청자에게 직접 알려 주세요.", NotificationType.Warning)
-                                      )
-                                  )
-                              );
-                              ClearCollect(colAdminReqs, Filter(VisitRequests, VisitDate >= DateAdd(Today(), -180, TimeUnit.Days)));
-                              Set(gSel, LookUp(colAdminReqs, ID = gSel.ID));
-                              UpdateContext({locWorking: false})
-                          )
+                          =// [PA 전용] 바로 처리하지 않고 사유 입력 + 메일 미리보기 창을 먼저 연다. 웹에는 없음(웹 거절 메일엔 사유 없음)
+                          Reset(txtMailMsg);
+                          Set(gMailMode, "거절")
                         Font: =fnt
                         Size: =10.5
                         FontWeight: =FontWeight.Semibold
@@ -472,59 +450,9 @@
                         Width: =110
                         Height: =40
                         OnSelect: |-
-                          =// [PA 전용] 연속 클릭 잠금, 최신 상태 재확인, 자기 센터 칸만 저장 후 두 센터 모두 승인이면 확정, 대기 자리를 관리자 행(예약)으로 교체, 흐름 실패 경고. 웹은 서버 잠금 안에서 처리
-                          If(
-                              !locWorking,
-                              UpdateContext({locWorking: true});
-                              With(
-                                  {cur: LookUp(VisitRequests, ID = gSel.ID)},
-                                  If(
-                                      cur.Status <> "대기" || Switch(gAdminSite, "main", cur.ApproveMain, "mtv", cur.ApproveMtv, "") <> "대기",
-                                      Notify("다른 관리자가 먼저 처리한 건입니다. 최신 상태로 다시 불러왔습니다.", NotificationType.Warning),
-                                      With(
-                                          {final: If(If(gAdminSite = "main", "승인", cur.ApproveMain) <> "대기" && If(gAdminSite = "mtv", "승인", cur.ApproveMtv) <> "대기", "승인", "대기")},
-                                          If(
-                                              final = "승인" && !IsEmpty(Filter(Filter(TourBusy, DateKey = cur.DateKey) As b, b.Title <> cur.Title && b.Kind <> "대기" && ((cur.CFrom >= 0 && b.CFrom >= 0 && cur.CFrom < b.CTo && b.CFrom < cur.CTo) || (cur.LFrom >= 0 && b.LFrom >= 0 && cur.LFrom < b.LTo && b.LFrom < cur.LTo) || (cur.MFrom >= 0 && b.MFrom >= 0 && cur.MFrom < b.MTo && b.MFrom < cur.MTo)))),
-                                              Notify("같은 시간에 이미 확정되었거나 막힌 일정이 있습니다. 달력을 확인해 주세요.", NotificationType.Error),
-                                              If(
-                                                  gAdminSite = "main",
-                                                  Patch(VisitRequests, cur, {ApproveMain: "승인", Status: final, AdminMemo: txtMemo.Text}),
-                                                  Patch(VisitRequests, cur, {ApproveMtv: "승인", Status: final, AdminMemo: txtMemo.Text})
-                                              );
-                                              With(
-                                                  {after: LookUp(VisitRequests, ID = cur.ID)},
-                                                  If(
-                                                      after.Status = "대기" && after.ApproveMain <> "대기" && after.ApproveMtv <> "대기",
-                                                      Patch(VisitRequests, after, {Status: "승인"})
-                                                  )
-                                              );
-                                              If(
-                                                  LookUp(VisitRequests, ID = cur.ID, Status) = "승인",
-                                                  Remove(TourBusy, Filter(TourBusy, Title = cur.Title));
-                                                  Patch(
-                                                      TourBusy,
-                                                      Defaults(TourBusy),
-                                                      {
-                                                          Title: cur.Title, DateKey: cur.DateKey, MonthKey: Left(cur.DateKey, 7),
-                                                          CFrom: cur.CFrom, CTo: cur.CTo, LFrom: cur.LFrom, LTo: cur.LTo, MFrom: cur.MFrom, MTo: cur.MTo,
-                                                          Kind: "예약", Reason: cur.TourName
-                                                      }
-                                                  );
-                                                  IfError(
-                                                      TDLVisitDecision.Run(cur.ID, "승인", Coalesce(txtMemo.Text, "-"));
-                                                      Notify("승인했습니다. 신청자에게 확정 메일이 발송됩니다.", NotificationType.Success),
-                                                      Notify("승인은 저장됐지만 확정 메일을 보내지 못했습니다. 신청자에게 직접 알려 주세요.", NotificationType.Warning)
-                                                  ),
-                                                  Notify("이 센터의 승인을 기록했습니다. 상대 센터의 승인을 기다립니다.", NotificationType.Success)
-                                              )
-                                          )
-                                      )
-                                  )
-                              );
-                              ClearCollect(colAdminReqs, Filter(VisitRequests, VisitDate >= DateAdd(Today(), -180, TimeUnit.Days)));
-                              Set(gSel, LookUp(colAdminReqs, ID = gSel.ID));
-                              UpdateContext({locWorking: false})
-                          )
+                          =// [PA 전용] 바로 처리하지 않고 신청자 메일 미리보기 창을 먼저 연다. 웹에는 없음
+                          Reset(txtMailMsg);
+                          Set(gMailMode, "승인")
                         Font: =fnt
                         Size: =10.5
                         FontWeight: =FontWeight.Semibold
@@ -552,21 +480,9 @@
                         Width: =110
                         Height: =40
                         OnSelect: |-
-                          =// [PA 전용] 연속 클릭 잠금, 흐름 실패 경고
-                          If(
-                              !locWorking,
-                              UpdateContext({locWorking: true});
-                              Patch(VisitRequests, LookUp(VisitRequests, ID = gSel.ID), {Status: "취소", AdminMemo: txtMemo.Text});
-                              Remove(TourBusy, Filter(TourBusy, Title = gSel.Title));
-                              IfError(
-                                  TDLVisitDecision.Run(gSel.ID, "취소", Coalesce(txtMemo.Text, "-"));
-                                  Notify("일정을 취소했습니다. 신청자에게 메일이 발송됩니다.", NotificationType.Success),
-                                  Notify("취소는 저장됐지만 안내 메일을 보내지 못했습니다. 신청자에게 직접 알려 주세요.", NotificationType.Warning)
-                              );
-                              ClearCollect(colAdminReqs, Filter(VisitRequests, VisitDate >= DateAdd(Today(), -180, TimeUnit.Days)));
-                              Set(gSel, LookUp(colAdminReqs, ID = gSel.ID));
-                              UpdateContext({locWorking: false})
-                          )
+                          =// [PA 전용] 바로 처리하지 않고 사유 입력 + 메일 미리보기 창을 먼저 연다. 웹에는 없음
+                          Reset(txtMailMsg);
+                          Set(gMailMode, "취소")
                         Font: =fnt
                         Size: =10.5
                         FontWeight: =FontWeight.Semibold
@@ -1859,3 +1775,356 @@
                   BorderThickness: =0
                   DisabledFill: =cSoft
                   DisabledColor: =cInk3
+- conMail:
+    Control: GroupContainer@1.3.0
+    Variant: ManualLayout
+    Properties:
+      X: =0
+      Y: =0
+      Width: =sw
+      Height: =sh
+      Fill: =cScrim
+      BorderThickness: =0
+      DropShadow: =DropShadow.None
+      Visible: =!IsBlank(gMailMode)
+    Children:
+      - conMailCard:
+          Control: GroupContainer@1.3.0
+          Variant: ManualLayout
+          Properties:
+            X: =(Parent.Width - 920) / 2
+            Y: =Max(16, (Parent.Height - 470) / 2)
+            Width: =920
+            Height: =470
+            Fill: =cSurface
+            BorderColor: =cLine
+            BorderThickness: =1
+            DropShadow: =DropShadow.None
+            RadiusTopLeft: =8
+            RadiusTopRight: =8
+            RadiusBottomLeft: =8
+            RadiusBottomRight: =8
+          Children:
+            - lblMailTitle:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =gMailMode & " 메일 미리보기"
+                  X: =24
+                  Y: =20
+                  Width: =600
+                  Height: =28
+                  Font: =fnt
+                  Size: =12.5
+                  Color: =cInk
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  FontWeight: =FontWeight.Semibold
+            - lblMailMsgTitle:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =If(gMailMode = "승인", "신청자에게 전할 안내 (선택)", "신청자에게 보낼 사유")
+                  X: =24
+                  Y: =64
+                  Width: =330
+                  Height: =22
+                  Font: =fnt
+                  Size: =10
+                  Color: =cInk2
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+            - txtMailMsg:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  Default: =gSel.AdminMemo
+                  X: =24
+                  Y: =92
+                  Width: =330
+                  Height: =250
+                  Mode: =TextMode.MultiLine
+                  Font: =fnt
+                  Size: =10.5
+                  Color: =cInk
+                  Fill: =cSurface
+                  BorderColor: =cLine
+                  HoverBorderColor: =cInk3
+                  PressedBorderColor: =cInk
+                  FocusedBorderColor: =cInk
+                  BorderThickness: =1
+                  PaddingLeft: =12
+                  PaddingRight: =12
+                  PaddingTop: =10
+                  PaddingBottom: =10
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  HintText: ="예) 1번 게이트에서 담당자를 찾아 주세요"
+            - lblMailWarn:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =If(gMailMode <> "승인" && IsBlank(Trim(txtMailMsg.Text)), "사유를 입력해야 보낼 수 있습니다. 입력한 글은 신청자에게 메일로 그대로 나갑니다.", "입력한 글은 신청자에게 메일로 그대로 나갑니다. 내부 메모는 적지 마세요.")
+                  X: =24
+                  Y: =350
+                  Width: =330
+                  Height: =48
+                  Font: =fnt
+                  Size: =9.75
+                  Color: =cRed
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  Wrap: =true
+                  VerticalAlign: =VerticalAlign.Top
+            - lblMailTo:
+                Control: Label@2.5.1
+                Properties:
+                  Text: =If(gMailMode = "승인" && If(gAdminSite = "main", gSel.ApproveMtv = "대기", gAdminSite = "mtv" && gSel.ApproveMain = "대기"), "받는 사람  (메일 없음 · 상대 센터 승인 대기)", "받는 사람  " & gSel.HostEmail & If(gMailMode = "승인" && gSel.AttendeeCount > 0, "  + 정보를 제출한 참석자 " & gSel.AttendeeCount & "명 (확정 메일)", ""))
+                  X: =378
+                  Y: =64
+                  Width: =518
+                  Height: =22
+                  Font: =fnt
+                  Size: =10
+                  Color: =cInk2
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+            - lblMailSubject:
+                Control: Label@2.5.1
+                Properties:
+                  Text: ="제목  " & Switch(gMailMode, "승인", "[방문 확정] ", "거절", "[방문 요청 결과] ", "[방문 일정 취소] ") & gSel.Company & If(gMailMode = "승인", " · " & gSel.DateKey & " " & gSel.ScheduleText, "")
+                  X: =378
+                  Y: =88
+                  Width: =518
+                  Height: =22
+                  Font: =fnt
+                  Size: =10
+                  Color: =cInk2
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+            - txtMailPreview:
+                Control: Classic/TextInput@2.3.2
+                Properties:
+                  Default: |-
+                    =With(
+                        {
+                            both: gSel.ForMain = "Y" && gSel.ForMtv = "Y",
+                            mtvFirst: gSel.MFrom >= 0 && (gSel.CFrom < 0 || gSel.MFrom < gSel.CFrom) && (gSel.LFrom < 0 || gSel.MFrom < gSel.LFrom),
+                            gm: LookUp(colGuides, Title = "main"),
+                            gv: LookUp(colGuides, Title = "mtv"),
+                            msg: Trim(txtMailMsg.Text),
+                            early: Coalesce(LookUp(colGuides, Title = "main").ArriveBefore, 10)
+                        },
+                        With(
+                            {
+                                blkMain: If(gSel.ForMain = "Y", Char(10) & Char(10) & "■ 오시는 길" & If(both, " · 메가와이즈 청라", "") & Char(10) & If(IsBlank(gm.Address), "위치 · 주차는 담당자가 별도로 안내드립니다.", "위치: " & gm.Address & Char(10) & "주차: " & gm.Parking & If(!IsBlank(gm.Meeting) && (IsBlank(gm.MeetingTours) || gSel.Tour in Split(gm.MeetingTours, ",").Result), Char(10) & "미팅 장소: " & gm.Meeting, "") & If(!IsBlank(gm.MapUrl), Char(10) & "지도: " & gm.MapUrl, "") & If(!IsBlank(gm.MapImageUrl), Char(10) & "[약도 이미지가 본문에 함께 들어갑니다]", "")), ""),
+                                blkMtv: If(gSel.ForMtv = "Y", Char(10) & Char(10) & "■ 오시는 길" & If(both, " · 시화MTV", "") & Char(10) & If(IsBlank(gv.Address), "위치 · 주차는 담당자가 별도로 안내드립니다.", "위치: " & gv.Address & Char(10) & "주차: " & gv.Parking & If(!IsBlank(gv.Meeting) && (IsBlank(gv.MeetingTours) || gSel.Tour in Split(gv.MeetingTours, ",").Result), Char(10) & "미팅 장소: " & gv.Meeting, "") & If(!IsBlank(gv.MapUrl), Char(10) & "지도: " & gv.MapUrl, "") & If(!IsBlank(gv.MapImageUrl), Char(10) & "[약도 이미지가 본문에 함께 들어갑니다]", "")), ""),
+                                plan: gSel.TourName & " · " & gSel.DateKey & " " & gSel.ScheduleText
+                            },
+                            Switch(
+                                gMailMode,
+                                "승인",
+                                If(If(gAdminSite = "main", gSel.ApproveMtv = "대기", gAdminSite = "mtv" && gSel.ApproveMain = "대기"), "※ 이 승인만으로는 메일이 나가지 않습니다. 상대 센터까지 승인되면 아래 메일이 신청자에게 발송됩니다." & Char(10) & Char(10), "") &
+                                "방문이 확정되었습니다" & Char(10) & "신청번호 " & gSel.Title & Char(10) & Char(10) &
+                                "일정: " & plan & Char(10) &
+                                "참석자: " & gSel.AttendeeCount & "명 정보 제출 완료 (예상 " & gSel.ExpectedHeadcount & "명)" &
+                                If(msg = "", "", Char(10) & "담당자 안내: " & msg) &
+                                If(mtvFirst, blkMtv & blkMain, blkMain & blkMtv) & Char(10) & Char(10) &
+                                "· 투어 시작 " & early & "분 전까지 도착해 주세요." &
+                                If(both, Char(10) & "· 두 센터는 떨어져 있어 오전 투어가 끝나면 오후 투어 장소로 이동해 주셔야 합니다.", "") &
+                                Char(10) & "· 문의나 일정 변경 · 취소는 최소 1일 전까지 담당자와 직접 소통해 주세요.",
+                                "거절",
+                                "요청하신 일정으로는 방문이 어렵습니다" & Char(10) & Char(10) & gSel.Company & " · " & plan & Char(10) & Char(10) &
+                                "사유" & Char(10) & Coalesce(msg, "-") & Char(10) & Char(10) &
+                                "다른 날짜로 다시 신청해 주시거나, 이 메일에 회신해 문의해 주세요.",
+                                "방문 일정이 취소되었습니다" & Char(10) & Char(10) & gSel.Company & " · " & plan & Char(10) & Char(10) &
+                                "사유" & Char(10) & Coalesce(msg, "-") & Char(10) & Char(10) &
+                                "다시 방문을 원하시면 새로 신청해 주세요."
+                            )
+                        )
+                    )
+                  X: =378
+                  Y: =116
+                  Width: =518
+                  Height: =290
+                  Mode: =TextMode.MultiLine
+                  Font: =fnt
+                  Size: =10.5
+                  Color: =cInk
+                  Fill: =cBg
+                  BorderColor: =cLine
+                  HoverBorderColor: =cInk3
+                  PressedBorderColor: =cInk
+                  FocusedBorderColor: =cInk
+                  BorderThickness: =1
+                  PaddingLeft: =12
+                  PaddingRight: =12
+                  PaddingTop: =10
+                  PaddingBottom: =10
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  DisplayMode: =DisplayMode.View
+            - btnMailCancel:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  Text: 돌아가기
+                  X: =684
+                  Y: =418
+                  Width: =100
+                  Height: =40
+                  OnSelect: =Set(gMailMode, Blank())
+                  Font: =fnt
+                  Size: =10.5
+                  FontWeight: =FontWeight.Semibold
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  Fill: =cSurface
+                  Color: =cInk
+                  HoverFill: =cSoft
+                  PressedFill: =cSoft
+                  HoverColor: =cInk
+                  PressedColor: =cInk
+                  BorderColor: =cLine
+                  BorderThickness: =1
+                  DisabledFill: =cSoft
+                  DisabledColor: =cInk3
+                  DisabledBorderColor: =cLine
+            - btnMailSend:
+                Control: Classic/Button@2.2.0
+                Properties:
+                  Text: =If(locWorking, "보내는 중…", gMailMode = "승인", If(gMailMode = "승인" && If(gAdminSite = "main", gSel.ApproveMtv = "대기", gAdminSite = "mtv" && gSel.ApproveMain = "대기"), "승인 기록", "승인하고 보내기"), gMailMode & "하고 보내기")
+                  X: =796
+                  Y: =418
+                  Width: =100
+                  Height: =40
+                  OnSelect: |-
+                    =// [PA 전용] 승인 · 거절 · 취소를 미리보기 창에서 한 번에 보냄. 웹은 확인 창 없이 바로 처리하고 거절 사유는 메일에 넣지 않음
+                    Switch(
+                        gMailMode,
+                        "승인",
+                    If(
+                        !locWorking,
+                        UpdateContext({locWorking: true});
+                        With(
+                            {cur: LookUp(VisitRequests, ID = gSel.ID)},
+                            If(
+                                cur.Status <> "대기" || Switch(gAdminSite, "main", cur.ApproveMain, "mtv", cur.ApproveMtv, "") <> "대기",
+                                Notify("다른 관리자가 먼저 처리한 건입니다. 최신 상태로 다시 불러왔습니다.", NotificationType.Warning),
+                                With(
+                                    {final: If(If(gAdminSite = "main", "승인", cur.ApproveMain) <> "대기" && If(gAdminSite = "mtv", "승인", cur.ApproveMtv) <> "대기", "승인", "대기")},
+                                    If(
+                                        final = "승인" && !IsEmpty(Filter(Filter(TourBusy, DateKey = cur.DateKey) As b, b.Title <> cur.Title && b.Kind <> "대기" && ((cur.CFrom >= 0 && b.CFrom >= 0 && cur.CFrom < b.CTo && b.CFrom < cur.CTo) || (cur.LFrom >= 0 && b.LFrom >= 0 && cur.LFrom < b.LTo && b.LFrom < cur.LTo) || (cur.MFrom >= 0 && b.MFrom >= 0 && cur.MFrom < b.MTo && b.MFrom < cur.MTo)))),
+                                        Notify("같은 시간에 이미 확정되었거나 막힌 일정이 있습니다. 달력을 확인해 주세요.", NotificationType.Error),
+                                        If(
+                                            gAdminSite = "main",
+                                            Patch(VisitRequests, cur, {ApproveMain: "승인", Status: final, AdminMemo: txtMailMsg.Text}),
+                                            Patch(VisitRequests, cur, {ApproveMtv: "승인", Status: final, AdminMemo: txtMailMsg.Text})
+                                        );
+                                        With(
+                                            {after: LookUp(VisitRequests, ID = cur.ID)},
+                                            If(
+                                                after.Status = "대기" && after.ApproveMain <> "대기" && after.ApproveMtv <> "대기",
+                                                Patch(VisitRequests, after, {Status: "승인"})
+                                            )
+                                        );
+                                        If(
+                                            LookUp(VisitRequests, ID = cur.ID, Status) = "승인",
+                                            Remove(TourBusy, Filter(TourBusy, Title = cur.Title));
+                                            Patch(
+                                                TourBusy,
+                                                Defaults(TourBusy),
+                                                {
+                                                    Title: cur.Title, DateKey: cur.DateKey, MonthKey: Left(cur.DateKey, 7),
+                                                    CFrom: cur.CFrom, CTo: cur.CTo, LFrom: cur.LFrom, LTo: cur.LTo, MFrom: cur.MFrom, MTo: cur.MTo,
+                                                    Kind: "예약", Reason: cur.TourName
+                                                }
+                                            );
+                                            IfError(
+                                                TDLVisitDecision.Run(cur.ID, "승인", Coalesce(txtMailMsg.Text, "-"));
+                                                Notify("승인했습니다. 신청자에게 확정 메일이 발송됩니다.", NotificationType.Success),
+                                                Notify("승인은 저장됐지만 확정 메일을 보내지 못했습니다. 신청자에게 직접 알려 주세요.", NotificationType.Warning)
+                                            ),
+                                            Notify("이 센터의 승인을 기록했습니다. 상대 센터의 승인을 기다립니다.", NotificationType.Success)
+                                        )
+                                    )
+                                )
+                            )
+                        );
+                        ClearCollect(colAdminReqs, Filter(VisitRequests, VisitDate >= DateAdd(Today(), -180, TimeUnit.Days)));
+                        Set(gSel, LookUp(colAdminReqs, ID = gSel.ID));
+                        UpdateContext({locWorking: false})
+                    ),
+                        "거절",
+                    If(
+                        !locWorking,
+                        UpdateContext({locWorking: true});
+                        With(
+                            {cur: LookUp(VisitRequests, ID = gSel.ID)},
+                            If(
+                                cur.Status <> "대기",
+                                Notify("다른 관리자가 먼저 처리한 건입니다. 최신 상태로 다시 불러왔습니다.", NotificationType.Warning),
+                                If(
+                                    gAdminSite = "main",
+                                    Patch(VisitRequests, cur, {Status: "거절", ApproveMain: "거절", AdminMemo: txtMailMsg.Text}),
+                                    Patch(VisitRequests, cur, {Status: "거절", ApproveMtv: "거절", AdminMemo: txtMailMsg.Text})
+                                );
+                                Remove(TourBusy, Filter(TourBusy, Title = cur.Title));
+                                IfError(
+                                    TDLVisitDecision.Run(cur.ID, "거절", Coalesce(txtMailMsg.Text, "-"));
+                                    Notify("거절했습니다. 신청자에게 메일이 발송됩니다.", NotificationType.Success),
+                                    Notify("거절은 저장됐지만 결과 메일을 보내지 못했습니다. 신청자에게 직접 알려 주세요.", NotificationType.Warning)
+                                )
+                            )
+                        );
+                        ClearCollect(colAdminReqs, Filter(VisitRequests, VisitDate >= DateAdd(Today(), -180, TimeUnit.Days)));
+                        Set(gSel, LookUp(colAdminReqs, ID = gSel.ID));
+                        UpdateContext({locWorking: false})
+                    ),
+                        "취소",
+                    If(
+                        !locWorking,
+                        UpdateContext({locWorking: true});
+                        Patch(VisitRequests, LookUp(VisitRequests, ID = gSel.ID), {Status: "취소", AdminMemo: txtMailMsg.Text});
+                        Remove(TourBusy, Filter(TourBusy, Title = gSel.Title));
+                        IfError(
+                            TDLVisitDecision.Run(gSel.ID, "취소", Coalesce(txtMailMsg.Text, "-"));
+                            Notify("일정을 취소했습니다. 신청자에게 메일이 발송됩니다.", NotificationType.Success),
+                            Notify("취소는 저장됐지만 안내 메일을 보내지 못했습니다. 신청자에게 직접 알려 주세요.", NotificationType.Warning)
+                        );
+                        ClearCollect(colAdminReqs, Filter(VisitRequests, VisitDate >= DateAdd(Today(), -180, TimeUnit.Days)));
+                        Set(gSel, LookUp(colAdminReqs, ID = gSel.ID));
+                        UpdateContext({locWorking: false})
+                    )
+                    );
+                    Set(gMailMode, Blank())
+                  Font: =fnt
+                  Size: =10.5
+                  FontWeight: =FontWeight.Semibold
+                  RadiusTopLeft: =6
+                  RadiusTopRight: =6
+                  RadiusBottomLeft: =6
+                  RadiusBottomRight: =6
+                  Fill: =cPrimary
+                  Color: =cSurface
+                  HoverFill: =cPrimaryHover
+                  PressedFill: =cPrimaryHover
+                  HoverColor: =cSurface
+                  PressedColor: =cSurface
+                  BorderColor: =cLine
+                  BorderThickness: =0
+                  DisabledFill: =cSoft
+                  DisabledColor: =cInk3
+                  DisabledBorderColor: =cLine
+                  DisplayMode: =If(locWorking || (gMailMode <> "승인" && IsBlank(Trim(txtMailMsg.Text))), DisplayMode.Disabled, DisplayMode.Edit)

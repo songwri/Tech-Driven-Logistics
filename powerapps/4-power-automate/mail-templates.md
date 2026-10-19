@@ -53,7 +53,10 @@
 </div>
 ```
 
-## C-1. 신청자에게: 방문 확정
+## C-1. 신청자에게: 방문 확정 (오시는 길 · 약도 포함)
+
+`{{오시는길}}` 자리는 흐름 C 의 `작성` 단계 `오시는길` 결과(동적 콘텐츠 > 출력)입니다. `{{Message}}` 가 `-` 이면 '담당자 안내' 줄은 지웁니다
+(흐름에서는 `if(equals(트리거 Message, '-'), '', ...)` 로 줄 전체를 조건 처리). 도착 시간 `{{도착전}}` 은 `CenterGuides` main 행의 `ArriveBefore`(없으면 10).
 
 ```html
 <div style="font-family:'Segoe UI','Malgun Gothic',sans-serif;color:#2F3437;max-width:600px;line-height:1.6">
@@ -64,21 +67,25 @@
     <tr><td style="padding:8px 0;border-bottom:1px solid #EAEAEA;color:#787774">참석자</td><td style="padding:8px 0;border-bottom:1px solid #EAEAEA">{{AttendeeCount}}명 정보 제출 완료 (예상 {{ExpectedHeadcount}}명)</td></tr>
     <tr><td style="padding:8px 0;border-bottom:1px solid #EAEAEA;color:#787774">담당자 안내</td><td style="padding:8px 0;border-bottom:1px solid #EAEAEA">{{Message}}</td></tr>
   </table>
-  <p style="margin:20px 0 4px;font-weight:600">오시는 길</p>
-  <p style="margin:0;font-size:14px">(센터 주소 · 주차 안내를 여기에 적으세요. 시화MTV 가 들어간 투어는 시화MTV 안내도 함께)</p>
+  {{오시는길}}
+  <div style="margin-top:22px;background:#F7F6F3;border:1px solid #EAEAEA;padding:14px 16px;font-size:13px;color:#5F5E5B;line-height:1.8">
+    · 투어 시작 <b>{{도착전}}분 전</b>까지 도착해 주세요.<br>
+    · (두 센터를 가는 투어만) 두 센터는 떨어져 있어 오전 투어가 끝나면 오후 투어 장소로 이동해 주셔야 합니다.<br>
+    · 문의나 일정 변경 · 취소는 <b>최소 1일 전</b>까지 담당자와 직접 소통해 주세요.
+  </div>
   <p style="font-size:12px;color:#A3A29E;margin:20px 0 0">아직 정보를 내지 않은 참석자가 있다면 방문 전까지 입력 링크로 제출해 주세요.</p>
 </div>
 ```
 
-## C-2. 정보를 제출한 참석자에게: 방문 확정
+## C-2. 정보를 제출한 참석자에게: 방문 확정 (오시는 길 포함)
 
 ```html
 <div style="font-family:'Segoe UI','Malgun Gothic',sans-serif;color:#2F3437;max-width:600px;line-height:1.6">
   <p style="font-size:18px;font-weight:600;margin:0 0 12px">LX판토스 센터 방문이 확정되었습니다</p>
   <p style="margin:0 0 4px">{{TourName}}</p>
-  <p style="margin:0 0 20px;color:#787774">{{DateKey}} {{ScheduleText}}</p>
-  <p style="margin:0 0 4px;font-weight:600">오시는 길</p>
-  <p style="margin:0;font-size:14px">(센터 주소 · 주차 안내)</p>
+  <p style="margin:0 0 4px;color:#787774">{{DateKey}} {{ScheduleText}}</p>
+  {{오시는길}}
+  <p style="font-size:13px;color:#5F5E5B;margin:20px 0 0">투어 시작 {{도착전}}분 전까지 도착해 주세요.</p>
 </div>
 ```
 
