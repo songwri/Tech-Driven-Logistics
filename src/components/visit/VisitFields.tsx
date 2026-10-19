@@ -463,12 +463,15 @@ export function CompanyFields({
   onChange,
   errors,
   hideInternalCompany,
+  partnerSuggestions,
 }: {
   draft: VisitDraft
   onChange: Patch
   errors?: Errors
   /** 예약 화면: 내부 방문은 방문 조직명을 받지 않는다 (신청 담당자 정보로 대신 채움). */
   hideInternalCompany?: boolean
+  /** 관리자 화면: 이미 기록된 파트너사 이름을 파트너사명 칸에 제안한다 */
+  partnerSuggestions?: string[]
 }) {
   const external = draft.category === 'external'
   return (
@@ -540,7 +543,15 @@ export function CompanyFields({
                     placeholder="예) 한국물류파트너스"
                     maxLength={40}
                     invalid={errors?.has('partnerName')}
+                    list={partnerSuggestions ? 'tdl-partner-name-options' : undefined}
                   />
+                  {partnerSuggestions && (
+                    <datalist id="tdl-partner-name-options">
+                      {partnerSuggestions.map((item) => (
+                        <option key={item} value={item} />
+                      ))}
+                    </datalist>
+                  )}
                 </Field>
               </div>
             )}
@@ -650,10 +661,18 @@ export function PurposeFields({ draft, onChange, errors }: { draft: VisitDraft; 
 }
 
 /** 관리자 수정 화면용: 방문 기관과 방문 목적을 한 번에 */
-export function VisitInfoFields({ draft, onChange }: { draft: VisitDraft; onChange: Patch }) {
+export function VisitInfoFields({
+  draft,
+  onChange,
+  partnerSuggestions,
+}: {
+  draft: VisitDraft
+  onChange: Patch
+  partnerSuggestions?: string[]
+}) {
   return (
     <div className="space-y-6">
-      <CompanyFields draft={draft} onChange={onChange} />
+      <CompanyFields draft={draft} onChange={onChange} partnerSuggestions={partnerSuggestions} />
       <PurposeFields draft={draft} onChange={onChange} />
     </div>
   )

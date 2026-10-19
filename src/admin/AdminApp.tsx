@@ -33,6 +33,7 @@ import { GuideAssignView } from './GuideAssignView'
 import { GuestbookAdmin } from './GuestbookAdmin'
 import { DiagnoseButton } from './DiagnosePanel'
 import { ManualVisitModal } from './ManualVisitModal'
+import { partnerNames } from './statsData'
 import { ImportModal } from './ImportModal'
 import { downloadVisitRequests } from './importTemplate'
 
@@ -588,6 +589,7 @@ function AdminDashboard({ site }: { site: AdminSite }) {
       {dialog === 'manual' && (
         <ManualVisitModal
           site={site}
+          partnerSuggestions={partnerNames(data.allRequests)}
           onClose={() => setDialog(null)}
           onSubmit={async (input) => {
             const created = await data.create(input)

@@ -117,7 +117,10 @@ export function ManualVisitModal({
   initial,
   onClose,
   onSubmit,
+  partnerSuggestions,
 }: {
+  /** 파트너사명 칸에 제안할 이미 기록된 이름 */
+  partnerSuggestions?: string[]
   /** 이 관리자 페이지에서 고를 수 있는 투어만 보여준다 (시화MTV 페이지는 시화MTV 가 들어간 투어) */
   site: AdminSite
   /** 있으면 수정, 없으면 새 등록 */
@@ -295,7 +298,15 @@ export function ManualVisitModal({
                     placeholder="소개한 파트너사명"
                     maxLength={40}
                     aria-label="파트너사명"
+                    list="tdl-manual-partner-options"
                   />
+                )}
+                {clientType === 'partner' && (
+                  <datalist id="tdl-manual-partner-options">
+                    {(partnerSuggestions ?? []).map((item) => (
+                      <option key={item} value={item} />
+                    ))}
+                  </datalist>
                 )}
               </div>
             )}
