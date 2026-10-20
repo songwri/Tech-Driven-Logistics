@@ -102,8 +102,8 @@ body.plain-bg {
   --rdp-accent-color: var(--color-brand);
   --rdp-accent-background-color: color-mix(in srgb, var(--color-brand) 10%, transparent);
   --rdp-today-color: var(--color-brand);
-  --rdp-day-height: 2.25rem;
-  --rdp-day-width: 2.25rem;
+  --rdp-day-height: 2.5rem;
+  --rdp-day-width: 2.5rem;
   --rdp-weekday-text-transform: none;
   font-family: var(--font-sans);
   font-size: 0.8125rem;
@@ -118,6 +118,35 @@ body.plain-bg {
 
 .tdl-calendar .rdp-caption_label {
   font-weight: 600;
+}
+
+/* 예약 가능한 날: 연한 브랜드색 원 + 굵은 글씨로 눌러도 되는 날임을 분명히 한다. 선택한 날은 기존 선택 스타일(진한 브랜드색)을 유지한다. */
+.tdl-calendar .tdl-day-available:not(.rdp-selected) .rdp-day_button {
+  font-weight: 700;
+  color: var(--color-brand);
+  background: color-mix(in srgb, var(--color-brand) 10%, white);
+  border: 1.5px solid color-mix(in srgb, var(--color-brand) 35%, white);
+  cursor: pointer;
+  transition: background-color 0.12s, transform 0.12s;
+}
+
+.tdl-calendar .tdl-day-available:not(.rdp-selected) .rdp-day_button:hover {
+  background: color-mix(in srgb, var(--color-brand) 20%, white);
+  transform: scale(1.06);
+}
+
+.tdl-calendar .rdp-selected .rdp-day_button {
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* 신청 불가인 날(휴무 · 마감 · 신청 기한 지남)은 숫자만 흐리게 */
+.tdl-calendar .rdp-disabled:not(.rdp-hidden):not(.rdp-selected) .rdp-day_button {
+  color: var(--color-warm-300);
+  opacity: 0.7;
+  font-weight: 400;
 }
 
 /* 방명록 컨베이어: 카드 줄이 왼쪽에서 오른쪽으로 일정한 속도로 흐른다 (두 벌을 이어 붙여 끊김 없이 반복). */
