@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BookOpen, CalendarCheck, MailCheck, Send } from 'lucide-react'
+import { BookOpen, CalendarCheck, MailCheck, Send, TriangleAlert } from 'lucide-react'
 import { Logo } from '@/components/ui/Logo'
 import { ReservationForm } from '@/components/visit/ReservationForm'
 import { fetchSchedule, isLiveBackend, readCachedSchedule, type Schedule } from '@/lib/labApi'
@@ -85,6 +85,21 @@ export default function ReservePage() {
               </li>
             ))}
           </ol>
+        </div>
+
+        {/* 방문일이 정해지지 않은 채 여러 날짜를 동시에 걸어 두는 신청이 들어와 상단에 경고한다. */}
+        <div className="mb-8 flex gap-3 border border-[#f59f00]/60 bg-[#fff4e6] px-4 py-3.5 md:px-5" role="note">
+          <TriangleAlert width={20} height={20} className="mt-0.5 shrink-0 text-[#c2410c]" strokeWidth={2} aria-hidden />
+          <div className="text-[14px] leading-relaxed text-warm-800">
+            <p className="font-bold text-[#c2410c]">방문일을 확정하기 전에 여러 날짜를 동시에 신청하지 말아 주세요</p>
+            <p className="mt-1">
+              방문일이 정해지지 않은 상태에서 여러 날짜를 걸어 두면 다른 방문객의 일정이 막힙니다. 방문 희망일을 정해{' '}
+              <b>한 번에 1건만</b> 신청해 주시고, 일정 조정이 필요하면 담당자에게 문의해 주세요.
+            </p>
+            <p className="mt-1">
+              <b className="text-[#c2410c]">승인 대기 중인 예약이 2건 이상 확인되면 담당자 판단으로 임의 반려될 수 있습니다.</b>
+            </p>
+          </div>
         </div>
 
         {loadError && (
