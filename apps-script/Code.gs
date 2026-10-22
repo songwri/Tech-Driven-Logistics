@@ -89,7 +89,7 @@ var ADMIN_URL = SITE_URL + 'admin/';
 var ADMIN_URLS = { main: ADMIN_URL, mtv: SITE_URL + 'admin-mtv/', hq: SITE_URL + 'admin-hq/' };
 
 /** 배포된 코드 버전 확인용. 웹앱주소?action=version 으로 확인할 수 있다. */
-var CODE_VERSION = '2026-10-15.industry';
+var CODE_VERSION = '2026-10-22.feedback';
 /**
  * 관리자 페이지가 기대하는 서버 기능 수준. 관리자 API 가 바뀔 때 올리고,
  * src/lib/labApi.ts 의 REQUIRED_API_LEVEL 도 함께 맞춘다.
@@ -237,7 +237,7 @@ var VISIT_HEADERS = [
   '방문인원', '방문자명단', '요청사항', '개인정보동의', '관리자메모', '토큰', '수정일시', '방문자JSON',
   '투어언어', '외국어', '통역동반', '출처', '주요인원', '가이드', '유관부서', '후속진행',
   // 새 열은 기존 시트와 맞도록 맨 뒤에 붙인다 (시트를 열면 제목이 자동으로 추가된다).
-  '담당(실)', '통역언어', '실제방문인원', '센터별승인', '방문자동의확인', '파트너사명',
+  '담당(실)', '통역언어', '실제방문인원', '센터별승인', '방문자동의확인', '파트너사명', '후기메일발송',
 ];
 var BLOCKED_HEADERS = ['날짜', '시간대(비우면 종일)', '사유', '대상(all/center/lab/mtv)', 'id'];
 
@@ -893,6 +893,7 @@ function rowToRequest_(row, col) {
     followUp: String(get('후속진행')),
     actualHeadcount: headcountFromCell_(get('실제방문인원')),
     partnerName: String(get('파트너사명')).trim(),
+    feedbackMailAt: String(get('후기메일발송')).trim(),
     approvals: approvalsFromText_(get('센터별승인')),
   };
 }
@@ -936,7 +937,7 @@ function readVisits_() {
 function publicRequest_(request) {
   var copy = {};
   for (var key in request) {
-    if (key !== '_row' && key !== '_token') copy[key] = request[key];
+    if (key.charAt(0) !== '_') copy[key] = request[key]; // _row · _token · _previous 같은 내부 값은 내보내지 않는다
   }
   return copy;
 }
@@ -1001,6 +1002,7 @@ function fillVisitRow_(values, col, request, extra) {
   set('실제방문인원', typeof request.actualHeadcount === 'number' ? request.actualHeadcount : '');
   set('센터별승인', needsSiteApproval_(request) ? approvalsText_(request.approvals) : '');
   set('파트너사명', request.clientType === 'partner' ? (request.partnerName || '') : '');
+  set('후기메일발송', request.feedbackMailAt || '');
   for (var key in (extra || {})) set(key, extra[key]);
 }
 
@@ -1300,6 +1302,14 @@ function changeStatus_(found, status, role) {
   var notify = request.source !== 'manual' && (
     (after === 'approved' && !isConfirmed_(before)) || (after === 'rejected' && before !== 'rejected'));
   if (notify) notifyHost_(request);
+  // 방문 완료로 바꾸면 그날 투어에 온 방문자들에게 만족도 · 개선 의견(방명록) 요청 메일을 보낸다. 실패해도 완료 처리는 그대로 둔다.
+  if (after === 'completed' && before !== 'completed') {
+    try {
+      request._feedbackMail = sendFeedbackMail_(request);
+    } catch (error) {
+      request._feedbackMail = { sent: 0, failed: 0, reason: 'error' };
+    }
+  }
   return request;
 }
 
@@ -1569,7 +1579,8 @@ function admin_(payload) {
   if (payload.action === 'setStatus') {
     var status = String(payload.status);
     if (!STATUS_TEXT[status]) throw new Error('알 수 없는 상태입니다.');
-    return { request: publicRequest_(changeStatus_(request, status, role)) };
+    var changed = changeStatus_(request, status, role);
+    return { request: publicRequest_(changed), feedbackMail: changed._feedbackMail || null };
   }
 
   if (payload.action === 'update') {
@@ -1589,6 +1600,7 @@ function admin_(payload) {
       if (!current) throw new Error('예약을 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.');
       next.status = current.status;
       next.approvals = current.approvals;
+      next.feedbackMailAt = current.feedbackMailAt; // 관리자 수정이 후기 메일 발송 기록을 지우지 않도록
       next._row = current._row;
       if (isConfirmed_(next.status) && next.source !== 'manual' && isBusy_(next.tour, next.date, next.slot, busy_(next.id).busy, next.source === 'manual')) {
         throw new Error('변경한 일정이 이미 승인된 다른 예약과 겹칩니다.');
@@ -1932,6 +1944,107 @@ function notifyHost_(r) {
       ['방문 인원', headcountOf_(r) + '명'],
     ]) + (approved ? visitGuideHtml_(r) : ''), mailBrand_(r.tour)),
   });
+}
+
+/* ------------------------------------------------- 방문 후 만족도 · 개선 의견 요청 메일 */
+
+/** 후기(방명록) 링크 */
+var FEEDBACK_LINK = SITE_URL + 'guestbook/';
+/**
+ * 이 날짜(포함) 이후에 신청된 예약만 후기 요청 메일을 보낸다. 신청 화면의 개인정보 동의 문구에
+ * '방문 후 만족도 · 개선 의견 조사 안내 메일' 용도를 넣은 날로, 그 이전에 신청한 방문자는 동의한 적 없는 용도라 보내지 않는다.
+ * 스크립트 속성 FEEDBACK_MAIL_FROM(YYYY-MM-DD)으로 바꿀 수 있다.
+ */
+var FEEDBACK_MAIL_FROM = '2026-10-22';
+var EMAIL_RE_ = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function feedbackMailFrom_() {
+  return PropertiesService.getScriptProperties().getProperty('FEEDBACK_MAIL_FROM') || FEEDBACK_MAIL_FROM;
+}
+
+/** 방문자 명단에서 이메일이 올바른 사람만, 같은 주소는 한 번만 */
+function feedbackTargets_(r) {
+  var seen = {};
+  var targets = [];
+  (r.visitors || []).forEach(function (v) {
+    var email = String(v.email || '').trim();
+    var key = email.toLowerCase();
+    if (!EMAIL_RE_.test(email) || seen[key]) return;
+    seen[key] = true;
+    targets.push({ name: String(v.name || '').trim(), email: email });
+  });
+  return targets;
+}
+
+function feedbackMailHtml_(r, name) {
+  var brand = mailBrand_(r.tour);
+  var hello = name ? escapeHtml_(name) + ' 님, ' : '';
+  var lead = hello + '<b>' + escapeHtml_(r.date) + '</b> 투어에 방문해 주셔서 감사합니다.<br>'
+    + '오늘 방문은 어떠셨나요? 만족하신 점과 더 나아졌으면 하는 점을 남겨 주시면 서비스를 개선하는 데 큰 도움이 됩니다.';
+  var body = scheduleBox_(r)
+    + '<div style="font-size:14px;line-height:1.9;color:#3d3532;margin:0 0 6px;">방명록에서 아래 내용을 남겨 주세요.</div>'
+    + '<ul style="margin:0 0 24px;padding-left:18px;font-size:13px;line-height:1.9;color:#534a47;">'
+    + '<li>투어 전반에 대한 <b>만족도</b> (별점)</li>'
+    + '<li>특히 <b>좋았던 점</b></li>'
+    + '<li><b>개선했으면 하는 점</b>이나 바라는 점</li></ul>'
+    + '<div style="margin:0 0 22px;">' + button_(FEEDBACK_LINK, '방명록에 후기 남기기', true) + '</div>'
+    + '<p style="margin:0;font-size:12px;line-height:1.8;color:#aca8a7;">1분이면 충분합니다. 방명록에는 이름과 소속이 일부만 공개되며, '
+    + '이 메일은 방문 예약 시 입력하신 이메일로 방문 종료 후 한 번만 발송됩니다.</p>';
+  // 외국어 투어는 영문 안내를 함께 넣는다.
+  if (r.language === 'foreign') {
+    body += '<hr style="border:0;border-top:1px solid #e3e0de;margin:24px 0;">'
+      + '<p style="margin:0 0 10px;font-size:13px;line-height:1.8;color:#534a47;">Thank you for visiting us on <b>' + escapeHtml_(r.date)
+      + '</b>. We would love to hear how your tour went — what you were happy with and what we could do better. '
+      + 'Please leave your feedback in our guestbook (it takes about a minute).</p>'
+      + '<div>' + button_(FEEDBACK_LINK, 'Leave your feedback', false) + '</div>';
+  }
+  return mailShell_('방문해 주셔서 감사합니다', lead, body, brand);
+}
+
+/**
+ * 방문 완료 시 방문자 명단의 이메일로 후기(방명록) 요청 메일을 한 사람씩 따로 보낸다.
+ * 보내지 않는 경우: 이미 보냄 · 수기 등록 · 개인정보 동의 기록 없음 · 동의 문구 변경 이전 신청 · 아직 오지 않은 날짜 · 이메일 없음 · 일일 발송 한도 부족.
+ * 한 건이라도 보내면 '후기메일발송' 열에 시각을 남겨 같은 예약에는 다시 보내지 않는다.
+ * 반환: { sent, failed, reason? } (reason 이 있으면 보내지 않은 이유)
+ */
+function sendFeedbackMail_(r) {
+  if (r.feedbackMailAt) return { sent: 0, failed: 0, reason: 'already' };
+  if (r.source === 'manual' || !r.consent) return { sent: 0, failed: 0, reason: 'noConsent' };
+  if (String(r.createdAt || '') < feedbackMailFrom_()) return { sent: 0, failed: 0, reason: 'before' };
+  var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  if (r.date > today) return { sent: 0, failed: 0, reason: 'future' };
+  var targets = feedbackTargets_(r);
+  if (targets.length === 0) return { sent: 0, failed: 0, reason: 'noRecipients' };
+  if (MailApp.getRemainingDailyQuota() < targets.length) return { sent: 0, failed: 0, reason: 'quota' };
+
+  var sent = 0;
+  var failed = 0;
+  var brand = mailBrand_(r.tour);
+  targets.forEach(function (target) {
+    try {
+      MailApp.sendEmail({
+        to: target.email,
+        name: MAIL_SENDER_NAME,
+        replyTo: mailTo_(r.tour),
+        subject: brand.tag + ' 방문해 주셔서 감사합니다 · 만족도와 개선 의견을 남겨 주세요',
+        htmlBody: feedbackMailHtml_(r, target.name),
+      });
+      sent++;
+    } catch (error) {
+      failed++;
+    }
+  });
+  if (sent > 0) {
+    withLock_(function () {
+      var current = findVisit_(function (item) { return item.id === r.id; });
+      if (current) {
+        current.feedbackMailAt = new Date().toISOString();
+        writeVisit_(current._row, current);
+      }
+    });
+    r.feedbackMailAt = new Date().toISOString();
+  }
+  return { sent: sent, failed: failed };
 }
 
 function resultPage_(title, message, tone) {

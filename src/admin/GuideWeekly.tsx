@@ -34,9 +34,15 @@ function addWeeks(monday: string, weeks: number) {
 }
 
 /** 인솔자 칩: 진한 남색 바탕 + 흰 글씨. 미배정이면 빨간 점선. */
-function LeadChip({ name }: { name: string | null }) {
-  return name ? (
-    <span className="inline-block rounded-[3px] bg-warm-800 px-2 py-0.5 text-[13px] font-bold leading-tight text-white">{nameLabel(name)}</span>
+function LeadChip({ names }: { names: string[] }) {
+  return names.length > 0 ? (
+    <span className="flex flex-wrap gap-1">
+      {names.map((name) => (
+        <span key={name} className="inline-block rounded-[3px] bg-warm-800 px-2 py-0.5 text-[13px] font-bold leading-tight text-white">
+          {nameLabel(name)}
+        </span>
+      ))}
+    </span>
   ) : (
     <span className="inline-block rounded-[3px] border border-dashed border-brand px-2 py-0.5 text-[12px] font-semibold leading-tight text-brand">미배정</span>
   )
@@ -74,7 +80,7 @@ function VisitBlock({ request, active, onSelect }: { request: VisitRequest; acti
       </span>
       <span className="mt-1.5 flex items-start gap-1.5">
         <span className="w-7 shrink-0 pt-0.5 text-[10px] font-bold text-warm-800">인솔</span>
-        <LeadChip name={assignment.main} />
+        <LeadChip names={assignment.leads} />
       </span>
       <span className="mt-1 flex items-start gap-1.5">
         <span className="w-7 shrink-0 pt-0.5 text-[10px] font-bold text-warm-600">운영</span>
@@ -123,7 +129,7 @@ export function GuideWeekly({
 
   const capacity = dates.filter(isWorkingDay).length * HOURS_PER_DAY
   const loads = tallyLoads(inWeek, capacity)
-  const unassigned = inWeek.filter((request) => !parseGuides(request.guides).main).length
+  const unassigned = inWeek.filter((request) => parseGuides(request.guides).leads.length === 0).length
   const relative =
     monday === thisWeek ? '이번 주' : monday === addWeeks(thisWeek, 1) ? '다음 주' : monday === addWeeks(thisWeek, -1) ? '지난 주' : null
 
