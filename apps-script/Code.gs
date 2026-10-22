@@ -1978,27 +1978,47 @@ function feedbackTargets_(r) {
 
 function feedbackMailHtml_(r, name) {
   var brand = mailBrand_(r.tour);
-  var hello = name ? escapeHtml_(name) + ' 님, ' : '';
-  var lead = hello + '<b>' + escapeHtml_(r.date) + '</b> 투어에 방문해 주셔서 감사합니다.<br>'
-    + '오늘 방문은 어떠셨나요? 만족하신 점과 더 나아졌으면 하는 점을 남겨 주시면 서비스를 개선하는 데 큰 도움이 됩니다.';
-  var body = scheduleBox_(r)
-    + '<div style="font-size:14px;line-height:1.9;color:#3d3532;margin:0 0 6px;">방명록에서 아래 내용을 남겨 주세요.</div>'
-    + '<ul style="margin:0 0 24px;padding-left:18px;font-size:13px;line-height:1.9;color:#534a47;">'
-    + '<li>투어 전반에 대한 <b>만족도</b> (별점)</li>'
-    + '<li>특히 <b>좋았던 점</b></li>'
-    + '<li><b>개선했으면 하는 점</b>이나 바라는 점</li></ul>'
-    + '<div style="margin:0 0 22px;">' + button_(FEEDBACK_LINK, '방명록에 후기 남기기', true) + '</div>'
-    + '<p style="margin:0;font-size:12px;line-height:1.8;color:#aca8a7;">1분이면 충분합니다. 방명록에는 이름과 소속이 일부만 공개되며, '
-    + '이 메일은 방문 예약 시 입력하신 이메일로 방문 종료 후 한 번만 발송됩니다.</p>';
-  // 외국어 투어는 영문 안내를 함께 넣는다.
-  if (r.language === 'foreign') {
-    body += '<hr style="border:0;border-top:1px solid #e3e0de;margin:24px 0;">'
-      + '<p style="margin:0 0 10px;font-size:13px;line-height:1.8;color:#534a47;">Thank you for visiting us on <b>' + escapeHtml_(r.date)
-      + '</b>. We would love to hear how your tour went — what you were happy with and what we could do better. '
-      + 'Please leave your feedback in our guestbook (it takes about a minute).</p>'
-      + '<div>' + button_(FEEDBACK_LINK, 'Leave your feedback', false) + '</div>';
+  var dateKo = formatDateKo_(r.date);
+  var dateParts = String(r.date).split('-');
+  var months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  var dateEn = months[Number(dateParts[1]) - 1] + ' ' + Number(dateParts[2]) + ', ' + dateParts[0];
+  var foreign = r.language === 'foreign';
+  var ko = {
+    lead: (name ? escapeHtml_(name) + ' 님, ' : '') + '<b>' + escapeHtml_(dateKo) + '</b> 투어에 방문해 주셔서 감사합니다.<br>'
+      + '이번 방문은 어떠셨나요? 만족하신 점과 더 나아졌으면 하는 점을 남겨 주시면 서비스를 개선하는 데 큰 도움이 됩니다.',
+    ask: '방명록에서 아래 내용을 남겨 주세요.',
+    items: ['투어 전반에 대한 <b>만족도</b> (별점)', '특히 <b>좋았던 점</b>', '<b>개선했으면 하는 점</b>이나 바라는 점'],
+    button: '방명록에 후기 남기기',
+    note: '1분이면 충분합니다. 방명록에는 이름과 소속이 일부만 공개되며, 이 메일은 방문 예약 시 입력하신 이메일로 방문 종료 후 한 번만 발송됩니다.',
+    noReply: '본 메일은 <b>발신 전용</b>입니다. 회신하셔도 확인할 수 없으니, 문의는 방문을 담당한 센터 담당자에게 직접 연락해 주세요.',
+  };
+  var en = {
+    lead: 'Dear ' + (name ? escapeHtml_(name) : 'Visitor') + ',<br>Thank you for visiting us on <b>' + escapeHtml_(dateEn) + '</b>. '
+      + 'How was your tour? Tell us what you were happy with and what we could do better — it helps us improve.',
+    ask: 'Please share the following in our guestbook.',
+    items: ['Your overall <b>satisfaction</b> (star rating)', 'What you <b>liked most</b>', 'What we could <b>improve</b>'],
+    button: 'Leave your feedback',
+    note: 'It takes about a minute. Only part of your name and company is shown publicly. This email is sent once, after your visit, to the address you gave when booking.',
+    noReply: 'This is a <b>send-only</b> mailbox, so replies are not monitored. Please contact your host at the center directly with any questions.',
+  };
+  // 한 언어 분량: 질문 목록 + 버튼 + 안내
+  var section = function (t, filled) {
+    return '<div style="font-size:14px;line-height:1.9;color:#3d3532;margin:0 0 6px;">' + t.ask + '</div>'
+      + '<ul style="margin:0 0 22px;padding-left:18px;font-size:13px;line-height:1.9;color:#534a47;">'
+      + t.items.map(function (item) { return '<li>' + item + '</li>'; }).join('') + '</ul>'
+      + '<div style="margin:0 0 18px;">' + button_(FEEDBACK_LINK, t.button, filled) + '</div>'
+      + '<p style="margin:0;font-size:12px;line-height:1.8;color:#aca8a7;">' + t.note + '<br>' + t.noReply + '</p>';
+  };
+  // 외국어 투어는 영문을 위에, 한국어를 아래에 둔다.
+  var first = foreign ? en : ko;
+  var second = foreign ? ko : null;
+  var body = scheduleBox_(r) + section(first, true);
+  if (second) {
+    body += '<hr style="border:0;border-top:1px solid #e3e0de;margin:26px 0;">'
+      + '<p style="margin:0 0 14px;font-size:14px;line-height:1.75;color:#534a47;">' + second.lead + '</p>'
+      + section(second, false);
   }
-  return mailShell_('방문해 주셔서 감사합니다', lead, body, brand);
+  return mailShell_(foreign ? 'Thank you for visiting' : '방문해 주셔서 감사합니다', first.lead, body, brand);
 }
 
 /**
@@ -2025,8 +2045,11 @@ function sendFeedbackMail_(r) {
       MailApp.sendEmail({
         to: target.email,
         name: MAIL_SENDER_NAME,
-        replyTo: mailTo_(r.tour),
-        subject: brand.tag + ' 방문해 주셔서 감사합니다 · 만족도와 개선 의견을 남겨 주세요',
+        // 발신 전용 메일: 회신 주소를 두지 않고, Google Workspace 계정이면 noreply 발신 주소로 보낸다(개인 Gmail 은 무시됨).
+        noReply: true,
+        subject: r.language === 'foreign'
+          ? brand.tag + ' Thank you for visiting · 방문해 주셔서 감사합니다'
+          : brand.tag + ' 방문해 주셔서 감사합니다 · 만족도와 개선 의견을 남겨 주세요',
         htmlBody: feedbackMailHtml_(r, target.name),
       });
       sent++;
