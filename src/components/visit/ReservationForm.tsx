@@ -342,6 +342,12 @@ export function ReservationForm({ busy, closedDays, scheduleLoading }: Reservati
         <SectionTitle index="1" done={problems.schedule === null}>
           투어 · 일정
         </SectionTitle>
+        <p className="mb-4 flex items-start gap-1.5 text-[13px] leading-snug text-[#c2410c]">
+          <CircleAlert width={14} height={14} className="mt-0.5 shrink-0" aria-hidden />
+          <span>
+            방문일 미정 상태로 여러 날짜를 동시에 신청하지 마세요. <b>대기 중인 예약이 2건 이상이면 임의 반려될 수 있습니다.</b>
+          </span>
+        </p>
         <SchedulePicker
           tour={draft.tour}
           date={draft.date}
