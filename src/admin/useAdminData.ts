@@ -25,6 +25,7 @@ import {
 import { buildSampleRequests } from './sampleData'
 import { visitKey, type ManualInput } from './importLegacy'
 import { normalizeRequest, normalizeRequests } from './normalize'
+import { becomesCompleted, simulateFeedbackMail, type FeedbackMailResult, type StatusOutcome } from './feedbackMail'
 
 export interface ServerHealth {
   version: string
@@ -275,20 +276,23 @@ export function useAdminData(site: AdminSite) {
    * 복합 투어는 이 페이지 센터의 결정으로 기록되고, 두 센터가 모두 승인해야 확정됩니다 (applyDecision).
    */
   const setStatus = useCallback(
-    async (id: string, status: VisitStatus) => {
+    async (id: string, status: VisitStatus): Promise<StatusOutcome | undefined> => {
       guard()
       const target = allRequests.find((request) => request.id === id)
-      if (!target) return
+      if (!target) return undefined
       const next = { ...target, ...applyDecision(target, site, status) }
       if (!isConfirmed(target.status) && conflicts(next, allRequests)) {
         throw new Error('이미 승인된 다른 예약과 시간이 겹쳐 승인할 수 없습니다. 일정을 먼저 조정해 주세요.')
       }
       if (!isLiveBackend) {
-        replace(next)
-        return
+        // 데모: 방문 완료로 바뀌면 서버와 같은 규칙으로 '후기 요청 메일을 보낸 것'처럼 표시한다 (실제 메일은 없음).
+        const mail = becomesCompleted(target, next.status) ? simulateFeedbackMail(target, toDateKey(new Date())) : undefined
+        replace(mail && mail.sent > 0 ? { ...next, feedbackMailAt: new Date().toISOString() } : next)
+        return mail ? { mail, demo: true } : undefined
       }
-      const data = await adminRequest<{ request: VisitRequest }>(key, 'setStatus', { id, status })
+      const data = await adminRequest<{ request: VisitRequest; feedbackMail?: FeedbackMailResult | null }>(key, 'setStatus', { id, status })
       replace(normalizeRequest(data.request))
+      return data.feedbackMail ? { mail: data.feedbackMail, demo: false } : undefined
     },
     [allRequests, guard, key, replace, site],
   )

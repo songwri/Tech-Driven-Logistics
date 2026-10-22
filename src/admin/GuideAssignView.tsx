@@ -63,13 +63,20 @@ function AssignPanel({
   const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
   const dirty = formatGuides(draft) !== formatGuides(saved)
 
-  const chooseMain = (name: string | null) => {
+  // 인솔자는 여러 명을 고를 수 있다. 인솔자로 고른 사람은 운영 인원에서 뺀다.
+  const toggleLead = (name: string) => {
     setMessage(null)
-    // 인솔자로 고른 사람은 운영 인원에서 뺀다.
-    setDraft((current) => ({ ...current, main: name, operators: current.operators.filter((item) => item !== name) }))
+    setDraft((current) => {
+      const selected = current.leads.includes(name)
+      return {
+        ...current,
+        leads: selected ? current.leads.filter((item) => item !== name) : [...current.leads, name],
+        operators: selected ? current.operators : current.operators.filter((item) => item !== name),
+      }
+    })
   }
   // 전체 선택 대상: 인솔자를 뺀 운영 가능 인원
-  const selectable = OPERATORS.filter((member) => member.name !== draft.main).map((member) => member.name)
+  const selectable = OPERATORS.filter((member) => !draft.leads.includes(member.name)).map((member) => member.name)
   const allSelected = selectable.length > 0 && selectable.every((name) => draft.operators.includes(name))
   const toggleAll = () => {
     setMessage(null)
@@ -112,31 +119,30 @@ function AssignPanel({
 
       <fieldset>
         <legend className="mb-1.5 flex items-center gap-1.5 text-[13px] font-bold text-warm-800">
-          <UserRound width={14} height={14} /> 인솔자
+          <UserRound width={14} height={14} /> 인솔자 <span className="font-normal text-warm-600">복수 선택</span>
         </legend>
-        <div className="border border-warm-300/50" role="radiogroup" aria-label="인솔자">
-          {[null, ...GUIDE_ROSTER.map((member) => member.name)].map((name) => {
-            const member = GUIDE_ROSTER.find((item) => item.name === name)
-            const active = draft.main === name
+        <div className="border border-warm-300/50" role="group" aria-label="인솔자">
+          {GUIDE_ROSTER.map((member) => {
+            const active = draft.leads.includes(member.name)
             return (
               <button
-                key={name ?? 'none'}
+                key={member.name}
                 type="button"
-                role="radio"
+                role="checkbox"
                 aria-checked={active}
-                onClick={() => chooseMain(name)}
+                onClick={() => toggleLead(member.name)}
                 className={cn(
                   'flex w-full items-center justify-between border-b border-warm-300/30 px-3 py-1.5 text-left text-[13px] transition last:border-b-0',
                   active ? 'bg-warm-800 font-semibold text-white' : 'text-warm-800 hover:bg-cream/60',
-                  !member && !active && 'text-warm-600',
                 )}
               >
-                {member ? memberLabel(member) : '미배정'}
+                {memberLabel(member)}
                 {active && <Check width={14} height={14} />}
               </button>
             )
           })}
         </div>
+        <p className="mt-1.5 text-[11px] text-warm-600">인솔자가 둘 이상이어도 됩니다 · 모두 선택을 해제하면 미배정입니다</p>
       </fieldset>
 
       <fieldset>
@@ -149,7 +155,7 @@ function AssignPanel({
         </legend>
         <div className="grid grid-cols-2 gap-1.5">
           {OPERATORS.map((member) => {
-            const isMain = draft.main === member.name
+            const isMain = draft.leads.includes(member.name)
             const checked = !isMain && draft.operators.includes(member.name)
             return (
               <label
@@ -228,7 +234,7 @@ export function GuideAssignView({
     .sort((a, b) => (a.date + a.slot).localeCompare(b.date + b.slot))
   // 주간 보드에서 다른 달의 방문을 골라도 배정 패널이 열리도록 전체에서 찾는다.
   const selected = confirmed.find((request) => request.id === selectedId) ?? null
-  const unassigned = inMonth.filter((request) => !parseGuides(request.guides).main).length
+  const unassigned = inMonth.filter((request) => parseGuides(request.guides).leads.length === 0).length
 
   const byDate = new Map<string, VisitRequest[]>()
   for (const request of inMonth) byDate.set(request.date, [...(byDate.get(request.date) ?? []), request])
@@ -400,7 +406,7 @@ export function GuideAssignView({
                         {list.map((request) => (
                           <span
                             key={request.id}
-                            className={cn('h-2 w-2 rounded-full', !parseGuides(request.guides).main && 'ring-2 ring-brand ring-offset-1')}
+                            className={cn('h-2 w-2 rounded-full', parseGuides(request.guides).leads.length === 0 && 'ring-2 ring-brand ring-offset-1')}
                             style={{ background: TOUR_BY_ID[request.tour].color }}
                           />
                         ))}
@@ -424,7 +430,7 @@ export function GuideAssignView({
                             className={cn(
                               'block w-full border border-l-[4px] px-1 py-0.5 text-left text-[11px] leading-tight transition',
                               active ? 'bg-warm-800 text-white' : 'bg-white text-warm-800 hover:bg-cream/70',
-                              !assignment.main && !active && 'bg-brand/5',
+                              assignment.leads.length === 0 && !active && 'bg-brand/5',
                             )}
                             style={{ borderColor: tour.color }}
                           >
@@ -433,9 +439,9 @@ export function GuideAssignView({
                               <span className="truncate font-medium">{request.company}</span>
                             </span>
                             <span className={cn('mt-0.5 block truncate text-[10px]', active ? 'text-white/80' : 'text-warm-600')}>
-                              {assignment.main ? (
+                              {assignment.leads.length > 0 ? (
                                 <>
-                                  <b className={active ? 'text-white' : 'text-warm-800'}>{assignment.main}</b>
+                                  <b className={active ? 'text-white' : 'text-warm-800'}>{assignment.leads.join(', ')}</b>
                                   {assignment.operators.length > 0 && ` + ${assignment.operators.length}명`}
                                 </>
                               ) : (
@@ -478,9 +484,9 @@ export function GuideAssignView({
                         </span>
                       </span>
                       <span className={cn('shrink-0 text-right text-[12px]', active ? 'text-white' : 'text-warm-600')}>
-                        {assignment.main ? (
+                        {assignment.leads.length > 0 ? (
                           <>
-                            <b className={active ? 'text-white' : 'text-warm-800'}>{assignment.main}</b>
+                            <b className={active ? 'text-white' : 'text-warm-800'}>{assignment.leads.join(', ')}</b>
                             {assignment.operators.length > 0 && <span className="block">+ {assignment.operators.length}명</span>}
                           </>
                         ) : (
