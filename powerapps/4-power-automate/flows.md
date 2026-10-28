@@ -1,4 +1,4 @@
-# Power Automate 흐름 4개
+# Power Automate 흐름 7개
 
 웹 버전의 Google Apps Script 메일 발송(`apps-script/Code.gs`)을 대신합니다.
 모두 **표준 커넥터**(Power Apps · SharePoint · Office 365 Outlook · Microsoft Forms)만 써서 M365 기본 라이선스로 돌아갑니다.
@@ -7,8 +7,11 @@
 | --- | --- | --- |
 | A. `TDLVisitSubmitted` | 앱에서 [신청하기] | 신청자에게 접수 메일 + Forms 링크, (입력했다면) 참석자에게 링크, 센터 관리자에게 알림 |
 | B. `TDLAttendeeCollect` **[PA 전용]** | 참석자가 Forms 제출 | 응답을 `VisitAttendees` 에 저장, 신청 건의 제출 인원(`AttendeeCount`) 갱신 |
-| C. `TDLVisitDecision` | 관리자가 승인 · 거절 · 취소 (미리보기 창에서 [보내기]) | 신청자(와 제출한 참석자)에게 결과 메일. 승인 메일에는 센터별 오시는 길(약도) 포함 |
-| D. `TDLRetention` **[PA 전용]** | 매월 1일 | 방문일 1년 지난 참석자 개인정보 삭제 |
+| C. `TDLVisitDecision` | 관리자가 승인 · 거절 · 취소 (미리보기 창에서 [보내기]) · **방문 완료** | 신청자(와 제출한 참석자)에게 결과 메일. 승인 메일에는 센터별 오시는 길(약도) 포함. **완료면 참석자에게 방명록(후기) 요청 메일** (웹 PR #89 · #91) |
+| D. `TDLRetention` **[PA 전용]** | 매월 1일 | 방문일 1년 지난 참석자 개인정보 삭제, **등록 1년 지난 방명록 삭제** |
+| E. `TDLGuestbookAdd` | 앱 방명록 화면에서 [등록하기] | 방명록 원본을 `Guestbook` 에 저장 (작성자에게 목록 권한이 없어도 흐름 소유자 권한으로) |
+| F. `TDLGuestbookForms` **[PA 전용]** | 외부 방문객이 방명록 Forms 제출 | 응답을 `Guestbook` 에 저장 |
+| G. `TDLGuestbookPublish` **[PA 전용]** | `Guestbook` 에 새 행이 생기면 | 이름 · 회사 · 팀을 가명 처리해 공개용 `GuestbookPublic` 에 행 추가 |
 
 > **[PA 전용]** = 웹(Apps Script)에는 없는 흐름. 고칠 때 `README.md` 14절 목록도 함께 고치세요.
 
@@ -154,6 +157,25 @@
         → **각각에 적용** `[동적 콘텐츠: 참석자 > value]` → 메일 보내기: 받는 사람 `[식: items('각각에_적용')?['Email']]`, 본문 **C-2** (같은 `오시는길`)
    - **사례 `거절`** → 메일 보내기 → `HostEmail` · 제목 `[방문 요청 결과] ` + `Company` · 본문 **C-3** (`Message` 가 사유로 들어감)
    - **사례 `취소`** → 메일 보내기 → `HostEmail` · 제목 `[방문 일정 취소] ` + `Company` · 본문 **C-4**
+   - **사례 `완료`** — 방문객에게 만족도 · 개선 의견(방명록) 요청 메일 (웹 `Code.gs` 의 `sendFeedbackMail_` 과 같은 규칙)
+     1. **변수 초기화** 2개 (흐름 맨 위, 트리거 바로 아래에 두어야 합니다)
+        - `방명록링크` (문자열) = `guestbook-form.md` 4번의 미리 채워진 링크 (`TOURQ` · `REQNO` 포함)
+        - `후기기준일` (문자열) = 참석자 Forms 동의 문구에 이 용도를 넣은 날 (예: `2026-10-28`)
+     2. **조건** — 아래가 **모두** 참일 때만 보냄 (하나라도 아니면 아무것도 하지 않음)
+        - `[식: empty(body('신청건')?['FeedbackMailAt'])]` 같음 `true` (이미 보낸 예약에는 다시 안 보냄)
+        - `[식: formatDateTime(body('신청건')?['Created'], 'yyyy-MM-dd')]` 크거나 같음 `[변수: 후기기준일]` (동의 문구 바꾸기 전 신청은 안 보냄)
+        - `[식: body('신청건')?['DateKey']]` 작거나 같음 `[식: formatDateTime(utcNow(), 'yyyy-MM-dd')]` (아직 오지 않은 날은 안 보냄)
+     3. 예 쪽: **항목 가져오기(복수)** (이름 `후기대상`) — `VisitAttendees`, 필터 `RequestNo eq '` + `Title` + `'`
+     4. **데이터 작업 `선택`** (이름 `후기메일`) — 보낸 사람 `후기대상 > value`, 텍스트 모드 `[식: toLower(trim(item()?['Email']))]`
+     5. **작성** (이름 `받는사람`) — `[식: union(body('후기메일'), body('후기메일'))]` (같은 주소는 한 번만)
+     6. **작성** (이름 `후기링크`) — 식:
+        `@replace(replace(variables('방명록링크'), 'TOURQ', encodeUriComponent(if(equals(body('신청건')?['Tour'], 'combined'), '종합 투어', body('신청건')?['TourName']))), 'REQNO', body('신청건')?['Title'])`
+     7. **각각에 적용** `[동적 콘텐츠: 받는사람 > 출력]` → **메일 보내기 (V2)**
+        - 받는 사람 `[식: items('각각에_적용_2')]` (이름이 다르면 그 단계 이름)
+        - 제목: 한국어 투어 `[TDL] 방문해 주셔서 감사합니다 · 만족도와 개선 의견을 남겨 주세요` / 외국어 투어 `[TDL] Thank you for visiting · 방문해 주셔서 감사합니다`
+          (`[식: if(equals(body('신청건')?['Language'], '한국어'), '…한국어 제목…', '…영문 제목…')]`)
+        - 본문: 한국어 투어 **F-1**, 외국어 투어 **F-2** (영문을 위, 한국어를 아래 — 웹과 같음). 버튼 링크는 `outputs('후기링크')`
+     8. **항목 업데이트** — `VisitRequests`, ID `RequestId`, Title `[동적 콘텐츠: 신청건 > Title]`, `FeedbackMailAt` = `[식: utcNow()]`
 
 > **[PA 전용] 미리보기와 같은 글이 나가야 합니다.** 앱 관리자 화면의 `conMail` 미리보기는 C-1 · C-3 · C-4 의 문구를 그대로 글로 옮긴 것입니다.
 > 메일 문구를 바꾸면 `scrAdmin.yaml` 의 `txtMailPreview` 수식도 같이 고치세요 (README 14절).
@@ -170,6 +192,67 @@
 2. **각각에 적용** `[동적 콘텐츠: 만료 > value]` → **SharePoint `항목 삭제`** — ID `[식: items('각각에_적용')?['ID']]`
 3. (선택) 같은 방식으로 `VisitRequests` 의 `HostPhone` 을 비우는 **항목 업데이트** 를 넣으면 신청자 연락처도 1년 뒤 지워집니다.
    통계용 기록(일정 · 업체 · 투어)은 남습니다.
+4. **방명록 1년 보관** (웹 동의 문구: 등록일로부터 1년 후 파기)
+   1. **항목 가져오기(복수)** (이름 `방명록만료`) — `Guestbook`, 필터 `Created lt '` + `[식: addDays(utcNow(), -365, 'yyyy-MM-dd')]` + `'`, 페이지 매김 켜기
+   2. **각각에 적용** → **항목 가져오기(복수)** `GuestbookPublic`, 필터 `Title eq '` + `[식: string(items('각각에_적용_3')?['ID'])]` + `'`
+      → 그 결과도 **각각에 적용** → **항목 삭제** (공개 행) → 바깥 반복에서 **항목 삭제** (원본 행)
+
+---
+
+## 흐름 E. TDLGuestbookAdd (앱에서 방명록 등록)
+
+**만들기**: 인스턴트 클라우드 흐름 → 이름 `TDLGuestbookAdd` → 트리거 **Power Apps (V2)**
+
+1. 입력 (모두 필수, **이 순서대로**): 텍스트 `Name`, 텍스트 `Company`, 텍스트 `Team`, 텍스트 `Role`, **숫자** `Rating`, 텍스트 `Tour`, 텍스트 `Message`
+   (앱은 팀명이 비면 `-` 를 보냅니다)
+2. **SharePoint `항목 만들기`** — 목록 `Guestbook`
+   | 열 | 값 |
+   | --- | --- |
+   | Title | `Name` |
+   | Company | `Company` |
+   | Team | `[식: if(equals(triggerBody()?['text_2'], '-'), '', triggerBody()?['text_2'])]` (식에서 `Team` 입력을 고르면 이름이 맞게 들어갑니다) |
+   | Role | `Role` |
+   | Rating | `Rating` |
+   | Tour | `Tour` |
+   | Message | `[식: substring(Message, 0, min(length(Message), 100))]` |
+   | ConsentAt | `[식: utcNow()]` (앱은 동의해야만 [등록하기] 가 됩니다) |
+   | Source | `앱` |
+3. 저장 · 앱에서 **Power Automate → 흐름 추가** 로 `TDLGuestbookAdd` 연결
+4. 흐름은 **관리자(소유자 그룹) 계정**으로 만들어야 합니다. `Guestbook` 은 관리자만 쓸 수 있는 목록이라, 작성자 대신 흐름 소유자 권한으로 저장합니다.
+
+## 흐름 F. TDLGuestbookForms **[PA 전용]** (외부 방문객 Forms → 방명록)
+
+**만들기**: 자동화된 클라우드 흐름 → 이름 `TDLGuestbookForms` → 트리거 **Microsoft Forms `새 응답이 제출되는 경우`** (양식 `TDL Lab 방명록`)
+
+1. **응답 세부 정보 가져오기** (이름 `응답`)
+2. **작성** (이름 `투어ID`) — 식: `@if(equals(outputs('응답')?['body/투어질문ID'], '종합 투어'), 'combined', if(equals(outputs('응답')?['body/투어질문ID'], 'TDL Lab 투어'), 'lab', 'center'))`
+   (`body/투어질문ID` 자리는 식 입력창에서 동적 콘텐츠 '어떤 투어에 참여하셨나요?' 를 고르면 자동으로 들어갑니다. 시화MTV 를 열면 그 투어 이름도 `if` 로 추가)
+3. **SharePoint `항목 만들기`** — 목록 `Guestbook`: Title=이름, Company=회사명, Team=팀명, Role=직책, Rating=`[식: int(별점 답변)]`,
+   Tour=`outputs('투어ID')`, Message=`[식: substring(소감, 0, min(length(소감), 100))]`, ConsentAt=`utcNow()`, Source=`Forms`, RequestNo=신청번호 답변
+4. 흐름은 관리자 계정으로 만듭니다 (흐름 E 와 같은 이유).
+
+## 흐름 G. TDLGuestbookPublish **[PA 전용]** (가명 처리 → 공개 목록)
+
+웹은 Apps Script 가 저장할 때 가명 값(`홍**`, `L**`)을 함께 만들어, 방명록 화면에는 가명 값만 내려 줍니다.
+Power Apps 는 서버가 없으므로 이 흐름이 원본(관리자만)에서 공개용 목록(전 직원 읽기)으로 가명 행을 만듭니다.
+숨기기 · 다시 표시 · 삭제는 관리자 화면(`scrGuestAdmin`)이 두 목록을 함께 고칩니다.
+
+**만들기**: 자동화된 클라우드 흐름 → 이름 `TDLGuestbookPublish` → 트리거 **SharePoint `항목이 생성된 경우`** (목록 `Guestbook`)
+
+1. **조건**: `[동적 콘텐츠: Hidden]` 같지 않음 `Y` (아니요 쪽은 비워 둠)
+2. 예 쪽 — 이름 가명 처리 (웹 `src/lib/mask.ts`: 홍길동 → 홍**, David Kim → D** K**)
+   1. **데이터 작업 `배열 필터링`** (이름 `이름조각`) — 보낸 사람 `[식: split(trim(triggerOutputs()?['body/Title']), ' ')]`, 고급 모드 `@greater(length(item()), 0)`
+   2. **선택** (이름 `이름가림`) — 보낸 사람 `이름조각 > 본문`, 텍스트 모드 `[식: concat(substring(item(), 0, 1), '**')]`
+3. **SharePoint `항목 만들기`** — 목록 `GuestbookPublic`
+   | 열 | 값 |
+   | --- | --- |
+   | Title | `[식: string(triggerOutputs()?['body/ID'])]` (원본 ID — 관리자 화면이 이 값으로 공개 행을 찾음) |
+   | DisplayName | `[식: join(body('이름가림'), ' ')]` |
+   | DisplayCompany | `[식: if(empty(trim(triggerOutputs()?['body/Company'])), '', concat(substring(trim(triggerOutputs()?['body/Company']), 0, 1), '**'))]` |
+   | DisplayTeam | 같은 식에서 `Company` → `Team` |
+   | Role · Rating · Message · Tour | 원본 값 그대로 |
+   | WrittenAt | `[동적 콘텐츠: 만든 날짜(Created)]` |
+4. 앱이 등록 직후 화면에 먼저 보여 주므로, 이 흐름이 몇 초 늦어도 사용자는 기다리지 않습니다.
 
 ---
 

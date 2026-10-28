@@ -15,21 +15,26 @@ FormsPrefillUrl = "https://forms.office.com/Pages/ResponsePage.aspx?id=여기에
 MtvEnabled = false;
 
 // ---------- 2. 디자인 토큰 (색 · 글꼴) ----------
-cBg = ColorValue("#F7F6F3");          // 화면 바탕 (따뜻한 오프화이트)
+// 운영 중인 웹앱(src/index.css · 관리자 화면)과 같은 색: 따뜻한 회색 + 브랜드 빨강, 모서리는 각지게.
+cBg = ColorValue("#F7F6F5");          // 화면 바탕 (웹 body.plain-bg)
 cSurface = ColorValue("#FFFFFF");     // 카드
-cSoft = ColorValue("#F1F0EC");        // 선택된 항목 바탕
-cLine = ColorValue("#EAEAEA");        // 1px 테두리 · 구분선
-cInk = ColorValue("#2F3437");         // 본문 글자
-cInk2 = ColorValue("#787774");        // 보조 글자 · 라벨
-cInk3 = ColorValue("#A3A29E");        // 힌트 · 비활성
-cPrimary = ColorValue("#111111");     // 주 버튼
-cPrimaryHover = ColorValue("#333333");
-cBrand = ColorValue("#A72B2B");       // 로고 표시에만 사용
-cRed = ColorValue("#9F2F2D");
-cRedBg = ColorValue("#FDEBEC");
-cGreen = ColorValue("#346538");
-cGreenBg = ColorValue("#EDF3EC");
-cScrim = RGBA(17, 17, 17, 0.35);
+cSoft = ColorValue("#F3F2F1");        // 옅은 바탕 · 마우스 올림 (웹 cream)
+cSel = ColorValue("#FBF4F4");         // 선택된 카드 바탕 (웹 brand/5)
+cLine = ColorValue("#DDDAD9");        // 1px 테두리 · 구분선 (웹 warm-300/50)
+cInk = ColorValue("#534A47");         // 본문 글자 (웹 warm-800)
+cInk2 = ColorValue("#736662");        // 보조 글자 · 라벨 (웹 warm-600)
+cInk3 = ColorValue("#ACA8A7");        // 힌트 · 비활성 (웹 warm-300)
+cBrand = ColorValue("#A72B2B");       // 브랜드 빨강 (웹 brand) · 선택 테두리 · 강조
+cPrimary = ColorValue("#A72B2B");     // 주 버튼 = 브랜드 빨강 (웹 신청하기 · 방명록 남기기 버튼)
+cPrimaryHover = ColorValue("#8F2323");
+cHeader = ColorValue("#1E2229");      // 위 머리말 (웹 관리자 머리말 bg-[#1e2229])
+cRed = ColorValue("#A72B2B");         // 오류 · 거절 글자
+cRedBg = ColorValue("#FBF4F4");
+cGreen = ColorValue("#2B8A3E");       // 승인 버튼 · 확정 (웹 관리자 승인)
+cGreenHover = ColorValue("#237032");
+cGreenBg = ColorValue("#EBFBEE");
+cOrange = ColorValue("#C2410C");      // 승인 대기 숫자 (웹 관리자 KPI)
+cScrim = RGBA(83, 74, 71, 0.45);      // 창 뒤 어둡게 (웹 bg-warm-800/45)
 fnt = Font.'Segoe UI';                // 한글은 맑은 고딕으로 자동 대체됩니다
 
 // [PA 전용] 화면 크기 (README 5-2: '크기 조정' 끄기). 웹은 브라우저가 페이지를 스크롤합니다. 화면은 1366 폭 기준으로 그리고, 창이 더 넓으면 가운데 정렬,
@@ -42,13 +47,13 @@ kx = Max(1, Min(MaxStretch, (sw - 48) / 1318));   // 창 폭에 맞춘 가로 �
 pw = 48 + 1318 * kx;                  // 늘어난 본문 폭 (좌우 여백 24 + 24)
 ox = (sw - pw) / 2;                   // 본문을 가운데 두기 위한 왼쪽 여백
 
-// 상태 태그 색 (옅은 파스텔 바탕 + 진한 글자)
+// 상태 태그 색 (웹 관리자 src/admin/statusTone.ts 의 badge 와 같은 값)
 StatusStyle = Table(
-    {S: "대기", Bg: ColorValue("#FBF3DB"), Fg: ColorValue("#956400")},
-    {S: "승인", Bg: ColorValue("#EDF3EC"), Fg: ColorValue("#346538")},
-    {S: "완료", Bg: ColorValue("#E1F3FE"), Fg: ColorValue("#1F6C9F")},
-    {S: "거절", Bg: ColorValue("#FDEBEC"), Fg: ColorValue("#9F2F2D")},
-    {S: "취소", Bg: ColorValue("#EFEFED"), Fg: ColorValue("#5F5E5B")}
+    {S: "대기", Bg: ColorValue("#FFF4E6"), Fg: ColorValue("#C2410C")},
+    {S: "승인", Bg: ColorValue("#D3F9D8"), Fg: ColorValue("#1E6B2E")},
+    {S: "완료", Bg: ColorValue("#D0EBFF"), Fg: ColorValue("#1864AB")},
+    {S: "거절", Bg: ColorValue("#E9ECEF"), Fg: ColorValue("#6C757D")},
+    {S: "취소", Bg: ColorValue("#E9ECEF"), Fg: ColorValue("#6C757D")}
 );
 
 // ---------- 3. 투어 ----------
@@ -60,6 +65,23 @@ Tours = Table(
     {Id: "combined", Name: "메가와이즈 + TDL Lab", Desc: "메가와이즈 센터 → TDL Lab · 약 2시간", Multi: true, Main: true, Mtv: false, Color: ColorValue("#DC2626")},
     {Id: "center_mtv", Name: "메가와이즈 + 시화MTV", Desc: "오전 · 오후로 나눠 두 센터 방문", Multi: true, Main: true, Mtv: true, Color: ColorValue("#9C6644")},
     {Id: "all3", Name: "3개 센터 전체", Desc: "메가와이즈 + TDL Lab + 시화MTV", Multi: true, Main: true, Mtv: true, Color: ColorValue("#343A40")}
+);
+
+// ---------- 방명록 ----------
+// SharePoint Guestbook 목록 주소 (관리자 화면의 '엑셀 (목록)' 버튼이 엽니다. 목록에서 '내보내기 → CSV' 로 엑셀 파일)
+GuestbookListUrl = "https://회사.sharepoint.com/sites/TDLVisit/Lists/Guestbook";
+// 방명록에서 고르는 투어 카드 (웹 GuestbookDialog 와 같은 순서 · 문구): 종합 → TDL Lab → 메가와이즈 → (열려 있으면) 시화MTV 투어
+// P1 · P2 = 다녀온 곳 배지, C1 · C2 = 배지 색 (TDL Lab 보라 · 메가와이즈 청록 · 시화MTV 남색)
+GuestTours = Filter(
+    Table(
+        {Id: "combined", Title: "종합 투어", Hint: "센터와 Lab을 함께 둘러봤어요", P1: "TDL Lab", C1: ColorValue("#7C5CC4"), P2: "메가와이즈", C2: ColorValue("#1A8FA0")},
+        {Id: "lab", Title: "TDL Lab 투어", Hint: "TDL Lab만 둘러봤어요", P1: "TDL Lab", C1: ColorValue("#7C5CC4"), P2: "", C2: Color.Transparent},
+        {Id: "center", Title: "메가와이즈 센터 투어", Hint: "메가와이즈 센터만 둘러봤어요", P1: "메가와이즈", C1: ColorValue("#1A8FA0"), P2: "", C2: Color.Transparent},
+        {Id: "center_mtv", Title: "메가와이즈 + 시화MTV", Hint: "오전 · 오후로 나눠 두 센터 방문", P1: "메가와이즈", C1: ColorValue("#1A8FA0"), P2: "시화MTV", C2: ColorValue("#3D5A80")},
+        {Id: "mtv", Title: "시화MTV 투어", Hint: "시화MTV 센터만", P1: "시화MTV", C1: ColorValue("#3D5A80"), P2: "", C2: Color.Transparent},
+        {Id: "all3", Title: "3개 센터 전체", Hint: "메가와이즈 + TDL Lab + 시화MTV", P1: "TDL Lab", C1: ColorValue("#7C5CC4"), P2: "센터 2곳", C2: ColorValue("#1A8FA0")}
+    ),
+    MtvEnabled || !(Id in ["center_mtv", "mtv", "all3"])
 );
 
 // 신청 화면에 보이는 투어 (시화MTV 를 닫아 두면 TDL Lab · 메가와이즈 · 메가와이즈 + TDL Lab 3종)

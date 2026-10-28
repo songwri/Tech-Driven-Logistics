@@ -1,0 +1,1336 @@
+# scrGuestAdmin — 방명록 관리 (관리자만). 웹 /admin/ 의 '방명록' 탭과 같은 구성
+#   · 위: 전체 · 공개 중 · 숨김 · 평균 평가 (투어를 고르면 그 투어 기준)
+#   · 투어 필터(전체 · 투어별 · 미분류, 건수), 공개 상태 필터(전체 · 공개 · 숨김), 이름 · 회사 · 팀 · 메시지 검색
+#   · 표: 작성일 · 투어 · 평가 · 작성자(실명 · 소속 · 공개 표시) · 메시지 · 상태 · 처리(숨기기 / 다시 표시 · 삭제 확인)
+# ── [PA 전용] 웹앱에 없는 기능 · 수정하면 이 목록과 수식 속 '// [PA 전용]' 주석도 함께 고칠 것 (README 14) ──
+#   · btnGbAdmToggle: 숨기면 공개용 GuestbookPublic 행을 지우고, 다시 표시하면 가명 행을 다시 만듦 (웹은 시트 숨김 열 하나)
+#   · btnGbAdmExcel: SharePoint 목록을 열어 '내보내기 → CSV/Excel' (웹은 화면에서 바로 엑셀 파일)
+#   · conGABody: 본문만 스크롤 · 폭은 창 폭에 맞춰 kx 배
+# 1) 새 화면(빈 화면) → 이름 scrGuestAdmin, 화면 Fill = cBg, Width = sw, Height = sh
+#    OnVisible =
+#      If(IsBlank(gAdminSite), Notify("관리자 권한이 없습니다.", NotificationType.Error); Navigate(scrGuest),
+#         Set(gGbAdmTour, "all"); Set(gGbAdmFilter, "all"); Set(gGbConfirmId, 0);
+#         ClearCollect(colGb, FirstN(SortByColumns(Guestbook, "Created", SortOrder.Descending), 2000)))
+# 2) 이 파일 내용을 전부 복사 → 트리 뷰에서 scrGuestAdmin 오른쪽 클릭 → '붙여넣기'
+- conGABody:
+    Control: GroupContainer@1.3.0
+    Variant: AutoLayout
+    Properties:
+      X: =0
+      Y: =56
+      Width: =sw
+      Height: =sh - 56
+      LayoutDirection: =LayoutDirection.Vertical
+      LayoutAlignItems: =LayoutAlignItems.Center
+      LayoutOverflowY: =LayoutOverflow.Scroll // [PA 전용] 본문 스크롤 레이아웃. 웹은 페이지 스크롤
+      Fill: =Color.Transparent
+      BorderThickness: =0
+      DropShadow: =DropShadow.None
+    Children:
+      - conGAPage:
+          Control: GroupContainer@1.3.0
+          Variant: ManualLayout
+          Properties:
+            Width: =pw
+            Height: =712
+            FillPortions: =0
+            Fill: =Color.Transparent
+            BorderThickness: =0
+            DropShadow: =DropShadow.None
+          Children:
+            - lblGbAdmTitle:
+                Control: Label@2.5.1
+                Properties:
+                  Text: ="방명록 관리"
+                  X: =24
+                  Y: =20
+                  Width: =400
+                  Height: =30
+                  Font: =fnt
+                  Size: =15
+                  Color: =ColorValue("#2B2522")
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  FontWeight: =FontWeight.Bold
+            - lblGbAdmSub:
+                Control: Label@2.5.1
+                Properties:
+                  Text: ="작성자 실명 · 실제 소속은 관리자만 봅니다. 숨긴 글은 방명록 화면에서 바로 빠지고 원본 목록에는 남습니다. 삭제는 되돌릴 수 없습니다."
+                  X: =200
+                  Y: =28
+                  Width: =1100 * kx
+                  Height: =20
+                  Font: =fnt
+                  Size: =9
+                  Color: =cInk3
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  PaddingBottom: =0
+            - conGbKpiAll:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  X: =24 + 0 * kx
+                  Y: =70
+                  Width: =320 * kx
+                  Height: =92
+                  Fill: =cSurface
+                  BorderColor: =cLine
+                  BorderThickness: =1
+                  DropShadow: =DropShadow.None
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                Children:
+                  - lblGbKpiAllTitle:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =If(gGbAdmTour = "all", "전체 방명록", "선택 투어 방명록")
+                        X: =18
+                        Y: =14
+                        Width: =280
+                        Height: =20
+                        Font: =fnt
+                        Size: =9.75
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        FontWeight: =FontWeight.Semibold
+                  - lblGbKpiAllValue:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =CountRows(Filter(colGb, (gGbAdmTour = "all" || (gGbAdmTour = "none" && IsBlank(Tour)) || Tour = gGbAdmTour))) & "건"
+                        X: =18
+                        Y: =34
+                        Width: =280
+                        Height: =32
+                        Font: =fnt
+                        Size: =20
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        FontWeight: =FontWeight.Bold
+                  - lblGbKpiAllNote:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="숨긴 글 포함"
+                        X: =18
+                        Y: =66
+                        Width: =280
+                        Height: =20
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk3
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+            - conGbKpiPublic:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  X: =24 + 332 * kx
+                  Y: =70
+                  Width: =320 * kx
+                  Height: =92
+                  Fill: =cSurface
+                  BorderColor: =cLine
+                  BorderThickness: =1
+                  DropShadow: =DropShadow.None
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                Children:
+                  - lblGbKpiPublicTitle:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="공개 중"
+                        X: =18
+                        Y: =14
+                        Width: =280
+                        Height: =20
+                        Font: =fnt
+                        Size: =9.75
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        FontWeight: =FontWeight.Semibold
+                  - lblGbKpiPublicValue:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =CountRows(Filter(Filter(colGb, (gGbAdmTour = "all" || (gGbAdmTour = "none" && IsBlank(Tour)) || Tour = gGbAdmTour)), Hidden <> "Y")) & "건"
+                        X: =18
+                        Y: =34
+                        Width: =280
+                        Height: =32
+                        Font: =fnt
+                        Size: =20
+                        Color: =cGreen
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        FontWeight: =FontWeight.Bold
+                  - lblGbKpiPublicNote:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="방명록 화면에 표시"
+                        X: =18
+                        Y: =66
+                        Width: =280
+                        Height: =20
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk3
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+            - conGbKpiHidden:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  X: =24 + 664 * kx
+                  Y: =70
+                  Width: =320 * kx
+                  Height: =92
+                  Fill: =cSurface
+                  BorderColor: =cLine
+                  BorderThickness: =1
+                  DropShadow: =DropShadow.None
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                Children:
+                  - lblGbKpiHiddenTitle:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="숨김"
+                        X: =18
+                        Y: =14
+                        Width: =280
+                        Height: =20
+                        Font: =fnt
+                        Size: =9.75
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        FontWeight: =FontWeight.Semibold
+                  - lblGbKpiHiddenValue:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =CountRows(Filter(Filter(colGb, (gGbAdmTour = "all" || (gGbAdmTour = "none" && IsBlank(Tour)) || Tour = gGbAdmTour)), Hidden = "Y")) & "건"
+                        X: =18
+                        Y: =34
+                        Width: =280
+                        Height: =32
+                        Font: =fnt
+                        Size: =20
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        FontWeight: =FontWeight.Bold
+                  - lblGbKpiHiddenNote:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="원본 목록에는 남아 있음"
+                        X: =18
+                        Y: =66
+                        Width: =280
+                        Height: =20
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk3
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+            - conGbKpiAvg:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  X: =24 + 996 * kx
+                  Y: =70
+                  Width: =320 * kx
+                  Height: =92
+                  Fill: =cSurface
+                  BorderColor: =cLine
+                  BorderThickness: =1
+                  DropShadow: =DropShadow.None
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                Children:
+                  - lblGbKpiAvgTitle:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="평균 평가"
+                        X: =18
+                        Y: =14
+                        Width: =280
+                        Height: =20
+                        Font: =fnt
+                        Size: =9.75
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        FontWeight: =FontWeight.Semibold
+                  - lblGbKpiAvgValue:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: |-
+                          =With({v: Filter(Filter(colGb, (gGbAdmTour = "all" || (gGbAdmTour = "none" && IsBlank(Tour)) || Tour = gGbAdmTour)), Hidden <> "Y")}, If(IsEmpty(v), "-", Text(Average(v, Rating), "0.0")))
+                        X: =18
+                        Y: =34
+                        Width: =280
+                        Height: =32
+                        Font: =fnt
+                        Size: =20
+                        Color: =cBrand
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        FontWeight: =FontWeight.Bold
+                  - lblGbKpiAvgNote:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="공개 글 기준 · 5점 만점"
+                        X: =18
+                        Y: =66
+                        Width: =280
+                        Height: =20
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk3
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+            - galGbAdmTours:
+                Control: Gallery@2.15.0
+                Variant: Vertical
+                Properties:
+                  Items: |-
+                    =Ungroup(
+                        Table(
+                            {g: Table({Id: "all", Name: "전체", Color: Color.Transparent})},
+                            {g: ForAll(GuestTours As t, {Id: t.Id, Name: LookUp(Tours, Id = t.Id, Name), Color: LookUp(Tours, Id = t.Id, Color)})},
+                            {g: Table({Id: "none", Name: "미분류", Color: cInk3})}
+                        ),
+                        g
+                    )
+                  X: =24
+                  Y: =176
+                  Width: =1060 * kx
+                  Height: =32
+                  TemplateSize: =32
+                  TemplatePadding: =0
+                  ShowScrollbar: =false
+                  BorderThickness: =0
+                  Fill: =Color.Transparent
+                  WrapCount: =5
+                Children:
+                  - btnGbAdmTour:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: =ThisItem.Name & "  " & CountRows(If(ThisItem.Id = "all", colGb, ThisItem.Id = "none", Filter(colGb, IsBlank(Tour)), Filter(colGb, Tour = ThisItem.Id)))
+                        X: =14
+                        Y: =0
+                        Width: =Parent.TemplateWidth - 20
+                        Height: =32
+                        OnSelect: =Set(gGbAdmTour, ThisItem.Id)
+                        Font: =fnt
+                        Size: =9
+                        Fill: =If(gGbAdmTour = ThisItem.Id, cInk, cSurface)
+                        Color: =If(gGbAdmTour = ThisItem.Id, cSurface, cInk)
+                        HoverFill: =If(gGbAdmTour = ThisItem.Id, cInk, cSoft)
+                        HoverColor: =If(gGbAdmTour = ThisItem.Id, cSurface, cInk)
+                        PressedFill: =cSoft
+                        BorderColor: =If(gGbAdmTour = ThisItem.Id, cBrand, cLine)
+                        BorderThickness: =1
+                        Align: =Align.Left
+                        PaddingLeft: =12
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                  - rctGbAdmTourDot:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        X: =0
+                        Y: =12
+                        Width: =8
+                        Height: =8
+                        Fill: =ThisItem.Color
+                        Visible: =ThisItem.Id <> "all"
+            - conGbAdmTable:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  X: =24
+                  Y: =222
+                  Width: =1318 * kx
+                  Height: =470
+                  Fill: =cSurface
+                  BorderColor: =cLine
+                  BorderThickness: =1
+                  DropShadow: =DropShadow.None
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                Children:
+                  - btnGbAdmAll:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="전체 " & CountRows(Filter(colGb, (gGbAdmTour = "all" || (gGbAdmTour = "none" && IsBlank(Tour)) || Tour = gGbAdmTour)))
+                        X: =16
+                        Y: =14
+                        Width: =84
+                        Height: =30
+                        OnSelect: =Set(gGbAdmFilter, "all")
+                        Font: =fnt
+                        Size: =9
+                        Fill: =If(gGbAdmFilter = "all", cPrimary, cSurface)
+                        Color: =If(gGbAdmFilter = "all", cSurface, cInk)
+                        HoverFill: =If(gGbAdmFilter = "all", cPrimaryHover, cSoft)
+                        HoverColor: =If(gGbAdmFilter = "all", cSurface, cInk)
+                        PressedFill: =If(gGbAdmFilter = "all", cPrimaryHover, cSoft)
+                        PressedColor: =If(gGbAdmFilter = "all", cSurface, cInk)
+                        BorderColor: =If(gGbAdmFilter = "all", cPrimary, cLine)
+                        HoverBorderColor: =If(gGbAdmFilter = "all", cPrimary, cInk3)
+                        BorderThickness: =1
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                  - btnGbAdmPublic:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="공개 " & CountRows(Filter(Filter(colGb, (gGbAdmTour = "all" || (gGbAdmTour = "none" && IsBlank(Tour)) || Tour = gGbAdmTour)), Hidden <> "Y"))
+                        X: =104
+                        Y: =14
+                        Width: =84
+                        Height: =30
+                        OnSelect: =Set(gGbAdmFilter, "public")
+                        Font: =fnt
+                        Size: =9
+                        Fill: =If(gGbAdmFilter = "public", cPrimary, cSurface)
+                        Color: =If(gGbAdmFilter = "public", cSurface, cInk)
+                        HoverFill: =If(gGbAdmFilter = "public", cPrimaryHover, cSoft)
+                        HoverColor: =If(gGbAdmFilter = "public", cSurface, cInk)
+                        PressedFill: =If(gGbAdmFilter = "public", cPrimaryHover, cSoft)
+                        PressedColor: =If(gGbAdmFilter = "public", cSurface, cInk)
+                        BorderColor: =If(gGbAdmFilter = "public", cPrimary, cLine)
+                        HoverBorderColor: =If(gGbAdmFilter = "public", cPrimary, cInk3)
+                        BorderThickness: =1
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                  - btnGbAdmHidden:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="숨김 " & CountRows(Filter(Filter(colGb, (gGbAdmTour = "all" || (gGbAdmTour = "none" && IsBlank(Tour)) || Tour = gGbAdmTour)), Hidden = "Y"))
+                        X: =192
+                        Y: =14
+                        Width: =84
+                        Height: =30
+                        OnSelect: =Set(gGbAdmFilter, "hidden")
+                        Font: =fnt
+                        Size: =9
+                        Fill: =If(gGbAdmFilter = "hidden", cPrimary, cSurface)
+                        Color: =If(gGbAdmFilter = "hidden", cSurface, cInk)
+                        HoverFill: =If(gGbAdmFilter = "hidden", cPrimaryHover, cSoft)
+                        HoverColor: =If(gGbAdmFilter = "hidden", cSurface, cInk)
+                        PressedFill: =If(gGbAdmFilter = "hidden", cPrimaryHover, cSoft)
+                        PressedColor: =If(gGbAdmFilter = "hidden", cSurface, cInk)
+                        BorderColor: =If(gGbAdmFilter = "hidden", cPrimary, cLine)
+                        HoverBorderColor: =If(gGbAdmFilter = "hidden", cPrimary, cInk3)
+                        BorderThickness: =1
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                  - txtGbAdmSearch:
+                      Control: Classic/TextInput@2.3.2
+                      Properties:
+                        Default: =""
+                        HintText: ="이름 · 회사 · 팀 · 메시지 검색"
+                        X: =296
+                        Y: =12
+                        Width: =360 + 400 * (kx - 1)
+                        Height: =34
+                        Font: =fnt
+                        Size: =10.5
+                        Color: =cInk
+                        Fill: =cSurface
+                        BorderColor: =cLine
+                        HoverBorderColor: =cInk3
+                        FocusedBorderColor: =cInk
+                        BorderThickness: =1
+                        FocusedBorderThickness: =1
+                        PaddingLeft: =10
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                  - btnGbAdmView:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="방명록 화면"
+                        X: =1318 * kx - 352
+                        Y: =12
+                        Width: =112
+                        Height: =34
+                        OnSelect: =Navigate(scrGuest, ScreenTransition.None)
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        Fill: =cSurface
+                        Color: =cInk
+                        HoverFill: =cSoft
+                        PressedFill: =cSoft
+                        HoverColor: =cInk
+                        PressedColor: =cInk
+                        BorderColor: =cLine
+                        HoverBorderColor: =cInk3
+                        BorderThickness: =1
+                        DisabledFill: =cSurface
+                        DisabledColor: =cInk3
+                        DisabledBorderColor: =cLine
+                  - btnGbAdmReload:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="새로고침"
+                        X: =1318 * kx - 234
+                        Y: =12
+                        Width: =90
+                        Height: =34
+                        OnSelect: =ClearCollect(colGb, FirstN(SortByColumns(Guestbook, "Created", SortOrder.Descending), 2000))
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        Fill: =cSurface
+                        Color: =cInk
+                        HoverFill: =cSoft
+                        PressedFill: =cSoft
+                        HoverColor: =cInk
+                        PressedColor: =cInk
+                        BorderColor: =cLine
+                        HoverBorderColor: =cInk3
+                        BorderThickness: =1
+                        DisabledFill: =cSurface
+                        DisabledColor: =cInk3
+                        DisabledBorderColor: =cLine
+                  - btnGbAdmExcel:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="엑셀 (목록)"
+                        X: =1318 * kx - 138
+                        Y: =12
+                        Width: =114
+                        Height: =34
+                        OnSelect: =Launch(GuestbookListUrl)
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        Fill: =cSurface
+                        Color: =cInk
+                        HoverFill: =cSoft
+                        PressedFill: =cSoft
+                        HoverColor: =cInk
+                        PressedColor: =cInk
+                        BorderColor: =cLine
+                        HoverBorderColor: =cInk3
+                        BorderThickness: =1
+                        DisabledFill: =cSurface
+                        DisabledColor: =cInk3
+                        DisabledBorderColor: =cLine
+                  - rctGbAdmHead:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        X: =0
+                        Y: =58
+                        Width: =1318 * kx
+                        Height: =30
+                        Fill: =cBg
+                  - lblGbAdmHead0:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="작성일"
+                        X: =24 + 16
+                        Y: =64
+                        Width: =92
+                        Height: =18
+                        Font: =fnt
+                        Size: =8.5
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        FontWeight: =FontWeight.Semibold
+                  - lblGbAdmHead1:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="투어"
+                        X: =24 + 112
+                        Y: =64
+                        Width: =150
+                        Height: =18
+                        Font: =fnt
+                        Size: =8.5
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        FontWeight: =FontWeight.Semibold
+                  - lblGbAdmHead2:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="평가"
+                        X: =24 + 266
+                        Y: =64
+                        Width: =100
+                        Height: =18
+                        Font: =fnt
+                        Size: =8.5
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        FontWeight: =FontWeight.Semibold
+                  - lblGbAdmHead3:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="작성자"
+                        X: =24 + 370
+                        Y: =64
+                        Width: =230
+                        Height: =18
+                        Font: =fnt
+                        Size: =8.5
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        FontWeight: =FontWeight.Semibold
+                  - lblGbAdmHead4:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="메시지"
+                        X: =24 + 604
+                        Y: =64
+                        Width: =356 + 1270 * (kx - 1)
+                        Height: =18
+                        Font: =fnt
+                        Size: =8.5
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        FontWeight: =FontWeight.Semibold
+                  - lblGbAdmHead5:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="상태"
+                        X: =24 + 964 + 1270 * (kx - 1)
+                        Y: =64
+                        Width: =64
+                        Height: =18
+                        Font: =fnt
+                        Size: =8.5
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        FontWeight: =FontWeight.Semibold
+                  - lblGbAdmHead6:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="처리"
+                        X: =24 + 1032 + 1270 * (kx - 1)
+                        Y: =64
+                        Width: =222
+                        Height: =18
+                        Font: =fnt
+                        Size: =8.5
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        FontWeight: =FontWeight.Semibold
+                  - galGbAdm:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        Items: =Filter(colGb, (gGbAdmTour = "all" || (gGbAdmTour = "none" && IsBlank(Tour)) || Tour = gGbAdmTour) && (gGbAdmFilter = "all" || (gGbAdmFilter = "hidden" && Hidden = "Y") || (gGbAdmFilter = "public" && Hidden <> "Y")) && (IsBlank(txtGbAdmSearch.Text) || txtGbAdmSearch.Text in Title || txtGbAdmSearch.Text in Company || txtGbAdmSearch.Text in Team || txtGbAdmSearch.Text in Message))
+                        X: =24
+                        Y: =88
+                        Width: =1270 * kx
+                        Height: =372
+                        TemplateSize: =88
+                        TemplatePadding: =0
+                        ShowScrollbar: =true
+                        BorderThickness: =0
+                        Fill: =Color.Transparent
+                      Children:
+                        - btnGbAdmRow:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              Text: =""
+                              X: =0
+                              Y: =0
+                              Width: =1270 * kx
+                              Height: =86
+                              OnSelect: =false
+                              DisplayMode: =DisplayMode.View
+                              Fill: =If(ThisItem.Hidden = "Y", ColorValue("#F1F3F5"), cSurface)
+                              BorderThickness: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                        - lblGbAdmDate:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =Text(ThisItem.Created, "yyyy.mm.dd")
+                              X: =16
+                              Y: =12
+                              Width: =92
+                              Height: =20
+                              Font: =Font.Consolas
+                              Size: =9
+                              Color: =cInk2
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                        - rctGbAdmRowDot:
+                            Control: Rectangle@2.3.0
+                            Properties:
+                              X: =112
+                              Y: =18
+                              Width: =8
+                              Height: =8
+                              Fill: =Coalesce(LookUp(Tours, Id = ThisItem.Tour, Color), cInk3)
+                        - lblGbAdmTour:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =If(IsBlank(ThisItem.Tour), "미분류", Coalesce(LookUp(Tours, Id = ThisItem.Tour, Name), ThisItem.Tour))
+                              X: =126
+                              Y: =12
+                              Width: =140
+                              Height: =20
+                              Font: =fnt
+                              Size: =9
+                              Color: =If(ThisItem.Hidden = "Y", ColorValue("#868E96"), cInk)
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Wrap: =false
+                        - galGbAdmStars:
+                            Control: Gallery@2.15.0
+                            Variant: Vertical
+                            Properties:
+                              Items: =Sequence(5)
+                              X: =266
+                              Y: =14
+                              Width: =60
+                              Height: =14
+                              TemplateSize: =14
+                              TemplatePadding: =0
+                              ShowScrollbar: =false
+                              BorderThickness: =0
+                              Fill: =Color.Transparent
+                              WrapCount: =5
+                            Children:
+                              - galGbAdmStarsOff:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Text: ="★"
+                                    X: =0
+                                    Y: =0
+                                    Width: =12
+                                    Height: =14
+                                    Font: =fnt
+                                    Size: =8
+                                    Color: =cLine
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    PaddingBottom: =0
+                                    Wrap: =false
+                              - galGbAdmStarsOn:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Text: ="★"
+                                    X: =0
+                                    Y: =0
+                                    Width: =12 * Max(0, Min(1, ThisItem.Rating - (ThisItem.Value - 1)))
+                                    Height: =14
+                                    Font: =fnt
+                                    Size: =8
+                                    Color: =cBrand
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    PaddingBottom: =0
+                                    Wrap: =false
+                                    Overflow: =Overflow.Hidden
+                        - lblGbAdmRating:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =Text(ThisItem.Rating, "0.0")
+                              X: =332
+                              Y: =12
+                              Width: =34
+                              Height: =20
+                              Font: =Font.Consolas
+                              Size: =8.5
+                              Color: =cInk
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              FontWeight: =FontWeight.Semibold
+                        - lblGbAdmName:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =ThisItem.Title & If(IsBlank(ThisItem.Role), "", " " & ThisItem.Role)
+                              X: =370
+                              Y: =10
+                              Width: =230
+                              Height: =20
+                              Font: =fnt
+                              Size: =10
+                              Color: =If(ThisItem.Hidden = "Y", ColorValue("#868E96"), cInk)
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              FontWeight: =FontWeight.Semibold
+                              Wrap: =false
+                        - lblGbAdmAff:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =Trim(ThisItem.Company & " " & ThisItem.Team)
+                              X: =370
+                              Y: =32
+                              Width: =230
+                              Height: =18
+                              Font: =fnt
+                              Size: =9
+                              Color: =cInk2
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Wrap: =false
+                        - lblGbAdmPublicName:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: |-
+                                ="공개: " & Concat(Filter(Split(Trim(ThisItem.Title), " "), !IsBlank(Value)), Left(Value, 1) & "**", " ") & " · " & If(IsBlank(Trim(ThisItem.Company)), "", Left(Trim(ThisItem.Company), 1) & "**")
+                              X: =370
+                              Y: =52
+                              Width: =230
+                              Height: =18
+                              Font: =fnt
+                              Size: =8.5
+                              Color: =cInk3
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Wrap: =false
+                        - lblGbAdmMsg:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =ThisItem.Message
+                              X: =604
+                              Y: =10
+                              Width: =356 + 1270 * (kx - 1)
+                              Height: =66
+                              Font: =fnt
+                              Size: =9.75
+                              Color: =If(ThisItem.Hidden = "Y", ColorValue("#868E96"), cInk)
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              VerticalAlign: =VerticalAlign.Top
+                        - tagGbAdmState:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              Text: =If(ThisItem.Hidden = "Y", "숨김", "공개")
+                              X: =964 + 1270 * (kx - 1)
+                              Y: =12
+                              Width: =50
+                              Height: =22
+                              DisplayMode: =DisplayMode.View
+                              Font: =fnt
+                              Size: =8
+                              FontWeight: =FontWeight.Semibold
+                              Fill: =If(ThisItem.Hidden = "Y", ColorValue("#E9ECEF"), ColorValue("#D3F9D8"))
+                              Color: =If(ThisItem.Hidden = "Y", ColorValue("#6C757D"), ColorValue("#1E6B2E"))
+                              BorderThickness: =0
+                              RadiusTopLeft: =2
+                              RadiusTopRight: =2
+                              RadiusBottomLeft: =2
+                              RadiusBottomRight: =2
+                              OnSelect: =false
+                        - btnGbAdmToggle:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              Text: =If(ThisItem.Hidden = "Y", "다시 표시", "숨기기")
+                              X: =1032 + 1270 * (kx - 1)
+                              Y: =10
+                              Width: =96
+                              Height: =30
+                              OnSelect: |-
+                                =// [PA 전용] 숨기기 · 다시 표시: 원본의 Hidden 을 바꾸고 공개용 GuestbookPublic 행을 지우거나 다시 만든다. 웹은 시트의 숨김 열 하나
+                                If(
+                                    ThisItem.Hidden = "Y",
+                                    Patch(Guestbook, LookUp(Guestbook, ID = ThisItem.ID), {Hidden: ""});
+                                    If(
+                                    IsBlank(LookUp(GuestbookPublic, Title = Text(ThisItem.ID))),
+                                    Patch(GuestbookPublic, Defaults(GuestbookPublic), {
+                                        Title: Text(ThisItem.ID),
+                                        DisplayName: Concat(Filter(Split(Trim(ThisItem.Title), " "), !IsBlank(Value)), Left(Value, 1) & "**", " "),
+                                        DisplayCompany: If(IsBlank(Trim(ThisItem.Company)), "", Left(Trim(ThisItem.Company), 1) & "**"),
+                                        DisplayTeam: If(IsBlank(Trim(ThisItem.Team)), "", Left(Trim(ThisItem.Team), 1) & "**"),
+                                        Role: ThisItem.Role,
+                                        Rating: ThisItem.Rating,
+                                        Message: ThisItem.Message,
+                                        Tour: ThisItem.Tour,
+                                        WrittenAt: ThisItem.Created
+                                    })
+                                );
+                                    Notify("다시 표시했습니다. 방명록 화면에 바로 나옵니다.", NotificationType.Success),
+                                    Patch(Guestbook, LookUp(Guestbook, ID = ThisItem.ID), {Hidden: "Y"});
+                                    RemoveIf(GuestbookPublic, Title = Text(ThisItem.ID));
+                                    Notify("숨겼습니다. 방명록 화면에서 바로 빠지고 원본에는 남습니다.", NotificationType.Success)
+                                );
+                                ClearCollect(colGb, FirstN(SortByColumns(Guestbook, "Created", SortOrder.Descending), 2000))
+                              Font: =fnt
+                              Size: =9
+                              FontWeight: =FontWeight.Semibold
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              Fill: =cSurface
+                              Color: =cInk
+                              HoverFill: =cSoft
+                              PressedFill: =cSoft
+                              HoverColor: =cInk
+                              PressedColor: =cInk
+                              BorderColor: =cLine
+                              HoverBorderColor: =cInk3
+                              BorderThickness: =1
+                              DisabledFill: =cSurface
+                              DisabledColor: =cInk3
+                              DisabledBorderColor: =cLine
+                              Visible: =gGbConfirmId <> ThisItem.ID
+                        - btnGbAdmDelete:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              Text: ="삭제"
+                              X: =1134 + 1270 * (kx - 1)
+                              Y: =10
+                              Width: =64
+                              Height: =30
+                              OnSelect: =Set(gGbConfirmId, ThisItem.ID)
+                              Font: =fnt
+                              Size: =9
+                              FontWeight: =FontWeight.Semibold
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              Fill: =cSurface
+                              Color: =cRed
+                              HoverFill: =cSoft
+                              PressedFill: =cSoft
+                              HoverColor: =cRed
+                              PressedColor: =cInk
+                              BorderColor: =cLine
+                              HoverBorderColor: =cInk3
+                              BorderThickness: =1
+                              DisabledFill: =cSurface
+                              DisabledColor: =cInk3
+                              DisabledBorderColor: =cLine
+                              Visible: =gGbConfirmId <> ThisItem.ID
+                        - btnGbAdmDelYes:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              Text: ="삭제 확인"
+                              X: =1032 + 1270 * (kx - 1)
+                              Y: =10
+                              Width: =96
+                              Height: =30
+                              OnSelect: |-
+                                =Remove(Guestbook, LookUp(Guestbook, ID = ThisItem.ID));
+                                RemoveIf(GuestbookPublic, Title = Text(ThisItem.ID));
+                                Set(gGbConfirmId, 0);
+                                Notify("삭제했습니다. 되돌릴 수 없습니다.", NotificationType.Success);
+                                ClearCollect(colGb, FirstN(SortByColumns(Guestbook, "Created", SortOrder.Descending), 2000))
+                              Font: =fnt
+                              Size: =9
+                              FontWeight: =FontWeight.Semibold
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              Fill: =cPrimary
+                              Color: =cSurface
+                              HoverFill: =cPrimaryHover
+                              PressedFill: =cPrimaryHover
+                              HoverColor: =cSurface
+                              PressedColor: =cSurface
+                              BorderThickness: =0
+                              DisabledFill: =cSoft
+                              DisabledColor: =cInk3
+                              Visible: =gGbConfirmId = ThisItem.ID
+                        - btnGbAdmDelNo:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              Text: ="취소"
+                              X: =1134 + 1270 * (kx - 1)
+                              Y: =10
+                              Width: =64
+                              Height: =30
+                              OnSelect: =Set(gGbConfirmId, 0)
+                              Font: =fnt
+                              Size: =9
+                              FontWeight: =FontWeight.Semibold
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              Fill: =cSurface
+                              Color: =cInk
+                              HoverFill: =cSoft
+                              PressedFill: =cSoft
+                              HoverColor: =cInk
+                              PressedColor: =cInk
+                              BorderColor: =cLine
+                              HoverBorderColor: =cInk3
+                              BorderThickness: =1
+                              DisabledFill: =cSurface
+                              DisabledColor: =cInk3
+                              DisabledBorderColor: =cLine
+                              Visible: =gGbConfirmId = ThisItem.ID
+                        - rctGbAdmRowLine:
+                            Control: Rectangle@2.3.0
+                            Properties:
+                              X: =0
+                              Y: =87
+                              Width: =1270 * kx
+                              Height: =1
+                              Fill: =cLine
+                  - lblGbAdmEmpty:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="조건에 맞는 방명록이 없습니다."
+                        X: =24
+                        Y: =110
+                        Width: =600
+                        Height: =20
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk3
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Visible: =IsEmpty(galGbAdm.AllItems)
+- hdrGABar:
+    Control: Rectangle@2.3.0
+    Properties:
+      X: =0
+      Y: =0
+      Width: =sw
+      Height: =56
+      Fill: =cHeader
+- hdrGALine:
+    Control: Rectangle@2.3.0
+    Properties:
+      X: =0
+      Y: =52
+      Width: =sw
+      Height: =4
+      Fill: =cBrand
+- hdrGAMark:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="TDL"
+      X: =ox + 24
+      Y: =12
+      Width: =46
+      Height: =30
+      Font: =fnt
+      Size: =16
+      Color: =cSurface
+      FontWeight: =FontWeight.Bold
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+- hdrGAMarkLab:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="LAB"
+      X: =ox + 70
+      Y: =24
+      Width: =26
+      Height: =14
+      Font: =fnt
+      Size: =7
+      Color: =cSurface
+      FontWeight: =FontWeight.Bold
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+- hdrGATitle:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="방문 예약"
+      X: =ox + 104
+      Y: =16
+      Width: =96
+      Height: =24
+      Font: =fnt
+      Size: =11
+      Color: =RGBA(255, 255, 255, 0.85)
+      FontWeight: =FontWeight.Semibold
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+- hdrGANavBook:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="방문 신청"
+      X: =ox + 210
+      Y: =12
+      Width: =92
+      Height: =40
+      OnSelect: =Navigate(scrBook, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =true
+- hdrGANavMy:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="내 신청"
+      X: =ox + 304
+      Y: =12
+      Width: =92
+      Height: =40
+      OnSelect: =Navigate(scrMy, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrMy, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrMy, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrMy, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrMy, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrMy, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrMy, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrMy, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =true
+- hdrGANavGuest:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="방명록"
+      X: =ox + 398
+      Y: =12
+      Width: =92
+      Height: =40
+      OnSelect: =Navigate(scrGuest, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrGuest, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrGuest, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrGuest, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrGuest, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrGuest, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrGuest, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrGuest, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =true
+- hdrGANavAdmin:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="관리자"
+      X: =ox + 492
+      Y: =12
+      Width: =92
+      Height: =40
+      OnSelect: =Navigate(scrAdmin, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrAdmin, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrAdmin, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrAdmin, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrAdmin, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrAdmin, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrAdmin, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrAdmin, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =!IsBlank(gAdminSite)
+- hdrGANavCal:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="달력"
+      X: =ox + 586
+      Y: =12
+      Width: =92
+      Height: =40
+      OnSelect: =Navigate(scrCalendar, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrCalendar, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrCalendar, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrCalendar, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrCalendar, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrCalendar, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrCalendar, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrCalendar, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =!IsBlank(gAdminSite)
+- hdrGANavStats:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="통계"
+      X: =ox + 680
+      Y: =12
+      Width: =92
+      Height: =40
+      OnSelect: =Navigate(scrStats, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrStats, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrStats, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrStats, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrStats, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrStats, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrStats, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrStats, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =!IsBlank(gAdminSite)
+- hdrGANavGuestAdmin:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="방명록 관리"
+      X: =ox + 774
+      Y: =12
+      Width: =108
+      Height: =40
+      OnSelect: =Navigate(scrGuestAdmin, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrGuestAdmin, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrGuestAdmin, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrGuestAdmin, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrGuestAdmin, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrGuestAdmin, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrGuestAdmin, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrGuestAdmin, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =!IsBlank(gAdminSite)
+- hdrGAUser:
+    Control: Label@2.5.1
+    Properties:
+      Text: =gMe.displayName & If(IsBlank(gMe.department), "", " · " & gMe.department)
+      X: =ox + pw - 324
+      Y: =18
+      Width: =300
+      Height: =20
+      Font: =fnt
+      Size: =9.75
+      Color: =RGBA(255, 255, 255, 0.7)
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      Align: =Align.Right

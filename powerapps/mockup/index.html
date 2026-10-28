@@ -7,12 +7,13 @@
 <style>
   /* Power Apps 앱과 같은 값: 3-powerapps/App.Formulas.txt 의 디자인 토큰 */
   :root {
-    --bg: #F7F6F3; --surface: #FFFFFF; --line: #EAEAEA; --soft: #F1F0EC;
-    --ink: #2F3437; --ink2: #787774; --ink3: #A3A29E;
-    --primary: #111111; --primary-hover: #333333; --brand: #A72B2B;
-    --red-bg: #FDEBEC; --red: #9F2F2D; --blue-bg: #E1F3FE; --blue: #1F6C9F;
-    --green-bg: #EDF3EC; --green: #346538; --yellow-bg: #FBF3DB; --yellow: #956400;
-    --gray-bg: #EFEFED; --gray: #5F5E5B; --red: #9F2F2D;
+    /* 운영 중인 웹앱(src/index.css · 관리자 화면)과 같은 색 = App.Formulas 의 디자인 토큰 */
+    --bg: #F7F6F5; --surface: #FFFFFF; --line: #DDDAD9; --soft: #F3F2F1; --sel: #FBF4F4;
+    --ink: #534A47; --ink2: #736662; --ink3: #ACA8A7; --title: #2B2522;
+    --primary: #A72B2B; --primary-hover: #8F2323; --brand: #A72B2B; --header: #1E2229;
+    --red-bg: #FBF4F4; --red: #A72B2B; --blue-bg: #D0EBFF; --blue: #1864AB;
+    --green-bg: #D3F9D8; --green: #1E6B2E; --yellow-bg: #FFF4E6; --yellow: #C2410C;
+    --gray-bg: #E9ECEF; --gray: #6C757D; --approve: #2B8A3E;
   }
   * { box-sizing: border-box; margin: 0; }
   body { background: #DAD9D4; font-family: "Segoe UI", "Malgun Gothic", sans-serif; color: var(--ink); word-break: keep-all; }
@@ -28,12 +29,22 @@
   .app { position: relative; width: 1366px; height: 768px; background: var(--bg); overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
   .abs { position: absolute; }
   .screen { display: none; } .screen.on { display: block; }
-  .hdr { left: 0; top: 0; width: 1366px; height: 56px; background: var(--surface); border-bottom: 1px solid var(--line); }
-  .mark { left: 24px; top: 16px; width: 24px; height: 24px; background: var(--brand); border-radius: 4px; color: #fff; font: 700 11px/24px "Segoe UI"; text-align: center; }
-  .apptitle { left: 58px; top: 16px; font-size: 16px; font-weight: 600; line-height: 24px; }
-  .nav { top: 12px; height: 32px; width: 96px; border-radius: 6px; font-size: 14px; line-height: 32px; text-align: center; color: var(--ink2); }
-  .nav.on { background: var(--soft); color: var(--ink); font-weight: 600; }
-  .user { right: 24px; top: 18px; font-size: 13px; color: var(--ink2); }
+  .hdr { left: 0; top: 0; width: 1366px; height: 52px; background: var(--header); border-bottom: 4px solid var(--brand); }
+  .mark { left: 24px; top: 12px; color: #fff; font: 800 22px/30px "Segoe UI", sans-serif; letter-spacing: .02em; }
+  .mark small { font-size: 9px; font-weight: 800; margin-left: 3px; letter-spacing: .04em; }
+  .apptitle { left: 104px; top: 16px; font-size: 14px; font-weight: 600; line-height: 24px; color: rgba(255,255,255,.85); }
+  .nav { top: 12px; height: 40px; width: 92px; font-size: 14px; line-height: 40px; text-align: center; color: rgba(255,255,255,.72); }
+  .nav.on { background: var(--bg); color: var(--ink); font-weight: 600; }
+  .user { right: 24px; top: 18px; font-size: 13px; color: rgba(255,255,255,.7); }
+  /* 웹처럼 각진 모서리: 상태 태그만 2px, 숫자 원 · 오늘 날짜 원(.round)은 그대로 */
+  .app *:not(.num):not(.round):not(i):not(.tag) { border-radius: 0 !important; }
+  .app .tag { border-radius: 2px; }
+  .tour.on, .slot.on { border-color: var(--brand) !important; background: var(--sel) !important; }
+  .tour.on .n { color: var(--brand); }
+  .chip.on { border-color: var(--brand) !important; background: var(--sel) !important; color: var(--brand); }
+  .li.on { background: var(--sel) !important; }
+  .cal.sel { background: var(--brand) !important; }
+  .h2, .h3 { color: var(--title); }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
   .h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
   .h3 { font-size: 15px; font-weight: 600; }
@@ -101,19 +112,24 @@
   <button data-s="blk">일정 막기 창</button>
   <button data-s="cal">예약 달력</button>
   <button data-s="st">통계</button>
+  <button data-s="gb">방명록</button>
+  <button data-s="gbw">방명록 남기기 창</button>
+  <button data-s="gba">방명록 관리</button>
   <span class="note">좌표는 Power Apps 컨트롤의 X · Y 와 같습니다</span>
 </div>
 <div class="stage"><div class="scaler" id="scaler"><div class="app" id="app">
 
   <!-- 공통 헤더 (header.yaml) -->
   <div class="abs hdr"></div>
-  <div class="abs mark">TDL</div>
-  <div class="abs apptitle">TDL 방문 예약</div>
-  <div class="abs nav" id="n1" style="left:520px">방문 신청</div>
-  <div class="abs nav" id="n2" style="left:624px">내 신청</div>
-  <div class="abs nav" id="n3" style="left:728px">관리자</div>
-  <div class="abs nav" id="n5" style="left:832px">달력</div>
-  <div class="abs nav" id="n4" style="left:936px">통계</div>
+  <div class="abs mark">TDL<small>LAB</small></div>
+  <div class="abs apptitle">방문 예약</div>
+  <div class="abs nav" id="n1" style="left:210px">방문 신청</div>
+  <div class="abs nav" id="n2" style="left:304px">내 신청</div>
+  <div class="abs nav" id="n6" style="left:398px">방명록</div>
+  <div class="abs nav" id="n3" style="left:492px">관리자</div>
+  <div class="abs nav" id="n5" style="left:586px">달력</div>
+  <div class="abs nav" id="n4" style="left:680px">통계</div>
+  <div class="abs nav" id="n7" style="left:774px;width:108px">방명록 관리</div>
   <div class="abs user">김서연 책임 · CL운영담당</div>
 
   <!-- ============ 신청 1단계 ============ -->
@@ -257,7 +273,7 @@
   <!-- ============ 신청 완료 ============ -->
   <div class="screen" id="s-done">
     <div class="abs card" style="left:323px;top:96px;width:720px;height:600px">
-      <div class="abs" style="left:328px;top:36px;width:64px;height:64px;border-radius:999px;background:var(--green-bg);color:var(--green);font-size:30px;text-align:center;line-height:64px">✓</div>
+      <div class="abs round" style="left:328px;top:36px;width:64px;height:64px;border-radius:999px;background:var(--green-bg);color:var(--green);font-size:30px;text-align:center;line-height:64px">✓</div>
       <div class="abs" style="left:0;top:120px;width:720px;text-align:center;font-size:22px;font-weight:600">신청이 접수되었습니다</div>
       <div class="abs" style="left:0;top:158px;width:720px;text-align:center;font-size:14px;color:var(--ink2)">신청번호 <span class="mono" style="color:var(--ink)">V261012-143015</span> · 메가와이즈 센터 투어 · 10월 21일 (수) 13:00 – 14:00</div>
       <div class="abs lbl" style="left:40px;top:206px">참석자 정보 입력 링크 (Forms)</div>
@@ -326,7 +342,7 @@
       <div class="abs" style="left:28px;top:44px;font-size:22px;font-weight:600">한빛식품</div>
       <span class="abs tag t-yellow" style="left:150px;top:51px">대기</span>
       <div class="abs btn sec" style="left:598px;top:40px;width:110px;color:var(--red)">거절</div>
-      <div class="abs btn pri" style="left:720px;top:40px;width:110px">승인</div>
+      <div class="abs btn pri" style="left:720px;top:40px;width:110px;background:var(--approve)">승인</div>
       <div class="abs row" style="left:28px;top:96px;width:396px"><span style="width:90px">일정</span>10/21 (수) 13:00 – 14:00</div>
       <div class="abs row" style="left:434px;top:96px;width:396px"><span style="width:90px">투어</span>메가와이즈 센터 투어</div>
       <div class="abs row" style="left:28px;top:130px;width:396px"><span style="width:90px">신청자</span>김서연 책임 · 010-2345-6789</div>
@@ -429,6 +445,88 @@
     </div>
   </div>
 
+  <!-- ============ 방명록 (scrGuest) ============ -->
+  <div class="screen" id="s-gb">
+    <div class="abs" style="left:24px;top:84px;font:600 11px Consolas,monospace;letter-spacing:.2em;color:var(--brand)">TDL LAB · GUESTBOOK</div>
+    <div class="abs" style="left:24px;top:104px;font-size:32px;font-weight:800;color:var(--title);letter-spacing:-.02em">TDL Lab 방명록</div>
+    <div class="abs" style="left:24px;top:158px;width:600px;font-size:15px;line-height:1.6;color:var(--ink2)">다녀가신 분들이 남긴 소감입니다. 이름, 회사명, 팀명은 가명 처리되어 일부만 보입니다.</div>
+    <div class="abs" style="left:24px;top:206px;width:600px;font-size:12px;line-height:1.6;color:var(--ink2)"><span style="color:var(--brand)">◈</span> 방명록은 가명 처리해 관리합니다. 실명과 실제 회사명은 공개하지 않으며, 담당 관리자만 확인합니다.</div>
+    <div class="abs round" style="left:24px;top:260px;width:190px;height:46px;border-radius:23px;background:var(--brand);color:#fff;font-size:14px;font-weight:600;line-height:46px;text-align:center">방명록 남기기 &nbsp;✎</div>
+    <div class="abs card" style="left:784px;top:96px;width:558px;height:210px">
+      <div class="abs lbl" style="left:24px;top:20px">공개 소감 평균 만족도</div>
+      <div class="abs" style="left:24px;top:40px;font-size:40px;font-weight:800;color:var(--title)">4.6</div>
+      <div class="abs" style="left:110px;top:58px;font-size:26px;letter-spacing:2px;color:var(--brand)">★★★★<span style="color:var(--line)">★</span></div>
+      <div class="abs hint" style="left:24px;top:104px">공개된 소감 28건 · 별점 4점 이상 최근 10건이 아래로 흘러갑니다</div>
+      <div class="abs" style="left:24px;top:140px;width:510px;height:1px;background:var(--line)"></div>
+      <div class="abs lbl" style="left:24px;top:152px">방문객은 방문 완료 메일의 링크(Forms)로도 남길 수 있습니다.</div>
+      <div class="abs hint" style="left:24px;top:174px">센터 현장 태블릿에서는 이 화면의 [방명록 남기기] 를 쓰세요.</div>
+    </div>
+    <div class="abs h3" style="left:24px;top:324px">최근 소감</div>
+    <div class="abs btn sec" style="left:1242px;top:318px;width:100px;height:30px;line-height:28px;font-size:12px">멈춤</div>
+    <div class="abs" style="left:0;top:356px;width:1366px;height:196px;background:var(--soft);overflow:hidden"><div id="gblane"></div>
+      <div class="abs" style="left:0;top:184px;width:1366px;height:12px;background:var(--line)"></div></div>
+    <div class="abs" style="left:24px;top:576px;width:1318px;height:1px;background:var(--line)"></div>
+    <div class="abs" style="left:24px;top:592px;font-weight:800;font-size:15px;color:var(--title)">TDL LAB</div>
+    <div class="abs lbl" style="left:942px;top:596px;width:400px;text-align:right">Tech Driven Logistics · Tech Innovation Team</div>
+  </div>
+
+  <!-- ============ 방명록 남기기 창 ============ -->
+  <div class="screen" id="s-gbw">
+    <div class="abs" style="left:24px;top:84px;font-size:32px;font-weight:800;color:var(--title)">TDL Lab 방명록</div>
+    <div class="abs scrim" style="background:rgba(83,74,71,.45)"></div>
+    <div class="abs card" style="left:263px;top:100px;width:840px;height:560px">
+      <div class="abs" style="left:24px;top:18px;font:11px Consolas,monospace;color:var(--ink2)">TDL LAB · GUESTBOOK · 2026.10.28</div>
+      <div class="abs" style="left:24px;top:38px;font-size:19px;font-weight:800;color:var(--title)">방명록 남기기</div>
+      <div class="abs lbl" style="left:24px;top:68px">이름과 회사명은 가명 처리(일부 가림)되어 공개됩니다.</div>
+      <div class="abs" style="left:800px;top:20px;color:var(--ink2);font-size:16px">✕</div>
+      <div class="abs" style="left:0;top:96px;width:840px;border-top:1px dashed var(--line)"></div>
+      <div class="abs lbl" style="left:24px;top:108px;color:var(--ink)">어떤 투어에 참여하셨나요? <b style="color:var(--brand)">*</b></div>
+      <div id="gbtours"></div>
+      <div class="abs lbl" style="left:24px;top:254px;color:var(--ink)">이번 방문은 어떠셨나요? <b style="color:var(--brand)">*</b></div>
+      <div class="abs" style="left:24px;top:272px;font-size:30px;letter-spacing:4px;color:var(--brand)">★★★★<span style="background:linear-gradient(90deg,var(--brand) 50%,var(--line) 50%);-webkit-background-clip:text;color:transparent">★</span></div>
+      <div class="abs" style="left:214px;top:284px;font-size:13px;color:var(--ink2)"><b style="color:var(--title)">4.5</b> · 아주 만족해요</div>
+      <div class="abs lbl" style="left:24px;top:322px;color:var(--ink)">방문 소감 <b style="color:var(--brand)">*</b></div>
+      <div class="abs hint" style="left:284px;top:322px;width:124px;text-align:right">38 / 100자</div>
+      <div class="abs input" style="left:24px;top:342px;width:384px;height:108px;line-height:1.6;padding-top:8px">AMR 피킹 라인을 실제로 보니 도입 검토가 훨씬 구체적으로 됐습니다.</div>
+      <div class="abs lbl" style="left:436px;top:106px;color:var(--ink)">이름 *</div><div class="abs input" style="left:436px;top:126px;width:380px">최민준</div>
+      <div class="abs lbl" style="left:436px;top:168px;color:var(--ink)">회사명 *</div><div class="abs input" style="left:436px;top:188px;width:380px">한빛식품</div>
+      <div class="abs lbl" style="left:436px;top:230px">팀명 (선택)</div><div class="abs input" style="left:436px;top:250px;width:186px">물류기획팀</div>
+      <div class="abs lbl" style="left:630px;top:230px;color:var(--ink)">직책 *</div><div class="abs input" style="left:630px;top:250px;width:186px">부장</div>
+      <div class="abs" style="left:436px;top:300px;width:380px;height:150px;background:var(--soft)"></div>
+      <div class="abs" style="left:440px;top:304px;width:372px;height:142px;background:#fff;border:1px solid var(--line)">
+        <div class="abs lbl" style="left:14px;top:10px">공개 표시 · 가명 처리되어 이렇게 보입니다</div>
+        <div class="abs" style="left:14px;top:34px;font-size:14px;color:var(--title)"><b>최**</b> <span style="color:var(--ink2)">&nbsp; 한** · 물** · 부장</span></div>
+        <div class="abs" style="left:14px;top:66px;width:344px;height:1px;background:var(--line)"></div>
+        <div class="abs" style="left:14px;top:74px;width:344px;font-size:11px;line-height:1.6;color:var(--ink2)"><span style="color:var(--brand)">◈</span> 방명록은 가명 처리해 관리합니다. 실명과 실제 회사명은 공개하지 않으며, 담당 관리자만 확인합니다.</div>
+      </div>
+      <div class="abs" style="left:0;top:470px;width:840px;border-top:1px dashed var(--line)"></div>
+      <div class="abs chk" style="left:24px;top:488px;background:var(--brand);border-color:var(--brand)">✓</div>
+      <div class="abs" style="left:52px;top:486px;font-size:13px">개인정보 수집 · 이용에 동의합니다 <b style="color:var(--brand)">(필수)</b></div>
+      <div class="abs" style="left:440px;top:488px;font-size:12px;color:var(--ink2);text-decoration:underline">자세히 ▼</div>
+      <div class="abs btn sec" style="left:584px;top:504px;width:110px">취소</div>
+      <div class="abs btn pri" style="left:706px;top:504px;width:110px">등록하기</div>
+    </div>
+  </div>
+
+  <!-- ============ 방명록 관리 (scrGuestAdmin) ============ -->
+  <div class="screen" id="s-gba">
+    <div class="abs" style="left:24px;top:76px;font-size:20px;font-weight:800;color:var(--title)">방명록 관리</div>
+    <div class="abs hint" style="left:200px;top:84px">작성자 실명 · 실제 소속은 관리자만 봅니다. 숨긴 글은 방명록 화면에서 바로 빠지고 원본 목록에는 남습니다. 삭제는 되돌릴 수 없습니다.</div>
+    <div id="gbkpi"></div>
+    <div id="gbtourf"></div>
+    <div class="abs card" style="left:24px;top:278px;width:1318px;height:470px">
+      <div class="abs seg on" style="left:16px;top:14px;width:84px;height:30px;line-height:28px;font-size:12px">전체 31</div>
+      <div class="abs seg" style="left:104px;top:14px;width:84px;height:30px;line-height:28px;font-size:12px">공개 28</div>
+      <div class="abs seg" style="left:192px;top:14px;width:84px;height:30px;line-height:28px;font-size:12px">숨김 3</div>
+      <div class="abs input" style="left:296px;top:12px;width:360px;height:34px;line-height:32px;color:var(--ink3)">이름 · 회사 · 팀 · 메시지 검색</div>
+      <div class="abs btn sec" style="left:966px;top:12px;width:112px;height:34px;line-height:32px;font-size:12px">방명록 화면</div>
+      <div class="abs btn sec" style="left:1084px;top:12px;width:90px;height:34px;line-height:32px;font-size:12px">새로고침</div>
+      <div class="abs btn sec" style="left:1180px;top:12px;width:114px;height:34px;line-height:32px;font-size:12px">엑셀 (목록)</div>
+      <div class="abs" style="left:0;top:58px;width:1318px;height:30px;background:var(--bg)"></div>
+      <div id="gbrows"></div>
+    </div>
+  </div>
+
 </div></div></div>
 <script>
   // 달력 (2026년 10월, 일요일 시작 6주)
@@ -522,7 +620,7 @@
       const list = ev[key] || [], pend = list.filter((e) => e[2] === '대기').length
       const shown = list.length > 3 ? list.slice(0, 2) : list
       h += `<div class="abs" style="left:${24 + (n % 7) * 140}px;top:${150 + Math.floor(n / 7) * 100}px;width:140px;height:100px;box-sizing:border-box;border:${sel ? '2px solid var(--ink)' : '1px solid var(--line)'};background:${sel ? 'var(--soft)' : inM && open ? '#fff' : 'var(--bg)'}">
-        <div class="abs" style="left:4px;top:4px;width:22px;height:22px;border-radius:11px;text-align:center;line-height:22px;font-size:11px;font-weight:600;background:${today ? 'var(--brand)' : 'transparent'};color:${today ? '#fff' : !inM ? 'var(--ink3)' : d.getDay() === 0 || hol.includes(key) ? 'var(--red)' : 'var(--ink)'}">${d.getDate()}</div>
+        <div class="abs round" style="left:4px;top:4px;width:22px;height:22px;border-radius:11px;text-align:center;line-height:22px;font-size:11px;font-weight:600;background:${today ? 'var(--brand)' : 'transparent'};color:${today ? '#fff' : !inM ? 'var(--ink3)' : d.getDay() === 0 || hol.includes(key) ? 'var(--red)' : 'var(--ink)'}">${d.getDate()}</div>
         ${hol.includes(key) && inM ? '<div class="abs" style="left:30px;top:8px;font-size:9px;color:var(--red)">공휴일</div>' : ''}
         ${pend ? `<span class="abs tag t-yellow" style="right:4px;top:5px;height:18px;line-height:18px;font-size:10px;padding:0 6px">대기 ${pend}</span>` : ''}
         <div class="abs" style="left:3px;top:27px">${shown.map((e) => chip(e, 130)).join('')}</div>
@@ -537,8 +635,58 @@
       <div class="abs lbl" style="left:14px;top:34px;font-size:11px">${r[1]}</div>
       <span class="abs tag ${r[3] === '대기' ? 't-yellow' : 't-green'}" style="right:12px;top:8px">${r[3]}</span></div>`).join('')
   })()
+
+  // 방명록 화면 · 작성 창 · 관리 화면 예시
+  ;(function () {
+    const star = (r, size) => { let h = ''; for (let k = 1; k <= 5; k++) { const f = Math.max(0, Math.min(1, r - (k - 1))) * 100
+      h += `<span style="display:inline-block;background:linear-gradient(90deg,var(--brand) ${f}%,var(--line) ${f}%);-webkit-background-clip:text;color:transparent;font-size:${size}px">★</span>` } return h }
+    const parcels = [['GB-1027-01', 5, '로봇이 실제로 작업하는 모습을 가까이서 볼 수 있어 도입 검토에 큰 도움이 됐습니다.', '김** 책임 · 세** 물**'],
+      ['GB-1023-02', 4.5, 'AMR 동선 최적화 사례가 인상 깊었습니다. 자료도 정리해서 주셨으면 합니다.', '정** 파트장 · 마**'],
+      ['GB-1021-03', 4, '현장 적용 관점으로 설명해 주셔서 우리 센터에 맞는 방식을 바로 떠올릴 수 있었습니다.', '박** 선임 · 누** S**'],
+      ['GB-1016-04', 5, '설비 담당 엔지니어가 직접 질문에 답해 주셔서 신뢰가 갔습니다.', '최** 팀장 · 오**'],
+      ['GB-1014-05', 4.5, '신기술 PoC를 짧게 검증하는 방식이 우리 팀 일하는 방식과 잘 맞았습니다.', '윤** 책임 · 미** 신**']]
+    document.getElementById('gblane').innerHTML = parcels.map((p, i) => `<div class="abs" style="left:${24 + i * 288 - 90}px;top:16px;width:272px;height:162px;background:#fff;border:${i === 1 ? '2px solid var(--brand)' : '1px solid var(--line)'}">
+      ${i === 1 ? '<span class="abs tag" style="left:10px;top:-10px;background:var(--brand);color:#fff;height:18px;line-height:18px">방금 도착</span>' : ''}
+      <div class="abs" style="left:16px;top:12px;font:11px Consolas,monospace;color:var(--ink2)">${p[0]}</div>
+      <div class="abs" style="left:160px;top:9px">${star(p[1], 12)}</div><div class="abs" style="left:226px;top:12px;width:30px;text-align:right;font:600 11px Consolas,monospace">${p[1].toFixed(1)}</div>
+      <div class="abs" style="left:16px;top:36px;width:240px;border-top:1px dashed var(--line)"></div>
+      <div class="abs" style="left:16px;top:46px;width:240px;font-size:14px;line-height:1.6;color:var(--title)">${p[2]}</div>
+      <div class="abs" style="left:16px;top:130px;width:240px;font-size:12px;color:var(--ink2);white-space:nowrap;overflow:hidden"><b style="color:var(--title)">${p[3].split(' ')[0]}</b> ${p[3].split(' ').slice(1).join(' ')}</div></div>`).join('')
+    const tours = [['종합 투어', [['TDL Lab', '#7C5CC4'], ['메가와이즈', '#1A8FA0']], '센터와 Lab을 함께 둘러봤어요', false],
+      ['TDL Lab 투어', [['TDL Lab', '#7C5CC4']], 'TDL Lab만 둘러봤어요', true], ['메가와이즈 센터 투어', [['메가와이즈', '#1A8FA0']], '메가와이즈 센터만 둘러봤어요', false]]
+    document.getElementById('gbtours').innerHTML = tours.map((t, i) => `<div class="abs" style="left:${24 + i * 128}px;top:128px;width:124px;height:108px;box-sizing:border-box;border:2px solid ${t[3] ? 'var(--brand)' : 'var(--line)'};background:${t[3] ? 'var(--sel)' : '#fff'}">
+      <div class="abs" style="left:10px;top:9px;width:84px;font-size:13px;font-weight:800;line-height:1.25;color:${t[3] ? 'var(--brand)' : 'var(--title)'}">${t[0]}</div>
+      <div class="abs round" style="left:96px;top:9px;width:16px;height:16px;border-radius:9px;border:1px solid ${t[3] ? 'var(--brand)' : 'var(--ink3)'};background:${t[3] ? 'var(--brand)' : '#fff'};color:#fff;font-size:10px;text-align:center;line-height:16px">${t[3] ? '✓' : ''}</div>
+      <div class="abs" style="left:8px;top:48px;white-space:nowrap">${t[1].map((b) => `<span style="background:${b[1]};color:#fff;font-size:9px;font-weight:800;padding:2px 3px">${b[0]}</span>`).join('<b style="color:var(--ink2);font-size:10px">+</b>')}</div>
+      <div class="abs" style="left:10px;top:72px;width:104px;font-size:11px;line-height:1.35;color:var(--ink2)">${t[2]}</div></div>`).join('')
+    const k = [['전체 방명록', '31건', '숨긴 글 포함', 'var(--ink)'], ['공개 중', '28건', '방명록 화면에 표시', 'var(--approve)'], ['숨김', '3건', '원본 목록에는 남아 있음', 'var(--ink)'], ['평균 평가', '4.4', '공개 글 기준 · 5점 만점', 'var(--brand)']]
+    document.getElementById('gbkpi').innerHTML = k.map((r, i) => `<div class="abs card" style="left:${24 + i * 332}px;top:126px;width:320px;height:92px">
+      <div class="abs lbl" style="left:18px;top:14px;font-weight:600;font-size:13px">${r[0]}</div><div class="abs" style="left:18px;top:34px;font-size:26px;font-weight:800;color:${r[3]}">${r[1]}</div>
+      <div class="abs hint" style="left:18px;top:66px">${r[2]}</div></div>`).join('')
+    const tf = [['전체', 31, ''], ['메가와이즈 + TDL Lab', 12, '#DC2626'], ['TDL Lab 투어', 11, '#7C5CC4'], ['메가와이즈 센터 투어', 7, '#1A8FA0'], ['미분류', 1, '#ACA8A7']]
+    document.getElementById('gbtourf').innerHTML = tf.map((t, i) => `<div class="abs" style="left:${24 + i * 212}px;top:232px;width:198px;height:32px;line-height:30px;padding-left:${t[2] ? 26 : 12}px;font-size:12px;border:1px solid ${i === 0 ? 'var(--ink)' : 'var(--line)'};background:${i === 0 ? 'var(--ink)' : '#fff'};color:${i === 0 ? '#fff' : 'var(--ink)'};box-sizing:border-box">
+      ${t[2] ? `<span style="position:absolute;left:12px;top:12px;width:8px;height:8px;background:${t[2]}"></span>` : ''}${t[0]} &nbsp;<span style="opacity:.7">${t[1]}</span></div>`).join('')
+    const head = [['작성일', 16], ['투어', 112], ['평가', 266], ['작성자', 370], ['메시지', 604], ['상태', 964], ['처리', 1032]]
+    let rows = head.map((h) => `<div class="abs" style="left:${24 + h[1]}px;top:64px;font-size:11px;font-weight:600;color:var(--ink2)">${h[0]}</div>`).join('')
+    const data = [['2026.10.27', '#7C5CC4', 'TDL Lab 투어', 5, '김도현 책임', '세림케미칼 물류혁신팀', '김** · 세**', '로봇이 실제로 작업하는 모습을 가까이서 볼 수 있어 도입 검토에 큰 도움이 됐습니다.', false],
+      ['2026.10.23', '#DC2626', '메가와이즈 + TDL Lab', 4.5, '정하린 파트장', '마루코스메틱 풀필먼트', '정** · 마**', 'AMR 동선 최적화 사례가 인상 깊었습니다. 자료도 정리해서 주셨으면 합니다.', false],
+      ['2026.10.20', '#1A8FA0', '메가와이즈 센터 투어', 1, '홍길동 테스트', '테스트회사', '홍** · 테**', 'ㅋㅋㅋ 테스트 입니다', true],
+      ['2026.10.16', '#7C5CC4', 'TDL Lab 투어', 3, '이준호 매니저', '한결유통 구매팀', '이** · 한**', '시간이 조금 짧았습니다. 다음에는 자율주행 쪽도 더 보고 싶습니다.', false]]
+    rows += data.map((r, i) => { const y = 88 + i * 88, hid = r[8], c = hid ? '#868E96' : 'var(--ink)'
+      return `<div class="abs" style="left:24px;top:${y}px;width:1270px;height:86px;background:${hid ? '#F1F3F5' : '#fff'};border-bottom:1px solid var(--line)">
+      <div class="abs" style="left:16px;top:12px;font:12px Consolas,monospace;color:var(--ink2)">${r[0]}</div>
+      <span class="abs" style="left:112px;top:18px;width:8px;height:8px;background:${r[1]}"></span><div class="abs" style="left:126px;top:12px;font-size:12px;color:${c}">${r[2]}</div>
+      <div class="abs" style="left:266px;top:9px">${star(r[3], 12)}</div><div class="abs" style="left:332px;top:12px;font:600 11px Consolas,monospace">${r[3].toFixed(1)}</div>
+      <div class="abs" style="left:370px;top:10px;font-size:13px;font-weight:600;color:${c}">${r[4]}</div><div class="abs" style="left:370px;top:32px;font-size:12px;color:var(--ink2)">${r[5]}</div>
+      <div class="abs" style="left:370px;top:52px;font-size:11px;color:var(--ink3)">공개: ${r[6]}</div>
+      <div class="abs" style="left:604px;top:10px;width:350px;font-size:13px;line-height:1.55;color:${c}">${r[7]}</div>
+      <span class="abs tag" style="left:964px;top:12px;background:${hid ? 'var(--gray-bg)' : 'var(--green-bg)'};color:${hid ? 'var(--gray)' : 'var(--green)'}">${hid ? '숨김' : '공개'}</span>
+      <div class="abs btn sec" style="left:1032px;top:10px;width:96px;height:30px;line-height:28px;font-size:12px">${hid ? '다시 표시' : '숨기기'}</div>
+      <div class="abs btn sec" style="left:1134px;top:10px;width:64px;height:30px;line-height:28px;font-size:12px;color:var(--red)">삭제</div></div>` }).join('')
+    document.getElementById('gbrows').innerHTML = rows
+  })()
   // 화면 전환 · 크기 맞춤
-  const navOf = { b1: 'n1', b2: 'n1', b3: 'n1', done: 'n1', my: 'n2', adm: 'n3', blk: 'n3', st: 'n4', cal: 'n5' }
+  const navOf = { b1: 'n1', b2: 'n1', b3: 'n1', done: 'n1', my: 'n2', adm: 'n3', blk: 'n3', st: 'n4', cal: 'n5', gb: 'n6', gbw: 'n6', gba: 'n7' }
   document.querySelectorAll('.toolbar button').forEach((b) => b.addEventListener('click', () => {
     document.querySelectorAll('.toolbar button').forEach((x) => x.classList.toggle('on', x === b))
     document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('on', s.id === 's-' + b.dataset.s))
