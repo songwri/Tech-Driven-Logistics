@@ -1,6 +1,6 @@
 # scrCalendar — 예약 달력 (관리자만). 웹 관리자 대시보드의 달력과 같은 역할
 # ── [PA 전용] 웹앱에 없는 기능 · 수정하면 이 목록과 수식 속 '// [PA 전용]' 주석도 함께 고칠 것 (README 14) ──
-#   · conCBody: 본문만 스크롤
+#   · conCBody: 본문만 스크롤 · 폭은 창 폭에 맞춰 kx 배(최대 MaxStretch)로 늘어남
 # 날짜 칸마다 예약을 '시간 · 투어 · 업체' 칩으로 3건까지 보여주고, 더 있으면 '+n건 더보기'.
 # 칩 색 = 상태(대기 노랑 · 승인 초록 · 완료 파랑 · 거절/취소 회색 취소선), 왼쪽 띠 = 투어 색, 막힌 일정은 '막힘' 칩.
 # 칩을 누르면 관리자 화면에서 그 신청이 열리고, 칸을 누르면 오른쪽에 그날 전체 목록 · 일정 막기 · 해제.
@@ -67,7 +67,7 @@
           Control: GroupContainer@1.3.0
           Variant: ManualLayout
           Properties:
-            Width: =1366
+            Width: =pw
             Height: =710
             FillPortions: =0
             Fill: =Color.Transparent
@@ -319,9 +319,9 @@
                 Variant: Vertical
                 Properties:
                   Items: =OpenTours
-                  X: =410
+                  X: =24 + 386 * kx
                   Y: =18
-                  Width: =594
+                  Width: =594 * kx
                   Height: =32
                   TemplateSize: =32
                   TemplatePadding: =0
@@ -360,7 +360,7 @@
                   Items: =["일", "월", "화", "수", "목", "금", "토"]
                   X: =24
                   Y: =64
-                  Width: =980
+                  Width: =980 * kx
                   Height: =26
                   TemplateSize: =26
                   TemplatePadding: =0
@@ -375,7 +375,7 @@
                         Text: =ThisItem.Value
                         X: =0
                         Y: =0
-                        Width: =140
+                        Width: =140 + 140 * (kx - 1)
                         Height: =26
                         Font: =fnt
                         Size: =9
@@ -411,7 +411,7 @@
                     )
                   X: =24
                   Y: =94
-                  Width: =980
+                  Width: =980 * kx
                   Height: =600
                   TemplateSize: =100
                   TemplatePadding: =0
@@ -426,7 +426,7 @@
                         Text: =""
                         X: =0
                         Y: =0
-                        Width: =140
+                        Width: =140 + 140 * (kx - 1)
                         Height: =100
                         OnSelect: =Set(gCalDay, ThisItem.Key)
                         Fill: =If(ThisItem.Key = gCalDay, cSoft, ThisItem.InMonth && ThisItem.Open && !ThisItem.Holiday, cSurface, cBg)
@@ -478,7 +478,7 @@
                       Control: Classic/Button@2.2.0
                       Properties:
                         Text: ="대기 " & CountRows(Filter(colCalItems, Key = ThisItem.Key && Status = "대기" && (gCalTour = "" || Kind = "block" || Tour = gCalTour)))
-                        X: =82
+                        X: =82 + 140 * (kx - 1)
                         Y: =6
                         Width: =54
                         Height: =18
@@ -503,7 +503,7 @@
                           =With({all: SortByColumns(Filter(colCalItems, Key = ThisItem.Key && (gCalTour = "" || Kind = "block" || Tour = gCalTour)), "Sort")}, FirstN(all, If(CountRows(all) > 3, 2, 3)))
                         X: =4
                         Y: =28
-                        Width: =132
+                        Width: =132 + 140 * (kx - 1)
                         Height: =66
                         TemplateSize: =22
                         TemplatePadding: =0
@@ -517,7 +517,7 @@
                               Text: =""
                               X: =0
                               Y: =0
-                              Width: =132
+                              Width: =132 + 140 * (kx - 1)
                               Height: =20
                               OnSelect: =If(ThisItem.Kind = "req", Set(gOpenId, ThisItem.ReqId); Navigate(scrAdmin, ScreenTransition.None), Set(gCalDay, ThisItem.Key))
                               Fill: =Switch(ThisItem.Status, "대기", ColorValue("#FBF3DB"), "승인", ColorValue("#EDF3EC"), "완료", ColorValue("#E1F3FE"), "막기", cSoft, ColorValue("#EFEFED"))
@@ -543,7 +543,7 @@
                               Text: =ThisItem.Chip & If(IsBlank(ThisItem.Lang), "", " · " & ThisItem.Lang)
                               X: =8
                               Y: =0
-                              Width: =122
+                              Width: =122 + 140 * (kx - 1)
                               Height: =20
                               Font: =fnt
                               Size: =9
@@ -562,7 +562,7 @@
                         Text: ="+" & (CountRows(Filter(colCalItems, Key = ThisItem.Key && (gCalTour = "" || Kind = "block" || Tour = gCalTour))) - 2) & "건 더보기"
                         X: =8
                         Y: =74
-                        Width: =128
+                        Width: =128 + 140 * (kx - 1)
                         Height: =18
                         Font: =fnt
                         Size: =9
@@ -577,9 +577,9 @@
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
-                  X: =1020
+                  X: =24 + 996 * kx
                   Y: =64
-                  Width: =322
+                  Width: =322 * kx
                   Height: =630
                   Fill: =cSurface
                   BorderColor: =cLine
@@ -596,7 +596,7 @@
                         Text: =Month(DateValue(gCalDay)) & "월 " & Day(DateValue(gCalDay)) & "일 (" & Text(DateValue(gCalDay), "ddd", "ko-KR") & ")"
                         X: =20
                         Y: =16
-                        Width: =282
+                        Width: =282 + 322 * (kx - 1)
                         Height: =28
                         Font: =fnt
                         Size: =13
@@ -612,7 +612,7 @@
                         Text: ="예약 " & CountRows(Filter(colCalItems, Key = gCalDay && Kind = "req" && (gCalTour = "" || Kind = "block" || Tour = gCalTour))) & "건 · 대기 " & CountRows(Filter(colCalItems, Key = gCalDay && Status = "대기" && (gCalTour = "" || Kind = "block" || Tour = gCalTour))) & "건"
                         X: =20
                         Y: =46
-                        Width: =282
+                        Width: =282 + 322 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -628,7 +628,7 @@
                         Items: =SortByColumns(Filter(colCalItems, Key = gCalDay && (gCalTour = "" || Kind = "block" || Tour = gCalTour)), "Sort")
                         X: =12
                         Y: =76
-                        Width: =298
+                        Width: =298 + 322 * (kx - 1)
                         Height: =400
                         TemplateSize: =64
                         TemplatePadding: =0
@@ -642,7 +642,7 @@
                               Text: =""
                               X: =0
                               Y: =0
-                              Width: =298
+                              Width: =298 + 322 * (kx - 1)
                               Height: =60
                               OnSelect: =If(ThisItem.Kind = "req", Set(gOpenId, ThisItem.ReqId); Navigate(scrAdmin, ScreenTransition.None))
                               Fill: =cSurface
@@ -669,7 +669,7 @@
                               Text: =ThisItem.Title
                               X: =14
                               Y: =8
-                              Width: =200
+                              Width: =200 + 322 * (kx - 1)
                               Height: =22
                               Font: =fnt
                               Size: =10.5
@@ -687,7 +687,7 @@
                               Text: =ThisItem.Sub & If(IsBlank(ThisItem.Lang), "", " · " & ThisItem.Lang)
                               X: =14
                               Y: =32
-                              Width: =270
+                              Width: =270 + 322 * (kx - 1)
                               Height: =20
                               Font: =fnt
                               Size: =9
@@ -702,7 +702,7 @@
                             Control: Classic/Button@2.2.0
                             Properties:
                               Text: =ThisItem.Status
-                              X: =228
+                              X: =228 + 322 * (kx - 1)
                               Y: =8
                               Width: =56
                               Height: =22
@@ -723,7 +723,7 @@
                             Control: Classic/Button@2.2.0
                             Properties:
                               Text: ="해제"
-                              X: =228
+                              X: =228 + 322 * (kx - 1)
                               Y: =8
                               Width: =56
                               Height: =24
@@ -796,7 +796,7 @@
                         Text: ="이 날은 예약이 없습니다."
                         X: =20
                         Y: =90
-                        Width: =282
+                        Width: =282 + 322 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -812,7 +812,7 @@
                         Text: ="이 날 일정 막기"
                         X: =20
                         Y: =488
-                        Width: =282
+                        Width: =282 + 322 * (kx - 1)
                         Height: =36
                         OnSelect: |-
                           =Set(gBlockDate, DateValue(gCalDay));
@@ -845,7 +845,7 @@
                       Properties:
                         X: =20
                         Y: =538
-                        Width: =282
+                        Width: =282 + 322 * (kx - 1)
                         Height: =1
                         Fill: =cLine
                   - lblCalLegend:
@@ -854,7 +854,7 @@
                         Text: ="칩 색 = 상태 · 왼쪽 띠 = 투어"
                         X: =20
                         Y: =548
-                        Width: =282
+                        Width: =282 + 322 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -927,7 +927,7 @@
                       Control: Classic/Button@2.2.0
                       Properties:
                         Text: ="거절"
-                        X: =188
+                        X: =188 + 322 * (kx - 1)
                         Y: =572
                         Width: =50
                         Height: =22
@@ -947,7 +947,7 @@
                       Control: Classic/Button@2.2.0
                       Properties:
                         Text: ="막힘"
-                        X: =244
+                        X: =244 + 322 * (kx - 1)
                         Y: =572
                         Width: =58
                         Height: =22
@@ -969,7 +969,7 @@
                         Text: ="EN · ZH · 통역 = 외국어 투어 / 통역 동반"
                         X: =20
                         Y: =600
-                        Width: =282
+                        Width: =282 + 322 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -1032,7 +1032,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="방문 신청"
-      X: =ox + 520
+      X: =ox + pw / 2 - 163
       Y: =12
       Width: =96
       Height: =32
@@ -1056,7 +1056,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="내 신청"
-      X: =ox + 624
+      X: =ox + pw / 2 - 59
       Y: =12
       Width: =96
       Height: =32
@@ -1080,7 +1080,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="관리자"
-      X: =ox + 728
+      X: =ox + pw / 2 + 45
       Y: =12
       Width: =96
       Height: =32
@@ -1104,7 +1104,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="달력"
-      X: =ox + 832
+      X: =ox + pw / 2 + 149
       Y: =12
       Width: =96
       Height: =32
@@ -1128,7 +1128,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="통계"
-      X: =ox + 936
+      X: =ox + pw / 2 + 253
       Y: =12
       Width: =96
       Height: =32
@@ -1152,7 +1152,7 @@
     Control: Label@2.5.1
     Properties:
       Text: =gMe.displayName & If(IsBlank(gMe.department), "", " · " & gMe.department)
-      X: =ox + 1042
+      X: =ox + pw - 324
       Y: =18
       Width: =300
       Height: =20

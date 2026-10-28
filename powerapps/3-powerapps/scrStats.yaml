@@ -1,7 +1,7 @@
 # scrStats — 방문 통계 (관리자만). 웹 관리자 '통계' 탭과 같은 기간 선택: 연간 · 월별 · 기간 지정 · 전체 기간
 # ── [PA 전용] 웹앱에 없는 기능 · 수정하면 이 목록과 수식 속 '// [PA 전용]' 주석도 함께 고칠 것 (README 14) ──
 #   · OnVisible: 목록을 해마다 나눠 읽음 (SharePoint 2000행 제한 회피, 웹은 시트 전체를 읽음)
-#   · conSBody: 본문만 스크롤
+#   · conSBody: 본문만 스크롤 · 폭은 창 폭에 맞춰 kx 배(최대 MaxStretch)로 늘어남
 # 1) 새 화면(빈 화면) → 이름 scrStats, 화면 Fill = cBg, Width = sw, Height = sh
 #    OnVisible =
 #      If(IsBlank(gAdminSite), Notify("관리자 권한이 없습니다.", NotificationType.Error); Navigate(scrBook),
@@ -55,7 +55,7 @@
           Control: GroupContainer@1.3.0
           Variant: ManualLayout
           Properties:
-            Width: =1366
+            Width: =pw
             Height: =712
             FillPortions: =0
             Fill: =Color.Transparent
@@ -68,7 +68,7 @@
                 Properties:
                   X: =24
                   Y: =16
-                  Width: =1318
+                  Width: =1318 * kx
                   Height: =52
                   Fill: =cSurface
                   BorderColor: =cLine
@@ -306,7 +306,7 @@
                       Control: Label@2.5.1
                       Properties:
                         Text: ="집계 기준"
-                        X: =980
+                        X: =980 + 1318 * (kx - 1)
                         Y: =16
                         Width: =70
                         Height: =20
@@ -321,7 +321,7 @@
                       Control: Classic/Button@2.2.0
                       Properties:
                         Text: ="전체"
-                        X: =1050
+                        X: =1050 + 1318 * (kx - 1)
                         Y: =10
                         Width: =110
                         Height: =32
@@ -345,7 +345,7 @@
                       Control: Classic/Button@2.2.0
                       Properties:
                         Text: ="승인 · 완료만"
-                        X: =1166
+                        X: =1166 + 1318 * (kx - 1)
                         Y: =10
                         Width: =132
                         Height: =32
@@ -371,7 +371,7 @@
                 Properties:
                   X: =24
                   Y: =80
-                  Width: =320
+                  Width: =320 * kx
                   Height: =92
                   Fill: =cSurface
                   BorderColor: =cLine
@@ -388,7 +388,7 @@
                         Text: =If(gStatBasis = "approved", "승인 · 완료 건수", "신청 건수")
                         X: =18
                         Y: =14
-                        Width: =290
+                        Width: =290 + 320 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -403,7 +403,7 @@
                         Text: =CountRows(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text))) & "건"
                         X: =18
                         Y: =34
-                        Width: =290
+                        Width: =290 + 320 * (kx - 1)
                         Height: =30
                         Font: =fnt
                         Size: =18
@@ -420,7 +420,7 @@
                           =If(Value(lblStatPS.Text) < 0, "비교 기간 없음", With({d: CountRows(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text))) - CountRows(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatPS.Text) && DayNum <= Value(lblStatPE.Text)))}, Switch(gStatPeriod, "year", "전년", "month", "전월", "직전 동기간") & " 대비 " & If(d > 0, "▲ ", d < 0, "▼ ", "– ") & Abs(d)))
                         X: =18
                         Y: =66
-                        Width: =290
+                        Width: =290 + 320 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -433,9 +433,9 @@
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
-                  X: =356
+                  X: =24 + 332 * kx
                   Y: =80
-                  Width: =320
+                  Width: =320 * kx
                   Height: =92
                   Fill: =cSurface
                   BorderColor: =cLine
@@ -452,7 +452,7 @@
                         Text: =If(gStatBasis = "approved", "방문 인원", "신청 인원 (대기 포함)")
                         X: =18
                         Y: =14
-                        Width: =290
+                        Width: =290 + 320 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -467,7 +467,7 @@
                         Text: =Sum(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Heads) & "명"
                         X: =18
                         Y: =34
-                        Width: =290
+                        Width: =290 + 320 * (kx - 1)
                         Height: =30
                         Font: =fnt
                         Size: =18
@@ -484,7 +484,7 @@
                           =If(Value(lblStatPS.Text) < 0, "비교 기간 없음", With({d: Sum(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Heads) - Sum(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatPS.Text) && DayNum <= Value(lblStatPE.Text)), Heads)}, Switch(gStatPeriod, "year", "전년", "month", "전월", "직전 동기간") & " 대비 " & If(d > 0, "▲ ", d < 0, "▼ ", "– ") & Abs(d)))
                         X: =18
                         Y: =66
-                        Width: =290
+                        Width: =290 + 320 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -497,9 +497,9 @@
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
-                  X: =688
+                  X: =24 + 664 * kx
                   Y: =80
-                  Width: =320
+                  Width: =320 * kx
                   Height: =92
                   Fill: =cSurface
                   BorderColor: =cLine
@@ -516,7 +516,7 @@
                         Text: ="승인률"
                         X: =18
                         Y: =14
-                        Width: =290
+                        Width: =290 + 320 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -532,7 +532,7 @@
                           =With({d: CountRows(Filter(Filter(colStatAll, DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Status = "승인" || Status = "완료" || Status = "거절"))}, If(d > 0, Round(CountRows(Filter(Filter(colStatAll, DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Status = "승인" || Status = "완료")) / d * 100, 0), 0)) & "%"
                         X: =18
                         Y: =34
-                        Width: =290
+                        Width: =290 + 320 * (kx - 1)
                         Height: =30
                         Font: =fnt
                         Size: =18
@@ -548,7 +548,7 @@
                         Text: ="처리 " & CountRows(Filter(Filter(colStatAll, DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Status = "승인" || Status = "완료" || Status = "거절")) & "건 중 승인 " & CountRows(Filter(Filter(colStatAll, DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Status = "승인" || Status = "완료")) & "건"
                         X: =18
                         Y: =66
-                        Width: =290
+                        Width: =290 + 320 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -561,9 +561,9 @@
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
-                  X: =1020
+                  X: =24 + 996 * kx
                   Y: =80
-                  Width: =320
+                  Width: =320 * kx
                   Height: =92
                   Fill: =cSurface
                   BorderColor: =cLine
@@ -580,7 +580,7 @@
                         Text: ="건당 평균 인원"
                         X: =18
                         Y: =14
-                        Width: =290
+                        Width: =290 + 320 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -596,7 +596,7 @@
                           =With({c: CountRows(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)))}, If(c > 0, Round(Sum(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Heads) / c, 1), 0)) & "명"
                         X: =18
                         Y: =34
-                        Width: =290
+                        Width: =290 + 320 * (kx - 1)
                         Height: =30
                         Font: =fnt
                         Size: =18
@@ -612,7 +612,7 @@
                         Text: ="인원 = 제출된 참석자 수 (없으면 예상 인원)"
                         X: =18
                         Y: =66
-                        Width: =290
+                        Width: =290 + 320 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -697,7 +697,7 @@
                 Control: Label@2.5.1
                 Properties:
                   Text: =Switch(gStatPeriod, "year", gStatYear & "년", "month", gStatYear & "년 " & gStatMonth & "월", "range", If(lblStatS.Text = lblStatE.Text, Text(Date(Int(Value(lblStatS.Text) / 10000), Mod(Int(Value(lblStatS.Text) / 100), 100), Mod(Value(lblStatS.Text), 100)), "yyyy.mm.dd"), Text(Date(Int(Value(lblStatS.Text) / 10000), Mod(Int(Value(lblStatS.Text) / 100), 100), Mod(Value(lblStatS.Text), 100)), "yyyy.mm.dd") & "~" & Text(Date(Int(Value(lblStatE.Text) / 10000), Mod(Int(Value(lblStatE.Text) / 100), 100), Mod(Value(lblStatE.Text), 100)), "yyyy.mm.dd")), "전체 기간") & " · " & If(gStatBasis = "approved", "승인 · 완료만", "거절 · 취소 제외")
-                  X: =760
+                  X: =pw - 606
                   Y: =188
                   Width: =582
                   Height: =24
@@ -715,7 +715,7 @@
                 Properties:
                   X: =24
                   Y: =226
-                  Width: =860
+                  Width: =860 * kx
                   Height: =470
                   Fill: =cSurface
                   BorderColor: =cLine
@@ -749,7 +749,7 @@
                         Text: =If(gStatPeriod = "range", Int(Value(lblStatE.Text) / 10000), gStatYear) & "년 · 월별 " & If(gStatBasis = "approved", "승인", "신청") & " 건수 · 선택 기간 밖의 달은 흐리게"
                         X: =20
                         Y: =42
-                        Width: =600
+                        Width: =600 + 860 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -781,7 +781,7 @@
                           )
                         X: =20
                         Y: =76
-                        Width: =820
+                        Width: =820 + 860 * (kx - 1)
                         Height: =370
                         TemplateSize: =370
                         TemplatePadding: =0
@@ -842,9 +842,9 @@
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
-                  X: =896
+                  X: =24 + 872 * kx
                   Y: =226
-                  Width: =446
+                  Width: =446 * kx
                   Height: =470
                   Fill: =cSurface
                   BorderColor: =cLine
@@ -862,7 +862,7 @@
                         Text: ="센터별 방문 건수"
                         X: =20
                         Y: =16
-                        Width: =300
+                        Width: =300 + 446 * (kx - 1)
                         Height: =24
                         Font: =fnt
                         Size: =11.5
@@ -878,7 +878,7 @@
                         Text: ="복합 투어는 들르는 센터마다 1건씩"
                         X: =20
                         Y: =42
-                        Width: =400
+                        Width: =400 + 446 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -905,7 +905,7 @@
                           )
                         X: =20
                         Y: =70
-                        Width: =406
+                        Width: =406 + 446 * (kx - 1)
                         Height: =100
                         TemplateSize: =30
                         TemplatePadding: =0
@@ -935,7 +935,7 @@
                             Properties:
                               X: =138
                               Y: =10
-                              Width: =206
+                              Width: =206 + 446 * (kx - 1)
                               Height: =8
                               Fill: =cSoft
                         - galPlacesBar:
@@ -943,14 +943,14 @@
                             Properties:
                               X: =138
                               Y: =10
-                              Width: =206 * ThisItem.N / Max(1, ThisItem.Mx)
+                              Width: =(206 + 446 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
                               Height: =8
                               Fill: =cPrimary
                         - galPlacesValue:
                             Control: Label@2.5.1
                             Properties:
                               Text: =ThisItem.N & "건"
-                              X: =352
+                              X: =352 + 446 * (kx - 1)
                               Y: =0
                               Width: =54
                               Height: =28
@@ -969,7 +969,7 @@
                       Properties:
                         X: =20
                         Y: =190
-                        Width: =406
+                        Width: =406 + 446 * (kx - 1)
                         Height: =1
                         Fill: =cLine
                   - lblToursStatTitle:
@@ -978,7 +978,7 @@
                         Text: ="투어 종류"
                         X: =20
                         Y: =206
-                        Width: =300
+                        Width: =300 + 446 * (kx - 1)
                         Height: =24
                         Font: =fnt
                         Size: =11.5
@@ -999,7 +999,7 @@
                           )
                         X: =20
                         Y: =240
-                        Width: =406
+                        Width: =406 + 446 * (kx - 1)
                         Height: =210
                         TemplateSize: =30
                         TemplatePadding: =0
@@ -1029,7 +1029,7 @@
                             Properties:
                               X: =158
                               Y: =10
-                              Width: =186
+                              Width: =186 + 446 * (kx - 1)
                               Height: =8
                               Fill: =cSoft
                         - galToursStatBar:
@@ -1037,14 +1037,14 @@
                             Properties:
                               X: =158
                               Y: =10
-                              Width: =186 * ThisItem.N / Max(1, ThisItem.Mx)
+                              Width: =(186 + 446 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
                               Height: =8
                               Fill: =cPrimary
                         - galToursStatValue:
                             Control: Label@2.5.1
                             Properties:
                               Text: =ThisItem.N & "건"
-                              X: =352
+                              X: =352 + 446 * (kx - 1)
                               Y: =0
                               Width: =54
                               Height: =28
@@ -1064,7 +1064,7 @@
                 Properties:
                   X: =24
                   Y: =226
-                  Width: =426
+                  Width: =426 * kx
                   Height: =470
                   Fill: =cSurface
                   BorderColor: =cLine
@@ -1082,7 +1082,7 @@
                         Text: ="방문 유형"
                         X: =20
                         Y: =16
-                        Width: =300
+                        Width: =300 + 426 * (kx - 1)
                         Height: =24
                         Font: =fnt
                         Size: =11.5
@@ -1098,7 +1098,7 @@
                         Text: ="고객 기존 · 신규 · 내부"
                         X: =20
                         Y: =42
-                        Width: =386
+                        Width: =386 + 426 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -1118,7 +1118,7 @@
                           )
                         X: =20
                         Y: =70
-                        Width: =386
+                        Width: =386 + 426 * (kx - 1)
                         Height: =380
                         TemplateSize: =30
                         TemplatePadding: =0
@@ -1148,7 +1148,7 @@
                             Properties:
                               X: =138
                               Y: =10
-                              Width: =186
+                              Width: =186 + 426 * (kx - 1)
                               Height: =8
                               Fill: =cSoft
                         - galStatSegBar:
@@ -1156,14 +1156,14 @@
                             Properties:
                               X: =138
                               Y: =10
-                              Width: =186 * ThisItem.N / Max(1, ThisItem.Mx)
+                              Width: =(186 + 426 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
                               Height: =8
                               Fill: =cPrimary
                         - galStatSegValue:
                             Control: Label@2.5.1
                             Properties:
                               Text: =ThisItem.N & "건"
-                              X: =332
+                              X: =332 + 426 * (kx - 1)
                               Y: =0
                               Width: =54
                               Height: =28
@@ -1181,9 +1181,9 @@
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
-                  X: =470
+                  X: =24 + 446 * kx
                   Y: =226
-                  Width: =426
+                  Width: =426 * kx
                   Height: =470
                   Fill: =cSurface
                   BorderColor: =cLine
@@ -1201,7 +1201,7 @@
                         Text: ="방문 목적"
                         X: =20
                         Y: =16
-                        Width: =300
+                        Width: =300 + 426 * (kx - 1)
                         Height: =24
                         Font: =fnt
                         Size: =11.5
@@ -1217,7 +1217,7 @@
                         Text: ="한 건에 하나 · 기타는 직접 입력 포함"
                         X: =20
                         Y: =42
-                        Width: =386
+                        Width: =386 + 426 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -1237,7 +1237,7 @@
                           )
                         X: =20
                         Y: =70
-                        Width: =386
+                        Width: =386 + 426 * (kx - 1)
                         Height: =380
                         TemplateSize: =30
                         TemplatePadding: =0
@@ -1265,7 +1265,7 @@
                         - galStatPurposeTrack:
                             Control: Rectangle@2.3.0
                             Properties:
-                              X: =158
+                              X: =158 + 426 * (kx - 1)
                               Y: =10
                               Width: =166
                               Height: =8
@@ -1275,14 +1275,14 @@
                             Properties:
                               X: =158
                               Y: =10
-                              Width: =166 * ThisItem.N / Max(1, ThisItem.Mx)
+                              Width: =(166 + 426 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
                               Height: =8
                               Fill: =cPrimary
                         - galStatPurposeValue:
                             Control: Label@2.5.1
                             Properties:
                               Text: =ThisItem.N & "건"
-                              X: =332
+                              X: =332 + 426 * (kx - 1)
                               Y: =0
                               Width: =54
                               Height: =28
@@ -1300,9 +1300,9 @@
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
-                  X: =916
+                  X: =24 + 892 * kx
                   Y: =226
-                  Width: =426
+                  Width: =426 * kx
                   Height: =470
                   Fill: =cSurface
                   BorderColor: =cLine
@@ -1320,7 +1320,7 @@
                         Text: ="업종 (고객 방문)"
                         X: =20
                         Y: =16
-                        Width: =300
+                        Width: =300 + 426 * (kx - 1)
                         Height: =24
                         Font: =fnt
                         Size: =11.5
@@ -1336,7 +1336,7 @@
                         Text: ="많은 순 · 0건은 숨김"
                         X: =20
                         Y: =42
-                        Width: =386
+                        Width: =386 + 426 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -1356,7 +1356,7 @@
                           )
                         X: =20
                         Y: =70
-                        Width: =386
+                        Width: =386 + 426 * (kx - 1)
                         Height: =380
                         TemplateSize: =30
                         TemplatePadding: =0
@@ -1386,7 +1386,7 @@
                             Properties:
                               X: =138
                               Y: =10
-                              Width: =186
+                              Width: =186 + 426 * (kx - 1)
                               Height: =8
                               Fill: =cSoft
                         - galStatIndustryBar:
@@ -1394,14 +1394,14 @@
                             Properties:
                               X: =138
                               Y: =10
-                              Width: =186 * ThisItem.N / Max(1, ThisItem.Mx)
+                              Width: =(186 + 426 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
                               Height: =8
                               Fill: =cPrimary
                         - galStatIndustryValue:
                             Control: Label@2.5.1
                             Properties:
                               Text: =ThisItem.N & "건"
-                              X: =332
+                              X: =332 + 426 * (kx - 1)
                               Y: =0
                               Width: =54
                               Height: =28
@@ -1421,7 +1421,7 @@
                 Properties:
                   X: =24
                   Y: =226
-                  Width: =426
+                  Width: =426 * kx
                   Height: =470
                   Fill: =cSurface
                   BorderColor: =cLine
@@ -1439,7 +1439,7 @@
                         Text: ="담당(실)별 방문 건수"
                         X: =20
                         Y: =16
-                        Width: =300
+                        Width: =300 + 426 * (kx - 1)
                         Height: =24
                         Font: =fnt
                         Size: =11.5
@@ -1455,7 +1455,7 @@
                         Text: ="주요 6개 담당 + 기타 · 입력값을 자동 분류"
                         X: =20
                         Y: =42
-                        Width: =386
+                        Width: =386 + 426 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -1475,7 +1475,7 @@
                           )
                         X: =20
                         Y: =70
-                        Width: =386
+                        Width: =386 + 426 * (kx - 1)
                         Height: =380
                         TemplateSize: =30
                         TemplatePadding: =0
@@ -1505,7 +1505,7 @@
                             Properties:
                               X: =148
                               Y: =10
-                              Width: =176
+                              Width: =176 + 426 * (kx - 1)
                               Height: =8
                               Fill: =cSoft
                         - galStatDivisionBar:
@@ -1513,14 +1513,14 @@
                             Properties:
                               X: =148
                               Y: =10
-                              Width: =176 * ThisItem.N / Max(1, ThisItem.Mx)
+                              Width: =(176 + 426 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
                               Height: =8
                               Fill: =cPrimary
                         - galStatDivisionValue:
                             Control: Label@2.5.1
                             Properties:
                               Text: =ThisItem.N & "건"
-                              X: =332
+                              X: =332 + 426 * (kx - 1)
                               Y: =0
                               Width: =54
                               Height: =28
@@ -1538,9 +1538,9 @@
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
-                  X: =470
+                  X: =24 + 446 * kx
                   Y: =226
-                  Width: =426
+                  Width: =426 * kx
                   Height: =470
                   Fill: =cSurface
                   BorderColor: =cLine
@@ -1558,7 +1558,7 @@
                         Text: ="투어 언어"
                         X: =20
                         Y: =16
-                        Width: =300
+                        Width: =300 + 426 * (kx - 1)
                         Height: =24
                         Font: =fnt
                         Size: =11.5
@@ -1574,7 +1574,7 @@
                         Text: ="진행 언어 · 한국어 투어의 통역 동반"
                         X: =20
                         Y: =42
-                        Width: =386
+                        Width: =386 + 426 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -1594,7 +1594,7 @@
                           )
                         X: =20
                         Y: =70
-                        Width: =386
+                        Width: =386 + 426 * (kx - 1)
                         Height: =380
                         TemplateSize: =30
                         TemplatePadding: =0
@@ -1622,7 +1622,7 @@
                         - galStatLangTrack:
                             Control: Rectangle@2.3.0
                             Properties:
-                              X: =158
+                              X: =158 + 426 * (kx - 1)
                               Y: =10
                               Width: =166
                               Height: =8
@@ -1632,14 +1632,14 @@
                             Properties:
                               X: =158
                               Y: =10
-                              Width: =166 * ThisItem.N / Max(1, ThisItem.Mx)
+                              Width: =(166 + 426 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
                               Height: =8
                               Fill: =cPrimary
                         - galStatLangValue:
                             Control: Label@2.5.1
                             Properties:
                               Text: =ThisItem.N & "건"
-                              X: =332
+                              X: =332 + 426 * (kx - 1)
                               Y: =0
                               Width: =54
                               Height: =28
@@ -1657,9 +1657,9 @@
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
-                  X: =916
+                  X: =24 + 892 * kx
                   Y: =226
-                  Width: =426
+                  Width: =426 * kx
                   Height: =470
                   Fill: =cSurface
                   BorderColor: =cLine
@@ -1677,7 +1677,7 @@
                         Text: ="방문자 직무"
                         X: =20
                         Y: =16
-                        Width: =300
+                        Width: =300 + 426 * (kx - 1)
                         Height: =24
                         Font: =fnt
                         Size: =11.5
@@ -1693,7 +1693,7 @@
                         Text: ="참석자 Forms 의 직무 · 방문자 수 기준"
                         X: =20
                         Y: =42
-                        Width: =386
+                        Width: =386 + 426 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -1716,7 +1716,7 @@
                           )
                         X: =20
                         Y: =70
-                        Width: =386
+                        Width: =386 + 426 * (kx - 1)
                         Height: =380
                         TemplateSize: =30
                         TemplatePadding: =0
@@ -1746,7 +1746,7 @@
                             Properties:
                               X: =138
                               Y: =10
-                              Width: =186
+                              Width: =186 + 426 * (kx - 1)
                               Height: =8
                               Fill: =cSoft
                         - galStatJobsBar:
@@ -1754,14 +1754,14 @@
                             Properties:
                               X: =138
                               Y: =10
-                              Width: =186 * ThisItem.N / Max(1, ThisItem.Mx)
+                              Width: =(186 + 426 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
                               Height: =8
                               Fill: =cPrimary
                         - galStatJobsValue:
                             Control: Label@2.5.1
                             Properties:
                               Text: =ThisItem.N & "명"
-                              X: =332
+                              X: =332 + 426 * (kx - 1)
                               Y: =0
                               Width: =54
                               Height: =28
@@ -1829,7 +1829,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="방문 신청"
-      X: =ox + 520
+      X: =ox + pw / 2 - 163
       Y: =12
       Width: =96
       Height: =32
@@ -1853,7 +1853,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="내 신청"
-      X: =ox + 624
+      X: =ox + pw / 2 - 59
       Y: =12
       Width: =96
       Height: =32
@@ -1877,7 +1877,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="관리자"
-      X: =ox + 728
+      X: =ox + pw / 2 + 45
       Y: =12
       Width: =96
       Height: =32
@@ -1901,7 +1901,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="달력"
-      X: =ox + 832
+      X: =ox + pw / 2 + 149
       Y: =12
       Width: =96
       Height: =32
@@ -1925,7 +1925,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="통계"
-      X: =ox + 936
+      X: =ox + pw / 2 + 253
       Y: =12
       Width: =96
       Height: =32
@@ -1949,7 +1949,7 @@
     Control: Label@2.5.1
     Properties:
       Text: =gMe.displayName & If(IsBlank(gMe.department), "", " · " & gMe.department)
-      X: =ox + 1042
+      X: =ox + pw - 324
       Y: =18
       Width: =300
       Height: =20

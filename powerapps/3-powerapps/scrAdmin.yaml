@@ -5,7 +5,7 @@
 #   · 일정 막기: 막기 번호 무작위 4자리
 #   · OnVisible: 공휴일 목록이 끝나 가면 알림
 #   · 관리자 구분: 키 입력 대신 회사 로그인 + TourAdmins 목록
-#   · conABody: 본문만 스크롤
+#   · conABody: 본문만 스크롤 · 폭은 창 폭에 맞춰 kx 배(최대 MaxStretch)로 늘어남
 #   · 승인 · 거절 · 일정 취소: 바로 처리하지 않고 conMail(신청자 메일 미리보기 + 사유 입력) 창을 먼저 연다 · 거절 · 취소는 사유 필수 · 오시는 길(약도)은 CenterGuides 목록을 읽어 센터별로 미리보기에 표시
 # 1) 새 화면(빈 화면) → 이름 scrAdmin, 화면 Fill = cBg, Width = sw, Height = sh
 #    OnVisible =
@@ -34,7 +34,7 @@
           Control: GroupContainer@1.3.0
           Variant: ManualLayout
           Properties:
-            Width: =1366
+            Width: =pw
             Height: =712
             FillPortions: =0
             Fill: =Color.Transparent
@@ -47,7 +47,7 @@
                 Properties:
                   X: =24
                   Y: =16
-                  Width: =440
+                  Width: =440 * kx
                   Height: =680
                   Fill: =cSurface
                   BorderColor: =cLine
@@ -80,7 +80,7 @@
                         Text: =Switch(gAdminSite, "main", "메가와이즈 · TDL Lab", "mtv", "시화MTV", "hq", "통합 관제 (보기 전용)", "")
                         X: =100
                         Y: =19
-                        Width: =210
+                        Width: =210 + 440 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -93,7 +93,7 @@
                       Control: Classic/Button@2.2.0
                       Properties:
                         Text: ="일정 막기"
-                        X: =320
+                        X: =320 + 440 * (kx - 1)
                         Y: =10
                         Width: =100
                         Height: =32
@@ -176,7 +176,7 @@
                       Control: Classic/Button@2.2.0
                       Properties:
                         Text: ="전체"
-                        X: =224
+                        X: =224 + 440 * (kx - 1)
                         Y: =52
                         Width: =96
                         Height: =32
@@ -203,7 +203,7 @@
                         HintText: ="업체명 · 신청자 · 신청번호 검색"
                         X: =20
                         Y: =96
-                        Width: =400
+                        Width: =400 + 440 * (kx - 1)
                         Height: =36
                         Font: =fnt
                         Size: =10.5
@@ -236,7 +236,7 @@
                           )
                         X: =20
                         Y: =144
-                        Width: =400
+                        Width: =400 + 440 * (kx - 1)
                         Height: =520
                         TemplateSize: =90
                         TemplatePadding: =0
@@ -251,7 +251,7 @@
                               Text: =""
                               X: =0
                               Y: =0
-                              Width: =400
+                              Width: =400 + 440 * (kx - 1)
                               Height: =86
                               OnSelect: =Select(Parent)
                               Fill: =If(ThisItem.ID = gSel.ID, cSoft, cSurface)
@@ -268,7 +268,7 @@
                               Text: =ThisItem.Company
                               X: =16
                               Y: =14
-                              Width: =300
+                              Width: =300 + 440 * (kx - 1)
                               Height: =24
                               Font: =fnt
                               Size: =11.25
@@ -285,7 +285,7 @@
                               Text: =Text(DateValue(ThisItem.DateKey), "mm/dd") & " (" & Text(DateValue(ThisItem.DateKey), "ddd", "ko-KR") & ") " & Left(ThisItem.Slot, 5) & " · " & ThisItem.TourName
                               X: =16
                               Y: =42
-                              Width: =370
+                              Width: =370 + 440 * (kx - 1)
                               Height: =20
                               Font: =fnt
                               Size: =9
@@ -301,7 +301,7 @@
                               Text: =ThisItem.HostName & " " & ThisItem.HostTitle & " · 참석자 " & ThisItem.AttendeeCount & "/" & ThisItem.ExpectedHeadcount & If(ThisItem.Status = "대기" && ThisItem.ApproveMain = "승인" && ThisItem.ApproveMtv = "대기", " · 시화MTV 승인 대기", ThisItem.Status = "대기" && ThisItem.ApproveMtv = "승인" && ThisItem.ApproveMain = "대기", " · 메가와이즈 · Lab 승인 대기", "")
                               X: =16
                               Y: =62
-                              Width: =370
+                              Width: =370 + 440 * (kx - 1)
                               Height: =20
                               Font: =fnt
                               Size: =9
@@ -315,7 +315,7 @@
                             Control: Classic/Button@2.2.0
                             Properties:
                               Text: =ThisItem.Status
-                              X: =328
+                              X: =328 + 440 * (kx - 1)
                               Y: =14
                               Width: =56
                               Height: =22
@@ -336,16 +336,16 @@
                             Properties:
                               X: =0
                               Y: =89
-                              Width: =400
+                              Width: =400 + 440 * (kx - 1)
                               Height: =1
                               Fill: =cLine
             - conAdminDetail:
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
-                  X: =480
+                  X: =24 + 456 * kx
                   Y: =16
-                  Width: =862
+                  Width: =862 * kx
                   Height: =680
                   Fill: =cSurface
                   BorderColor: =cLine
@@ -363,7 +363,7 @@
                         Text: =gSel.Title & " · " & Text(gSel.Created, "yyyy.mm.dd") & " 신청"
                         X: =28
                         Y: =24
-                        Width: =500
+                        Width: =500 + 862 * (kx - 1)
                         Height: =20
                         Font: =Font.Consolas
                         Size: =9
@@ -378,7 +378,7 @@
                         Text: =gSel.Company
                         X: =28
                         Y: =44
-                        Width: =420
+                        Width: =420 + 862 * (kx - 1)
                         Height: =32
                         Font: =fnt
                         Size: =16.5
@@ -392,7 +392,7 @@
                       Control: Classic/Button@2.2.0
                       Properties:
                         Text: =gSel.Status
-                        X: =460
+                        X: =460 + 862 * (kx - 1)
                         Y: =50
                         Width: =56
                         Height: =22
@@ -412,7 +412,7 @@
                       Control: Classic/Button@2.2.0
                       Properties:
                         Text: ="거절"
-                        X: =598
+                        X: =598 + 862 * (kx - 1)
                         Y: =40
                         Width: =110
                         Height: =40
@@ -445,7 +445,7 @@
                       Control: Classic/Button@2.2.0
                       Properties:
                         Text: ="승인"
-                        X: =720
+                        X: =720 + 862 * (kx - 1)
                         Y: =40
                         Width: =110
                         Height: =40
@@ -475,7 +475,7 @@
                       Control: Classic/Button@2.2.0
                       Properties:
                         Text: ="일정 취소"
-                        X: =598
+                        X: =598 + 862 * (kx - 1)
                         Y: =40
                         Width: =110
                         Height: =40
@@ -508,7 +508,7 @@
                       Control: Classic/Button@2.2.0
                       Properties:
                         Text: ="방문 완료"
-                        X: =720
+                        X: =720 + 862 * (kx - 1)
                         Y: =40
                         Width: =110
                         Height: =40
@@ -578,14 +578,14 @@
                       Properties:
                         X: =28
                         Y: =130
-                        Width: =396
+                        Width: =396 + 862 * (kx - 1)
                         Height: =1
                         Fill: =cLine
                   - infoTourKey:
                       Control: Label@2.5.1
                       Properties:
                         Text: ="투어"
-                        X: =434
+                        X: =434 + 862 * (kx - 1)
                         Y: =96
                         Width: =90
                         Height: =34
@@ -601,7 +601,7 @@
                       Control: Label@2.5.1
                       Properties:
                         Text: =gSel.TourName
-                        X: =524
+                        X: =524 + 862 * (kx - 1)
                         Y: =96
                         Width: =306
                         Height: =34
@@ -618,7 +618,7 @@
                       Properties:
                         X: =434
                         Y: =130
-                        Width: =396
+                        Width: =396 + 862 * (kx - 1)
                         Height: =1
                         Fill: =cLine
                   - infoHostKey:
@@ -658,14 +658,14 @@
                       Properties:
                         X: =28
                         Y: =164
-                        Width: =396
+                        Width: =396 + 862 * (kx - 1)
                         Height: =1
                         Fill: =cLine
                   - infoOrgKey:
                       Control: Label@2.5.1
                       Properties:
                         Text: ="소속"
-                        X: =434
+                        X: =434 + 862 * (kx - 1)
                         Y: =130
                         Width: =90
                         Height: =34
@@ -681,7 +681,7 @@
                       Control: Label@2.5.1
                       Properties:
                         Text: =gSel.HostDivision & " " & gSel.HostOrg
-                        X: =524
+                        X: =524 + 862 * (kx - 1)
                         Y: =130
                         Width: =306
                         Height: =34
@@ -698,7 +698,7 @@
                       Properties:
                         X: =434
                         Y: =164
-                        Width: =396
+                        Width: =396 + 862 * (kx - 1)
                         Height: =1
                         Fill: =cLine
                   - infoCatKey:
@@ -738,14 +738,14 @@
                       Properties:
                         X: =28
                         Y: =198
-                        Width: =396
+                        Width: =396 + 862 * (kx - 1)
                         Height: =1
                         Fill: =cLine
                   - infoLangKey:
                       Control: Label@2.5.1
                       Properties:
                         Text: ="언어"
-                        X: =434
+                        X: =434 + 862 * (kx - 1)
                         Y: =164
                         Width: =90
                         Height: =34
@@ -761,7 +761,7 @@
                       Control: Label@2.5.1
                       Properties:
                         Text: =gSel.Language & If(gSel.Interpreter = "Y", " · 통역 동반" & If(IsBlank(gSel.InterpreterLanguage), "", "(" & gSel.InterpreterLanguage & ")"), "")
-                        X: =524
+                        X: =524 + 862 * (kx - 1)
                         Y: =164
                         Width: =306
                         Height: =34
@@ -778,7 +778,7 @@
                       Properties:
                         X: =434
                         Y: =198
-                        Width: =396
+                        Width: =396 + 862 * (kx - 1)
                         Height: =1
                         Fill: =cLine
                   - infoPurposeKey:
@@ -803,7 +803,7 @@
                         Text: =If(IsBlank(gSel.Industry), "", gSel.Industry & " · ") & gSel.Purpose
                         X: =118
                         Y: =198
-                        Width: =712
+                        Width: =712 + 862 * (kx - 1)
                         Height: =34
                         Font: =fnt
                         Size: =10.5
@@ -818,7 +818,7 @@
                       Properties:
                         X: =28
                         Y: =232
-                        Width: =802
+                        Width: =802 + 862 * (kx - 1)
                         Height: =1
                         Fill: =cLine
                   - infoCommentKey:
@@ -843,7 +843,7 @@
                         Text: =Coalesce(gSel.HostComment, "-")
                         X: =118
                         Y: =232
-                        Width: =712
+                        Width: =712 + 862 * (kx - 1)
                         Height: =52
                         Font: =fnt
                         Size: =10.5
@@ -858,7 +858,7 @@
                       Properties:
                         X: =28
                         Y: =284
-                        Width: =802
+                        Width: =802 + 862 * (kx - 1)
                         Height: =1
                         Fill: =cLine
                   - infoApprovalKey:
@@ -884,7 +884,7 @@
                           =If(IsBlank(gSel.ApproveMain), "", "메가와이즈 · Lab: " & gSel.ApproveMain) & If(!IsBlank(gSel.ApproveMain) && !IsBlank(gSel.ApproveMtv), "   ", "") & If(IsBlank(gSel.ApproveMtv), "", "시화MTV: " & gSel.ApproveMtv)
                         X: =118
                         Y: =284
-                        Width: =712
+                        Width: =712 + 862 * (kx - 1)
                         Height: =30
                         Font: =fnt
                         Size: =10.5
@@ -899,7 +899,7 @@
                       Properties:
                         X: =28
                         Y: =314
-                        Width: =802
+                        Width: =802 + 862 * (kx - 1)
                         Height: =1
                         Fill: =cLine
                   - lblAttTitle:
@@ -908,7 +908,7 @@
                         Text: ="참석자  " & gSel.AttendeeCount & " / " & gSel.ExpectedHeadcount & "명 제출 · Forms"
                         X: =28
                         Y: =330
-                        Width: =600
+                        Width: =600 + 862 * (kx - 1)
                         Height: =24
                         Font: =fnt
                         Size: =11.5
@@ -923,7 +923,7 @@
                       Properties:
                         X: =28
                         Y: =360
-                        Width: =802
+                        Width: =802 + 862 * (kx - 1)
                         Height: =30
                         Fill: =cBg
                   - lblAttHead0:
@@ -978,7 +978,7 @@
                       Control: Label@2.5.1
                       Properties:
                         Text: ="이메일"
-                        X: =380
+                        X: =380 + 862 * (kx - 1)
                         Y: =366
                         Width: =210
                         Height: =18
@@ -994,7 +994,7 @@
                       Control: Label@2.5.1
                       Properties:
                         Text: ="차량번호"
-                        X: =600
+                        X: =600 + 862 * (kx - 1)
                         Y: =366
                         Width: =100
                         Height: =18
@@ -1010,7 +1010,7 @@
                       Control: Label@2.5.1
                       Properties:
                         Text: ="제출"
-                        X: =710
+                        X: =710 + 862 * (kx - 1)
                         Y: =366
                         Width: =110
                         Height: =18
@@ -1029,7 +1029,7 @@
                         Items: =Filter(VisitAttendees, RequestNo = gSel.Title)
                         X: =28
                         Y: =392
-                        Width: =802
+                        Width: =802 + 862 * (kx - 1)
                         Height: =108
                         TemplateSize: =36
                         TemplatePadding: =0
@@ -1092,7 +1092,7 @@
                             Control: Label@2.5.1
                             Properties:
                               Text: =ThisItem.Email
-                              X: =352
+                              X: =352 + 862 * (kx - 1)
                               Y: =0
                               Width: =210
                               Height: =35
@@ -1109,7 +1109,7 @@
                             Control: Label@2.5.1
                             Properties:
                               Text: =Coalesce(ThisItem.CarNo, "-")
-                              X: =572
+                              X: =572 + 862 * (kx - 1)
                               Y: =0
                               Width: =100
                               Height: =35
@@ -1126,7 +1126,7 @@
                             Control: Label@2.5.1
                             Properties:
                               Text: =Text(ThisItem.Created, "mm/dd hh:mm")
-                              X: =682
+                              X: =682 + 862 * (kx - 1)
                               Y: =0
                               Width: =110
                               Height: =35
@@ -1144,7 +1144,7 @@
                             Properties:
                               X: =0
                               Y: =35
-                              Width: =802
+                              Width: =802 + 862 * (kx - 1)
                               Height: =1
                               Fill: =cLine
                   - lblMemo:
@@ -1153,7 +1153,7 @@
                         Text: ="관리자 메모 (거절 · 취소 사유는 신청자 메일에 들어갑니다)"
                         X: =28
                         Y: =512
-                        Width: =690
+                        Width: =690 + 862 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -1169,7 +1169,7 @@
                         HintText: ="안내 가이드 · 특이사항"
                         X: =28
                         Y: =534
-                        Width: =690
+                        Width: =690 + 862 * (kx - 1)
                         Height: =80
                         Font: =fnt
                         Size: =10.5
@@ -1190,7 +1190,7 @@
                       Control: Classic/Button@2.2.0
                       Properties:
                         Text: ="메모 저장"
-                        X: =730
+                        X: =730 + 862 * (kx - 1)
                         Y: =534
                         Width: =100
                         Height: =40
@@ -1225,7 +1225,7 @@
                         Text: ="승인하면 해당 시간이 신청 달력에서 마감 처리되고, 신청자에게 확정 메일이 갑니다."
                         X: =28
                         Y: =630
-                        Width: =802
+                        Width: =802 + 862 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -1238,7 +1238,7 @@
                 Control: Label@2.5.1
                 Properties:
                   Text: ="왼쪽 목록에서 요청을 고르세요."
-                  X: =480
+                  X: =pw - 886
                   Y: =324
                   Width: =862
                   Height: =24
@@ -1305,7 +1305,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="방문 신청"
-      X: =ox + 520
+      X: =ox + pw / 2 - 163
       Y: =12
       Width: =96
       Height: =32
@@ -1329,7 +1329,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="내 신청"
-      X: =ox + 624
+      X: =ox + pw / 2 - 59
       Y: =12
       Width: =96
       Height: =32
@@ -1353,7 +1353,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="관리자"
-      X: =ox + 728
+      X: =ox + pw / 2 + 45
       Y: =12
       Width: =96
       Height: =32
@@ -1377,7 +1377,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="달력"
-      X: =ox + 832
+      X: =ox + pw / 2 + 149
       Y: =12
       Width: =96
       Height: =32
@@ -1401,7 +1401,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="통계"
-      X: =ox + 936
+      X: =ox + pw / 2 + 253
       Y: =12
       Width: =96
       Height: =32
@@ -1425,7 +1425,7 @@
     Control: Label@2.5.1
     Properties:
       Text: =gMe.displayName & If(IsBlank(gMe.department), "", " · " & gMe.department)
-      X: =ox + 1042
+      X: =ox + pw - 324
       Y: =18
       Width: =300
       Height: =20

@@ -2,7 +2,7 @@
 # ── [PA 전용] 웹앱에 없는 기능 · 수정하면 이 목록과 수식 속 '// [PA 전용]' 주석도 함께 고칠 것 (README 14) ──
 #   · 화면 전체: 신청자 본인의 신청 목록 · 참석자 제출 현황 · 대기 건 취소 (웹에는 신청자용 조회 화면이 없음)
 #   · btnMyCancel: 취소하면 TourBusy 의 대기 자리도 지움
-#   · conMBody: 본문만 스크롤
+#   · conMBody: 본문만 스크롤 · 폭은 창 폭에 맞춰 kx 배(최대 MaxStretch)로 늘어남
 # 1) 새 화면(빈 화면) → 이름 scrMy, 화면 Fill = cBg, Width = sw, Height = sh
 #    OnVisible = Refresh(VisitRequests); UpdateContext({locCancelArm: false})
 # 2) 이 파일 내용을 전부 복사 → 트리 뷰에서 scrMy 오른쪽 클릭 → '붙여넣기'
@@ -25,7 +25,7 @@
           Control: GroupContainer@1.3.0
           Variant: ManualLayout
           Properties:
-            Width: =1366
+            Width: =pw
             Height: =712
             FillPortions: =0
             Fill: =Color.Transparent
@@ -38,7 +38,7 @@
                 Properties:
                   X: =24
                   Y: =16
-                  Width: =520
+                  Width: =520 * kx
                   Height: =680
                   Fill: =cSurface
                   BorderColor: =cLine
@@ -87,7 +87,7 @@
                         Items: =SortByColumns(Filter(VisitRequests, ApplicantEmail = Lower(User().Email)), "VisitDate", SortOrder.Descending)
                         X: =20
                         Y: =52
-                        Width: =480
+                        Width: =480 + 520 * (kx - 1)
                         Height: =612
                         TemplateSize: =90
                         TemplatePadding: =0
@@ -103,7 +103,7 @@
                               Text: =""
                               X: =0
                               Y: =0
-                              Width: =480
+                              Width: =480 + 520 * (kx - 1)
                               Height: =86
                               OnSelect: =Select(Parent)
                               Fill: =If(ThisItem.ID = galMy.Selected.ID, cSoft, cSurface)
@@ -120,7 +120,7 @@
                               Text: =ThisItem.Company
                               X: =16
                               Y: =14
-                              Width: =360
+                              Width: =360 + 520 * (kx - 1)
                               Height: =24
                               Font: =fnt
                               Size: =11.25
@@ -137,7 +137,7 @@
                               Text: =Text(DateValue(ThisItem.DateKey), "mm/dd") & " (" & Text(DateValue(ThisItem.DateKey), "ddd", "ko-KR") & ") " & Left(ThisItem.Slot, 5) & " · " & ThisItem.TourName
                               X: =16
                               Y: =42
-                              Width: =440
+                              Width: =440 + 520 * (kx - 1)
                               Height: =20
                               Font: =fnt
                               Size: =9
@@ -153,7 +153,7 @@
                               Text: ="참석자 " & ThisItem.AttendeeCount & " / " & ThisItem.ExpectedHeadcount & "명 제출"
                               X: =16
                               Y: =62
-                              Width: =440
+                              Width: =440 + 520 * (kx - 1)
                               Height: =20
                               Font: =fnt
                               Size: =9
@@ -167,7 +167,7 @@
                             Control: Classic/Button@2.2.0
                             Properties:
                               Text: =ThisItem.Status
-                              X: =404
+                              X: =404 + 520 * (kx - 1)
                               Y: =14
                               Width: =56
                               Height: =22
@@ -188,7 +188,7 @@
                             Properties:
                               X: =0
                               Y: =89
-                              Width: =480
+                              Width: =480 + 520 * (kx - 1)
                               Height: =1
                               Fill: =cLine
                   - lblMyEmpty:
@@ -197,7 +197,7 @@
                         Text: ="아직 신청한 방문이 없습니다."
                         X: =20
                         Y: =80
-                        Width: =480
+                        Width: =480 + 520 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -211,9 +211,9 @@
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
-                  X: =560
+                  X: =24 + 536 * kx
                   Y: =16
-                  Width: =782
+                  Width: =782 * kx
                   Height: =680
                   Fill: =cSurface
                   BorderColor: =cLine
@@ -231,7 +231,7 @@
                         Text: =galMy.Selected.Title
                         X: =28
                         Y: =24
-                        Width: =400
+                        Width: =400 + 782 * (kx - 1)
                         Height: =20
                         Font: =Font.Consolas
                         Size: =9
@@ -246,7 +246,7 @@
                         Text: =galMy.Selected.Company
                         X: =28
                         Y: =44
-                        Width: =560
+                        Width: =560 + 782 * (kx - 1)
                         Height: =32
                         Font: =fnt
                         Size: =16.5
@@ -261,7 +261,7 @@
                       Control: Classic/Button@2.2.0
                       Properties:
                         Text: =galMy.Selected.Status
-                        X: =650
+                        X: =650 + 782 * (kx - 1)
                         Y: =50
                         Width: =56
                         Height: =22
@@ -283,7 +283,7 @@
                         Text: =galMy.Selected.TourName & " · " & Text(DateValue(galMy.Selected.DateKey), "yyyy년 m월 d일") & " (" & Text(DateValue(galMy.Selected.DateKey), "ddd", "ko-KR") & ") " & galMy.Selected.ScheduleText
                         X: =28
                         Y: =84
-                        Width: =726
+                        Width: =726 + 782 * (kx - 1)
                         Height: =22
                         Font: =fnt
                         Size: =10.5
@@ -297,7 +297,7 @@
                       Properties:
                         X: =28
                         Y: =124
-                        Width: =726
+                        Width: =726 + 782 * (kx - 1)
                         Height: =1
                         Fill: =cLine
                   - lblMyAttTitle:
@@ -337,7 +337,7 @@
                       Properties:
                         X: =28
                         Y: =222
-                        Width: =726
+                        Width: =726 + 782 * (kx - 1)
                         Height: =8
                         Fill: =cSoft
                   - rctMyBar:
@@ -345,7 +345,7 @@
                       Properties:
                         X: =28
                         Y: =222
-                        Width: =726 * Min(1, galMy.Selected.AttendeeCount / Max(1, galMy.Selected.ExpectedHeadcount))
+                        Width: =(726 + 782 * (kx - 1)) * Min(1, galMy.Selected.AttendeeCount / Max(1, galMy.Selected.ExpectedHeadcount))
                         Height: =8
                         Fill: =cPrimary
                   - lblMyAttHint:
@@ -354,7 +354,7 @@
                         Text: ="참석자 이름 · 연락처는 개인정보 보호를 위해 센터 담당자만 볼 수 있습니다."
                         X: =28
                         Y: =240
-                        Width: =726
+                        Width: =726 + 782 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -369,7 +369,7 @@
                         Text: ="참석자 정보 입력 링크"
                         X: =28
                         Y: =280
-                        Width: =400
+                        Width: =400 + 782 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -385,7 +385,7 @@
                         HintText: =""
                         X: =28
                         Y: =302
-                        Width: =600
+                        Width: =600 + 782 * (kx - 1)
                         Height: =36
                         Font: =Font.Consolas
                         Size: =9
@@ -406,7 +406,7 @@
                       Control: Classic/Button@2.2.0
                       Properties:
                         Text: ="링크 복사"
-                        X: =642
+                        X: =642 + 782 * (kx - 1)
                         Y: =300
                         Width: =112
                         Height: =40
@@ -434,7 +434,7 @@
                       Properties:
                         X: =28
                         Y: =368
-                        Width: =726
+                        Width: =726 + 782 * (kx - 1)
                         Height: =1
                         Fill: =cLine
                   - lblMyInfoTitle:
@@ -475,7 +475,7 @@
                         Text: =galMy.Selected.HostName & " " & galMy.Selected.HostTitle & " · " & galMy.Selected.HostDivision & " " & galMy.Selected.HostOrg
                         X: =158
                         Y: =420
-                        Width: =596
+                        Width: =596 + 782 * (kx - 1)
                         Height: =34
                         Font: =fnt
                         Size: =10.5
@@ -490,7 +490,7 @@
                       Properties:
                         X: =28
                         Y: =454
-                        Width: =726
+                        Width: =726 + 782 * (kx - 1)
                         Height: =1
                         Fill: =cLine
                   - rowMyCatKey:
@@ -515,7 +515,7 @@
                         Text: =galMy.Selected.Category & If(IsBlank(galMy.Selected.ClientType), "", " · " & galMy.Selected.ClientType)
                         X: =158
                         Y: =454
-                        Width: =596
+                        Width: =596 + 782 * (kx - 1)
                         Height: =34
                         Font: =fnt
                         Size: =10.5
@@ -530,7 +530,7 @@
                       Properties:
                         X: =28
                         Y: =488
-                        Width: =726
+                        Width: =726 + 782 * (kx - 1)
                         Height: =1
                         Fill: =cLine
                   - rowMyPurposeKey:
@@ -555,7 +555,7 @@
                         Text: =If(IsBlank(galMy.Selected.Industry), "", galMy.Selected.Industry & " · ") & galMy.Selected.Purpose
                         X: =158
                         Y: =488
-                        Width: =596
+                        Width: =596 + 782 * (kx - 1)
                         Height: =34
                         Font: =fnt
                         Size: =10.5
@@ -570,7 +570,7 @@
                       Properties:
                         X: =28
                         Y: =522
-                        Width: =726
+                        Width: =726 + 782 * (kx - 1)
                         Height: =1
                         Fill: =cLine
                   - rowMyLangKey:
@@ -595,7 +595,7 @@
                         Text: =galMy.Selected.Language & If(galMy.Selected.Interpreter = "Y", " · 통역 동반" & If(IsBlank(galMy.Selected.InterpreterLanguage), "", "(" & galMy.Selected.InterpreterLanguage & ")"), "")
                         X: =158
                         Y: =522
-                        Width: =596
+                        Width: =596 + 782 * (kx - 1)
                         Height: =34
                         Font: =fnt
                         Size: =10.5
@@ -610,7 +610,7 @@
                       Properties:
                         X: =28
                         Y: =556
-                        Width: =726
+                        Width: =726 + 782 * (kx - 1)
                         Height: =1
                         Fill: =cLine
                   - rowMyMemoKey:
@@ -635,7 +635,7 @@
                         Text: =Coalesce(galMy.Selected.AdminMemo, "-")
                         X: =158
                         Y: =556
-                        Width: =596
+                        Width: =596 + 782 * (kx - 1)
                         Height: =34
                         Font: =fnt
                         Size: =10.5
@@ -650,7 +650,7 @@
                       Properties:
                         X: =28
                         Y: =590
-                        Width: =726
+                        Width: =726 + 782 * (kx - 1)
                         Height: =1
                         Fill: =cLine
                   - lblMyCancelHint:
@@ -659,7 +659,7 @@
                         Text: =If(galMy.Selected.Status = "승인", "승인된 방문의 취소 · 변경은 센터 담당자에게 메일로 알려 주세요.", "")
                         X: =28
                         Y: =624
-                        Width: =560
+                        Width: =560 + 782 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -672,7 +672,7 @@
                       Control: Classic/Button@2.2.0
                       Properties:
                         Text: =If(locCancelArm, "한 번 더 누르면 취소됩니다", "신청 취소")
-                        X: =554
+                        X: =554 + 782 * (kx - 1)
                         Y: =612
                         Width: =200
                         Height: =40
@@ -763,7 +763,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="방문 신청"
-      X: =ox + 520
+      X: =ox + pw / 2 - 163
       Y: =12
       Width: =96
       Height: =32
@@ -787,7 +787,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="내 신청"
-      X: =ox + 624
+      X: =ox + pw / 2 - 59
       Y: =12
       Width: =96
       Height: =32
@@ -811,7 +811,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="관리자"
-      X: =ox + 728
+      X: =ox + pw / 2 + 45
       Y: =12
       Width: =96
       Height: =32
@@ -835,7 +835,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="달력"
-      X: =ox + 832
+      X: =ox + pw / 2 + 149
       Y: =12
       Width: =96
       Height: =32
@@ -859,7 +859,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="통계"
-      X: =ox + 936
+      X: =ox + pw / 2 + 253
       Y: =12
       Width: =96
       Height: =32
@@ -883,7 +883,7 @@
     Control: Label@2.5.1
     Properties:
       Text: =gMe.displayName & If(IsBlank(gMe.department), "", " · " & gMe.department)
-      X: =ox + 1042
+      X: =ox + pw - 324
       Y: =18
       Width: =300
       Height: =20
