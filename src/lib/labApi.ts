@@ -24,6 +24,8 @@ export interface GuestbookDraft {
   rating: number
   message: string
   tour: GuestbookTour
+  /** 개인정보 수집 · 이용 동의 (서버가 동의 시각을 시트에 남긴다) */
+  consent?: boolean
 }
 
 const API_BASE = (import.meta.env.VITE_LAB_API as string | undefined)?.replace(/\/$/, '')
