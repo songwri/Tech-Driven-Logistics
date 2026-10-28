@@ -9,6 +9,7 @@ import {
   busyFromRequests,
   clientSegment,
   formatDateLong,
+  formatDateShort,
   formatSchedule,
   headcountLabel,
   languageSummary,
@@ -25,6 +26,7 @@ import { ManualVisitModal, OpsFields } from './ManualVisitModal'
 import { opsFromRequest, opsToRequest } from './opsRecord'
 import { ClientTypeEditor } from './ClientTypeEditor'
 import { partnerNames } from './statsData'
+import { feedbackMailMessage, type StatusOutcome } from './feedbackMail'
 
 // 달력 라이브러리(react-day-picker)는 '정보 수정'을 열 때만 받는다.
 const SchedulePicker = lazy(() =>
@@ -38,7 +40,7 @@ interface RequestModalProps {
   request: VisitRequest
   requests: VisitRequest[]
   onClose: () => void
-  onSetStatus: (id: string, status: VisitStatus) => Promise<void>
+  onSetStatus: (id: string, status: VisitStatus) => Promise<StatusOutcome | undefined | void>
   onUpdate: (request: VisitRequest) => Promise<void>
   /** 예약 완전 삭제 (구글 시트 행도 삭제) */
   onDelete: (id: string) => Promise<void>
@@ -64,6 +66,7 @@ export function RequestModal({ site, readOnly, request, requests, onClose, onSet
   const [ops, setOps] = useState(() => opsFromRequest(request))
   const manual = request.source === 'manual'
   const [editingClient, setEditingClient] = useState(false)
+  const [info, setInfo] = useState<string | null>(null)
   const partnerSuggestions = partnerNames(requests)
 
   const run = async (task: () => Promise<void>) => {
@@ -333,6 +336,11 @@ export function RequestModal({ site, readOnly, request, requests, onClose, onSet
           <Row label="방문 목적">{request.purposes.join(', ')}</Row>
           <Row label="담당자 의견">{request.hostComment}</Row>
           <Row label="요청사항">{request.note}</Row>
+          {(request.status === 'completed' || request.feedbackMailAt) && (
+            <Row label="만족도 메일">
+              {request.feedbackMailAt ? `방문자에게 발송됨 · ${formatDateShort(request.feedbackMailAt.slice(0, 10))}` : '보내지 않음'}
+            </Row>
+          )}
         </div>
       </div>
 
@@ -444,6 +452,7 @@ export function RequestModal({ site, readOnly, request, requests, onClose, onSet
       </div>
 
       {error && <p className="mt-4 border border-brand/40 bg-brand/5 px-3 py-2 text-sm text-brand">{error}</p>}
+      {info && !error && <p className="mt-4 border border-[#8ce99a] bg-[#ebfbee] px-3 py-2 text-sm text-[#1e6b2e]">{info}</p>}
 
       {confirmDelete && (
         <div className="mt-6 border border-brand/50 bg-brand/5 p-4" role="alertdialog" aria-label="예약 삭제 확인">
@@ -496,7 +505,14 @@ export function RequestModal({ site, readOnly, request, requests, onClose, onSet
                 size="sm"
                 variant={action.variant}
                 disabled={pending}
-                onClick={() => run(() => onSetStatus(request.id, action.status))}
+                onClick={() =>
+                  run(async () => {
+                    setInfo(null)
+                    const outcome = await onSetStatus(request.id, action.status)
+                    // 방문 완료 → 방문자에게 만족도 요청 메일이 나가므로 결과를 알려 준다.
+                    setInfo(outcome ? feedbackMailMessage(outcome.mail, outcome.demo) : null)
+                  })
+                }
                 className={action.className}
               >
                 {action.label}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { PenLine } from 'lucide-react'
+import { PenLine, ShieldCheck } from 'lucide-react'
 import { motion, useReducedMotion } from 'framer-motion'
 import LabProvider from '@/components/LabProvider'
 import { Button } from '@/components/ui/Button'
@@ -93,7 +93,11 @@ function GuestbookView() {
                 TDL Lab 방명록
               </motion.h1>
               <motion.p {...fade(0.06)} className="mt-3 max-w-md text-[15px] leading-relaxed text-warm-600">
-                다녀가신 분들이 남긴 소감입니다. 이름, 회사명, 팀명은 일부만 보입니다.
+                다녀가신 분들이 남긴 소감입니다. 이름, 회사명, 팀명은 가명 처리되어 일부만 보입니다.
+              </motion.p>
+              <motion.p {...fade(0.09)} className="mt-2 flex max-w-md items-start gap-1.5 text-[12px] leading-relaxed text-warm-600">
+                <ShieldCheck width={14} height={14} className="mt-0.5 shrink-0 text-brand" aria-hidden />
+                <span>방명록은 가명 처리해 관리합니다. 실명과 실제 회사명은 공개하지 않으며, 담당 관리자만 확인합니다.</span>
               </motion.p>
               <motion.div {...fade(0.12)} ref={ctaRef} className="mt-6">
                 <CtaButton onClick={openGuestbook} />

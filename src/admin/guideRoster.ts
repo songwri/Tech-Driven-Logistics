@@ -30,51 +30,53 @@ const MAIN_MARK = '(인솔자)'
 // 이전에 '(메인)' 으로 저장한 기록도 인솔자로 읽는다.
 const MAIN_PATTERN = /[([]\s*(?:인솔자?|메인)\s*[)\]]|(?:인솔자?|메인)\s*[:：]/
 
-/** 예약의 가이드 배정. others 는 명단에 없는 사람 등 그대로 남겨 둘 기존 기록 줄. */
+/** 예약의 가이드 배정. 인솔자는 여러 명일 수 있다. others 는 명단에 없는 사람 등 그대로 남겨 둘 기존 기록 줄. */
 export interface GuideAssignment {
-  main: string | null
+  leads: string[]
   operators: string[]
   others: string[]
 }
 
 const findMember = (line: string) => GUIDE_ROSTER.find((member) => line.includes(member.name))
 
+/** 명단 순서로 정렬 (저장 · 표시 순서를 고정한다) */
+const inRosterOrder = (names: string[]) => GUIDE_ROSTER.map((member) => member.name).filter((name) => names.includes(name))
+
 /**
  * 가이드 칸(줄바꿈 · 쉼표 구분 텍스트)을 배정으로 읽는다.
- * '권요한 책임 (인솔자)' 처럼 표시된 줄이 인솔자, 나머지 명단 인원은 운영 인원.
- * 표시 없이 적힌 이전 기록의 팀장은 운영 인원이 될 수 없으므로 인솔자로 본다(인솔자가 따로 없을 때).
+ * '권요한 책임 (인솔자)' 처럼 표시된 줄은 모두 인솔자(여러 명 가능), 나머지 명단 인원은 운영 인원.
+ * 표시 없이 적힌 이전 기록의 팀장은 운영 인원이 될 수 없으므로 인솔자로 본다.
  */
 export function parseGuides(text: string | undefined): GuideAssignment {
-  const result: GuideAssignment = { main: null, operators: [], others: [] }
+  const leads: string[] = []
   const unmarked: string[] = []
+  const others: string[] = []
   for (const raw of (text ?? '').split(/[\n,]+/)) {
     const line = raw.trim()
     if (!line) continue
     const member = findMember(line)
-    if (!member) {
-      result.others.push(line)
-    } else if (MAIN_PATTERN.test(line) && !result.main) {
-      result.main = member.name
-    } else {
-      unmarked.push(member.name)
-    }
+    if (!member) others.push(line)
+    else if (MAIN_PATTERN.test(line)) leads.push(member.name)
+    else unmarked.push(member.name)
   }
+  const operators: string[] = []
   for (const name of unmarked) {
     const member = GUIDE_ROSTER.find((item) => item.name === name)!
-    if (name === result.main || result.operators.includes(name)) continue
-    if (member.canOperate) result.operators.push(name)
-    else if (!result.main) result.main = name
+    if (leads.includes(name) || operators.includes(name)) continue
+    if (member.canOperate) operators.push(name)
+    else leads.push(name)
   }
-  return result
+  return { leads: inRosterOrder(leads), operators: inRosterOrder(operators), others }
 }
 
-/** 배정을 가이드 칸 텍스트로: 인솔자 → 운영 인원(명단 순) → 그 밖의 기존 기록 */
-export function formatGuides({ main, operators, others }: GuideAssignment) {
+/** 배정을 가이드 칸 텍스트로: 인솔자(여러 명이면 줄마다) → 운영 인원(명단 순) → 그 밖의 기존 기록 */
+export function formatGuides({ leads, operators, others }: GuideAssignment) {
   const lines: string[] = []
-  const mainMember = GUIDE_ROSTER.find((member) => member.name === main)
-  if (mainMember) lines.push(`${memberLabel(mainMember)} ${MAIN_MARK}`)
+  for (const member of GUIDE_ROSTER) {
+    if (leads.includes(member.name)) lines.push(`${memberLabel(member)} ${MAIN_MARK}`)
+  }
   for (const member of OPERATORS) {
-    if (member.name !== main && operators.includes(member.name)) lines.push(memberLabel(member))
+    if (!leads.includes(member.name) && operators.includes(member.name)) lines.push(memberLabel(member))
   }
   return [...lines, ...others].join('\n')
 }
@@ -123,7 +125,7 @@ export interface GuideLoad {
 export function roleOf(request: VisitRequest, name: string): 'main' | 'operator' | null {
   if (!isAssignable(request)) return null
   const assignment = parseGuides(request.guides)
-  if (assignment.main === name) return 'main'
+  if (assignment.leads.includes(name)) return 'main'
   return assignment.operators.includes(name) ? 'operator' : null
 }
 
@@ -141,7 +143,7 @@ export function tallyLoads(requests: VisitRequest[], capacity: number): GuideLoa
     for (const request of requests) {
       if (!isAssignable(request)) continue
       const assignment = parseGuides(request.guides)
-      const isMain = assignment.main === member.name
+      const isMain = assignment.leads.includes(member.name)
       const isOperator = !isMain && assignment.operators.includes(member.name)
       if (!isMain && !isOperator) continue
       if (isMain) main++

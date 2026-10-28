@@ -34,6 +34,7 @@ import { GuestbookAdmin } from './GuestbookAdmin'
 import { DiagnoseButton } from './DiagnosePanel'
 import { ManualVisitModal } from './ManualVisitModal'
 import { partnerNames } from './statsData'
+import { feedbackMailMessage } from './feedbackMail'
 import { ImportModal } from './ImportModal'
 import { downloadVisitRequests } from './importTemplate'
 
@@ -264,7 +265,10 @@ function AdminDashboard({ site }: { site: AdminSite }) {
     setBusyId(id)
     setNotice(null)
     try {
-      await data.setStatus(id, status)
+      const outcome = await data.setStatus(id, status)
+      // 방문 완료로 바꾸면 방문자에게 만족도 요청 메일이 나가므로 결과를 알려 준다.
+      const mailMessage = feedbackMailMessage(outcome?.mail, outcome?.demo)
+      if (mailMessage) setNotice(mailMessage)
     } catch (statusError) {
       setNotice(statusError instanceof Error ? statusError.message : '상태 변경에 실패했습니다.')
     } finally {

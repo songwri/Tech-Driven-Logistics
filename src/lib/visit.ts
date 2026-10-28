@@ -474,6 +474,8 @@ export interface VisitRequest extends VisitDraft {
   headcount?: number
   /** 관리자가 정한 실제 방문 인원 (예: '홍길동 외 9명' 단체). 있으면 명단 인원보다 우선 */
   actualHeadcount?: number
+  /** 방문 완료 후 만족도 · 개선 의견(방명록) 요청 메일을 보낸 시각 (ISO). 없으면 아직 안 보냄 */
+  feedbackMailAt?: string
   /** 주요 인원 (예: '홍길동 상무, 김철수 이사') */
   keyPersons?: string
   /** 안내 가이드 (줄바꿈 구분) */

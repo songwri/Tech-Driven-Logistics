@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { CalendarDays, Clock, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { isHoliday } from '@/lib/holidays'
@@ -86,6 +86,22 @@ export function SchedulePicker({
     return [0, 1, 2, 3, 4, 5, 6].filter((day) => !open.includes(day))
   }, [tour])
   const selectedDate = date ? parseDateKey(date) : undefined
+
+  // 달력에 보이는 달. 예약 가능한 날을 눈에 띄게 칠하고, 이 달에 몇 일 가능한지 세어 보여 준다.
+  const [shownMonth, setShownMonth] = useState<Date>(() => selectedDate ?? earliest)
+  const firstOfMonth = (value: Date) => new Date(value.getFullYear(), value.getMonth(), 1)
+  const visibleMonth = firstOfMonth(shownMonth) < firstOfMonth(earliest) ? firstOfMonth(earliest) : firstOfMonth(shownMonth)
+  const bookedKeys = useMemo(() => new Set(fullyBookedDays.map(toDateKey)), [fullyBookedDays])
+  const closedKeys = useMemo(() => new Set(closedDays), [closedDays])
+  const earliestKey = toDateKey(earliest)
+  const isAvailable = (day: Date) => {
+    const key = toDateKey(day)
+    return key >= earliestKey && !closedWeekdays.includes(day.getDay()) && !isHoliday(day) && !closedKeys.has(key) && !bookedKeys.has(key)
+  }
+  const availableInMonth = Array.from(
+    { length: new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 0).getDate() },
+    (_, index) => new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), index + 1),
+  ).filter(isAvailable).length
   const busySlots = date ? definition.slots.filter((candidate) => isSlotBusy(tour, date, candidate, busy)) : []
 
   const chooseTour = (next: TourType) => {
@@ -173,9 +189,30 @@ export function SchedulePicker({
                 onChange({ date: nextDate, slot: keepSlot ? slot : '' })
               }}
               startMonth={earliest}
-              defaultMonth={selectedDate ?? earliest}
+              month={visibleMonth}
+              onMonthChange={setShownMonth}
+              modifiers={{ available: isAvailable }}
+              modifiersClassNames={{ available: 'tdl-day-available' }}
               disabled={[{ before: earliest }, { dayOfWeek: closedWeekdays }, isHoliday, ...closed, ...fullyBookedDays]}
             />
+            {/* 범례: 어떤 날을 누를 수 있는지 한눈에 */}
+            <div className="mt-2 flex flex-wrap items-center gap-x-3.5 gap-y-1 border-t border-warm-300/40 pt-2 text-[12px] text-warm-600">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-4 w-4 rounded-full bg-brand/10 ring-[1.5px] ring-brand/35" aria-hidden />
+                예약 가능
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-4 w-4 rounded-full bg-brand" aria-hidden />
+                선택한 날
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-warm-300">
+                <span className="font-mono text-[13px]">12</span>
+                신청 불가
+              </span>
+              <span className={cn('ml-auto font-semibold', availableInMonth > 0 ? 'text-brand' : 'text-warm-600')}>
+                {visibleMonth.getMonth() + 1}월 {availableInMonth > 0 ? `예약 가능 ${availableInMonth}일` : '예약 가능한 날 없음 · 다음 달을 확인해 주세요'}
+              </span>
+            </div>
             <p className="mt-2 flex items-center gap-2 border-t border-warm-300/40 pt-2 text-[12px] text-warm-600">
               <CalendarDays width={14} height={14} />
               {date
