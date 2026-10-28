@@ -1,5 +1,7 @@
 # TDL 방문 예약 → Power Apps 이전 가이드
 
+> **10/13 컨버전 이후 웹에서 바뀐 기능 · 옮기지 않는 범위 · 결정 사항은 [`FUNCTION-SPEC.md`](FUNCTION-SPEC.md)(기능 정의서)를 보세요.**
+
 지금 운영 중인 웹 예약 사이트(GitHub Pages + Google Apps Script + Google 시트)를
 **회사 Microsoft 365 안으로** 옮기는 작업입니다. 개인정보가 외부 서비스(Google)를 거치지 않게 하는 것이 목적입니다.
 
