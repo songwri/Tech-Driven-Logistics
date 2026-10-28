@@ -39,7 +39,6 @@ Set(gStatPeriod, "year");
 Set(gStatYear, Year(Today()));
 Set(gStatMonth, Month(Today()));
 Set(gStatBasis, "all");
-Set(gStatTab, "overview");
 
 // 관리자 예약 달력
 Set(gCalMonth, Date(Year(Today()), Month(Today()), 1));

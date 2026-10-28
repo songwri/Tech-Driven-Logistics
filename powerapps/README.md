@@ -438,4 +438,5 @@ YAML 구조 · 컨트롤 이름 중복 · 수식 괄호는 스크립트로 검�
 | 승인 · 거절 · 취소 전 신청자 메일 미리보기 + 사유 입력 (거절 · 취소는 사유 필수) | `scrAdmin` `conMail`, `flows.md` C | 확인 창 없이 즉시 처리, 웹 거절 메일엔 사유 없음 |
 | 센터별 오시는 길(약도)을 SharePoint 목록에서 읽어 메일에 삽입 | `CenterGuides` 목록, `App.OnStart` `colGuides`, `flows.md` C, `mail-templates.md` G-1 · G-2 | `Code.gs` 의 `VISIT_GUIDE` · `VISIT_GUIDE_MTV` 상수(코드 수정 후 재배포) |
 | 참석자(정보 제출자)에게도 오시는 길이 든 확정 메일 | `mail-templates.md` C-2 | 없음 (신청 담당자에게만) |
+| 통계 화면 한 화면(탭 없음) · 가장 큰 막대만 강조 · 값순 · 비율(%) · 투어 색 · 기간 필터 1회 계산 | `scrStats` | 통계 그리드(히트맵) · 탭 구성 |
 | 공휴일 목록이 끝난 해 뒤 날짜 닫기 · 관리자 알림 | `App.Formulas` `HolidayLastYear`, `scrBook` galCal, `scrAdmin` OnVisible | 공휴일 자동 계산 |

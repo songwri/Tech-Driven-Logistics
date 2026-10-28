@@ -2,6 +2,7 @@
 # ── [PA 전용] 웹앱에 없는 기능 · 수정하면 이 목록과 수식 속 '// [PA 전용]' 주석도 함께 고칠 것 (README 14) ──
 #   · OnVisible: 목록을 해마다 나눠 읽음 (SharePoint 2000행 제한 회피, 웹은 시트 전체를 읽음)
 #   · conSBody: 본문만 스크롤 · 폭은 창 폭에 맞춰 kx 배(최대 MaxStretch)로 늘어남
+#   · 통계 레이아웃: 탭 없이 한 화면(스크롤) · 카드 높이를 내용에 맞춤 · 막대는 가장 큰 항목만 강조 · 값 큰 순 정렬 · 건수 옆 비율(%) · 투어는 투어 색 · 기간 필터를 한 번만 계산(base)
 # 1) 새 화면(빈 화면) → 이름 scrStats, 화면 Fill = cBg, Width = sw, Height = sh
 #    OnVisible =
 #      If(IsBlank(gAdminSite), Notify("관리자 권한이 없습니다.", NotificationType.Error); Navigate(scrBook),
@@ -56,7 +57,7 @@
           Variant: ManualLayout
           Properties:
             Width: =pw
-            Height: =712
+            Height: =1378
             FillPortions: =0
             Fill: =Color.Transparent
             BorderThickness: =0
@@ -621,84 +622,12 @@
                         PaddingRight: =0
                         PaddingTop: =0
                         PaddingBottom: =0
-            - btnTabOverview:
-                Control: Classic/Button@2.2.0
-                Properties:
-                  Text: ="추이 · 센터"
-                  X: =24
-                  Y: =184
-                  Width: =140
-                  Height: =32
-                  OnSelect: =Set(gStatTab, "overview")
-                  Font: =fnt
-                  Size: =9.75
-                  Fill: =If(gStatTab = "overview", cPrimary, cSurface)
-                  Color: =If(gStatTab = "overview", cSurface, cInk)
-                  HoverFill: =If(gStatTab = "overview", cPrimaryHover, cSoft)
-                  HoverColor: =If(gStatTab = "overview", cSurface, cInk)
-                  PressedFill: =If(gStatTab = "overview", cPrimaryHover, cSoft)
-                  PressedColor: =If(gStatTab = "overview", cSurface, cInk)
-                  BorderColor: =If(gStatTab = "overview", cPrimary, cLine)
-                  HoverBorderColor: =If(gStatTab = "overview", cPrimary, cInk3)
-                  BorderThickness: =1
-                  RadiusTopLeft: =6
-                  RadiusTopRight: =6
-                  RadiusBottomLeft: =6
-                  RadiusBottomRight: =6
-            - btnTabKind:
-                Control: Classic/Button@2.2.0
-                Properties:
-                  Text: ="유형 · 목적 · 업종"
-                  X: =170
-                  Y: =184
-                  Width: =140
-                  Height: =32
-                  OnSelect: =Set(gStatTab, "kind")
-                  Font: =fnt
-                  Size: =9.75
-                  Fill: =If(gStatTab = "kind", cPrimary, cSurface)
-                  Color: =If(gStatTab = "kind", cSurface, cInk)
-                  HoverFill: =If(gStatTab = "kind", cPrimaryHover, cSoft)
-                  HoverColor: =If(gStatTab = "kind", cSurface, cInk)
-                  PressedFill: =If(gStatTab = "kind", cPrimaryHover, cSoft)
-                  PressedColor: =If(gStatTab = "kind", cSurface, cInk)
-                  BorderColor: =If(gStatTab = "kind", cPrimary, cLine)
-                  HoverBorderColor: =If(gStatTab = "kind", cPrimary, cInk3)
-                  BorderThickness: =1
-                  RadiusTopLeft: =6
-                  RadiusTopRight: =6
-                  RadiusBottomLeft: =6
-                  RadiusBottomRight: =6
-            - btnTabOrg:
-                Control: Classic/Button@2.2.0
-                Properties:
-                  Text: ="담당 · 언어 · 직무"
-                  X: =316
-                  Y: =184
-                  Width: =140
-                  Height: =32
-                  OnSelect: =Set(gStatTab, "org")
-                  Font: =fnt
-                  Size: =9.75
-                  Fill: =If(gStatTab = "org", cPrimary, cSurface)
-                  Color: =If(gStatTab = "org", cSurface, cInk)
-                  HoverFill: =If(gStatTab = "org", cPrimaryHover, cSoft)
-                  HoverColor: =If(gStatTab = "org", cSurface, cInk)
-                  PressedFill: =If(gStatTab = "org", cPrimaryHover, cSoft)
-                  PressedColor: =If(gStatTab = "org", cSurface, cInk)
-                  BorderColor: =If(gStatTab = "org", cPrimary, cLine)
-                  HoverBorderColor: =If(gStatTab = "org", cPrimary, cInk3)
-                  BorderThickness: =1
-                  RadiusTopLeft: =6
-                  RadiusTopRight: =6
-                  RadiusBottomLeft: =6
-                  RadiusBottomRight: =6
             - lblStatPeriod:
                 Control: Label@2.5.1
                 Properties:
                   Text: =Switch(gStatPeriod, "year", gStatYear & "년", "month", gStatYear & "년 " & gStatMonth & "월", "range", If(lblStatS.Text = lblStatE.Text, Text(Date(Int(Value(lblStatS.Text) / 10000), Mod(Int(Value(lblStatS.Text) / 100), 100), Mod(Value(lblStatS.Text), 100)), "yyyy.mm.dd"), Text(Date(Int(Value(lblStatS.Text) / 10000), Mod(Int(Value(lblStatS.Text) / 100), 100), Mod(Value(lblStatS.Text), 100)), "yyyy.mm.dd") & "~" & Text(Date(Int(Value(lblStatE.Text) / 10000), Mod(Int(Value(lblStatE.Text) / 100), 100), Mod(Value(lblStatE.Text), 100)), "yyyy.mm.dd")), "전체 기간") & " · " & If(gStatBasis = "approved", "승인 · 완료만", "거절 · 취소 제외")
                   X: =pw - 606
-                  Y: =188
+                  Y: =180
                   Width: =582
                   Height: =24
                   Font: =fnt
@@ -714,7 +643,7 @@
                 Variant: ManualLayout
                 Properties:
                   X: =24
-                  Y: =226
+                  Y: =212
                   Width: =860 * kx
                   Height: =470
                   Fill: =cSurface
@@ -725,7 +654,6 @@
                   RadiusTopRight: =8
                   RadiusBottomLeft: =8
                   RadiusBottomRight: =8
-                  Visible: =gStatTab = "overview"
                 Children:
                   - lblTrendTitle:
                       Control: Label@2.5.1
@@ -843,7 +771,7 @@
                 Variant: ManualLayout
                 Properties:
                   X: =24 + 872 * kx
-                  Y: =226
+                  Y: =212
                   Width: =446 * kx
                   Height: =470
                   Fill: =cSurface
@@ -854,7 +782,6 @@
                   RadiusTopRight: =8
                   RadiusBottomLeft: =8
                   RadiusBottomRight: =8
-                  Visible: =gStatTab = "overview"
                 Children:
                   - lblPlacesTitle:
                       Control: Label@2.5.1
@@ -892,16 +819,20 @@
                       Variant: Vertical
                       Properties:
                         Items: |-
-                          =With(
+                          =// [PA 전용] 계산 중복 제거: 기간 · 집계 기준 필터를 한 번만(base) 하고 값순 정렬 · 비율(Tot)을 붙임. 웹은 미리 계산한 통계를 씀
+                          With(
+                              {base: Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text))},
+                              With(
                               {rows: Filter(
                               Table(
-                                  {Label: "메가와이즈 센터", N: CountRows(Filter(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Tour in ["center", "combined", "center_mtv", "all3"]))},
-                                  {Label: "TDL Lab", N: CountRows(Filter(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Tour in ["lab", "combined", "all3"]))},
-                                  {Label: "시화MTV", N: CountRows(Filter(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Tour in ["mtv", "center_mtv", "all3"]))}
+                                  {Label: "메가와이즈 센터", N: CountRows(Filter(base, Tour in ["center", "combined", "center_mtv", "all3"]))},
+                                  {Label: "TDL Lab", N: CountRows(Filter(base, Tour in ["lab", "combined", "all3"]))},
+                                  {Label: "시화MTV", N: CountRows(Filter(base, Tour in ["mtv", "center_mtv", "all3"]))}
                               ),
                               MtvEnabled || Label <> "시화MTV"
                           )},
-                              With({mx: Max(rows, N)}, AddColumns(rows, Mx, mx))
+                              With({srt: SortByColumns(rows, "N", SortOrder.Descending)}, With({mx: Max(srt, N), tot: Sum(srt, N)}, AddColumns(srt, Mx, mx, Tot, tot)))
+                          )
                           )
                         X: =20
                         Y: =70
@@ -935,7 +866,7 @@
                             Properties:
                               X: =138
                               Y: =10
-                              Width: =206 + 446 * (kx - 1)
+                              Width: =170 + 446 * (kx - 1)
                               Height: =8
                               Fill: =cSoft
                         - galPlacesBar:
@@ -943,16 +874,16 @@
                             Properties:
                               X: =138
                               Y: =10
-                              Width: =(206 + 446 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
+                              Width: =(170 + 446 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
                               Height: =8
-                              Fill: =cPrimary
+                              Fill: =If(ThisItem.N > 0 && ThisItem.N = ThisItem.Mx, cPrimary, cInk2) // [PA 전용] 가장 큰 항목만 진하게(강조), 나머지는 보조색
                         - galPlacesValue:
                             Control: Label@2.5.1
                             Properties:
-                              Text: =ThisItem.N & "건"
-                              X: =352 + 446 * (kx - 1)
+                              Text: =ThisItem.N & "건" & If(ThisItem.Tot > 0, " · " & Round(ThisItem.N / ThisItem.Tot * 100, 0) & "%", "")
+                              X: =316 + 446 * (kx - 1)
                               Y: =0
-                              Width: =54
+                              Width: =90
                               Height: =28
                               Font: =fnt
                               Size: =9.75
@@ -993,9 +924,13 @@
                       Variant: Vertical
                       Properties:
                         Items: |-
-                          =With(
-                              {rows: ForAll(OpenTours As t, {Label: t.Name, N: CountRows(Filter(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Tour = t.Id))})},
-                              With({mx: Max(rows, N)}, AddColumns(rows, Mx, mx))
+                          =// [PA 전용] 계산 중복 제거: 기간 · 집계 기준 필터를 한 번만(base) 하고 값순 정렬 · 비율(Tot)을 붙임. 웹은 미리 계산한 통계를 씀
+                          With(
+                              {base: Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text))},
+                              With(
+                              {rows: ForAll(OpenTours As t, {Label: t.Name, N: CountRows(Filter(base, Tour = t.Id))})},
+                              With({srt: SortByColumns(rows, "N", SortOrder.Descending)}, With({mx: Max(srt, N), tot: Sum(srt, N)}, AddColumns(srt, Mx, mx, Tot, tot)))
+                          )
                           )
                         X: =20
                         Y: =240
@@ -1029,7 +964,7 @@
                             Properties:
                               X: =158
                               Y: =10
-                              Width: =186 + 446 * (kx - 1)
+                              Width: =150 + 446 * (kx - 1)
                               Height: =8
                               Fill: =cSoft
                         - galToursStatBar:
@@ -1037,16 +972,16 @@
                             Properties:
                               X: =158
                               Y: =10
-                              Width: =(186 + 446 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
+                              Width: =(150 + 446 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
                               Height: =8
-                              Fill: =cPrimary
+                              Fill: =Coalesce(LookUp(Tours, Name = ThisItem.Label, Color), cInk2) // [PA 전용] 투어 색(달력 · 칩과 같은 색)으로 투어를 구분. 웹 통계도 투어 색 사용
                         - galToursStatValue:
                             Control: Label@2.5.1
                             Properties:
-                              Text: =ThisItem.N & "건"
-                              X: =352 + 446 * (kx - 1)
+                              Text: =ThisItem.N & "건" & If(ThisItem.Tot > 0, " · " & Round(ThisItem.N / ThisItem.Tot * 100, 0) & "%", "")
+                              X: =316 + 446 * (kx - 1)
                               Y: =0
-                              Width: =54
+                              Width: =90
                               Height: =28
                               Font: =fnt
                               Size: =9.75
@@ -1063,9 +998,9 @@
                 Variant: ManualLayout
                 Properties:
                   X: =24
-                  Y: =226
+                  Y: =698
                   Width: =426 * kx
-                  Height: =470
+                  Height: =250
                   Fill: =cSurface
                   BorderColor: =cLine
                   BorderThickness: =1
@@ -1074,7 +1009,6 @@
                   RadiusTopRight: =8
                   RadiusBottomLeft: =8
                   RadiusBottomRight: =8
-                  Visible: =gStatTab = "kind"
                 Children:
                   - lblStatSegTitle:
                       Control: Label@2.5.1
@@ -1095,7 +1029,7 @@
                   - lblStatSegSub:
                       Control: Label@2.5.1
                       Properties:
-                        Text: ="고객 기존 · 신규 · 내부"
+                        Text: ="고객 기존 · 신규 · 파트너사 · 내부 · 값 큰 순"
                         X: =20
                         Y: =42
                         Width: =386 + 426 * (kx - 1)
@@ -1112,14 +1046,18 @@
                       Variant: Vertical
                       Properties:
                         Items: |-
-                          =With(
-                              {rows: ForAll(["고객 · 기존", "고객 · 신규", "내부 방문", "고객 · 미분류"] As g, {Label: g.Value, N: CountRows(Filter(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Seg = g.Value))})},
-                              With({mx: Max(rows, N)}, AddColumns(rows, Mx, mx))
+                          =// [PA 전용] 계산 중복 제거: 기간 · 집계 기준 필터를 한 번만(base) 하고 값순 정렬 · 비율(Tot)을 붙임. 웹은 미리 계산한 통계를 씀
+                          With(
+                              {base: Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text))},
+                              With(
+                              {rows: ForAll(["고객 · 기존", "고객 · 신규", "내부 방문", "고객 · 미분류"] As g, {Label: g.Value, N: CountRows(Filter(base, Seg = g.Value))})},
+                              With({srt: SortByColumns(rows, "N", SortOrder.Descending)}, With({mx: Max(srt, N), tot: Sum(srt, N)}, AddColumns(srt, Mx, mx, Tot, tot)))
+                          )
                           )
                         X: =20
                         Y: =70
                         Width: =386 + 426 * (kx - 1)
-                        Height: =380
+                        Height: =160
                         TemplateSize: =30
                         TemplatePadding: =0
                         ShowScrollbar: =true
@@ -1148,7 +1086,7 @@
                             Properties:
                               X: =138
                               Y: =10
-                              Width: =186 + 426 * (kx - 1)
+                              Width: =150 + 426 * (kx - 1)
                               Height: =8
                               Fill: =cSoft
                         - galStatSegBar:
@@ -1156,16 +1094,16 @@
                             Properties:
                               X: =138
                               Y: =10
-                              Width: =(186 + 426 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
+                              Width: =(150 + 426 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
                               Height: =8
-                              Fill: =cPrimary
+                              Fill: =If(ThisItem.N > 0 && ThisItem.N = ThisItem.Mx, cPrimary, cInk2) // [PA 전용] 가장 큰 항목만 진하게(강조), 나머지는 보조색
                         - galStatSegValue:
                             Control: Label@2.5.1
                             Properties:
-                              Text: =ThisItem.N & "건"
-                              X: =332 + 426 * (kx - 1)
+                              Text: =ThisItem.N & "건" & If(ThisItem.Tot > 0, " · " & Round(ThisItem.N / ThisItem.Tot * 100, 0) & "%", "")
+                              X: =296 + 426 * (kx - 1)
                               Y: =0
-                              Width: =54
+                              Width: =90
                               Height: =28
                               Font: =fnt
                               Size: =9.75
@@ -1182,9 +1120,9 @@
                 Variant: ManualLayout
                 Properties:
                   X: =24 + 446 * kx
-                  Y: =226
+                  Y: =698
                   Width: =426 * kx
-                  Height: =470
+                  Height: =250
                   Fill: =cSurface
                   BorderColor: =cLine
                   BorderThickness: =1
@@ -1193,7 +1131,6 @@
                   RadiusTopRight: =8
                   RadiusBottomLeft: =8
                   RadiusBottomRight: =8
-                  Visible: =gStatTab = "kind"
                 Children:
                   - lblStatPurposeTitle:
                       Control: Label@2.5.1
@@ -1214,7 +1151,7 @@
                   - lblStatPurposeSub:
                       Control: Label@2.5.1
                       Properties:
-                        Text: ="한 건에 하나 · 기타는 직접 입력 포함"
+                        Text: ="가장 큰 항목을 진하게 · 값 큰 순"
                         X: =20
                         Y: =42
                         Width: =386 + 426 * (kx - 1)
@@ -1231,14 +1168,18 @@
                       Variant: Vertical
                       Properties:
                         Items: |-
-                          =With(
-                              {rows: ForAll(Purposes As p, {Label: p.Value, N: CountRows(Filter(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), (Purpose = p.Value || (p.Value = "기타" && StartsWith(Purpose, "기타")))))})},
-                              With({mx: Max(rows, N)}, AddColumns(rows, Mx, mx))
+                          =// [PA 전용] 계산 중복 제거: 기간 · 집계 기준 필터를 한 번만(base) 하고 값순 정렬 · 비율(Tot)을 붙임. 웹은 미리 계산한 통계를 씀
+                          With(
+                              {base: Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text))},
+                              With(
+                              {rows: ForAll(Purposes As p, {Label: p.Value, N: CountRows(Filter(base, (Purpose = p.Value || (p.Value = "기타" && StartsWith(Purpose, "기타")))))})},
+                              With({srt: SortByColumns(rows, "N", SortOrder.Descending)}, With({mx: Max(srt, N), tot: Sum(srt, N)}, AddColumns(srt, Mx, mx, Tot, tot)))
+                          )
                           )
                         X: =20
                         Y: =70
                         Width: =386 + 426 * (kx - 1)
-                        Height: =380
+                        Height: =160
                         TemplateSize: =30
                         TemplatePadding: =0
                         ShowScrollbar: =true
@@ -1275,16 +1216,16 @@
                             Properties:
                               X: =158
                               Y: =10
-                              Width: =(166 + 426 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
+                              Width: =(130 + 426 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
                               Height: =8
-                              Fill: =cPrimary
+                              Fill: =If(ThisItem.N > 0 && ThisItem.N = ThisItem.Mx, cPrimary, cInk2) // [PA 전용] 가장 큰 항목만 진하게(강조), 나머지는 보조색
                         - galStatPurposeValue:
                             Control: Label@2.5.1
                             Properties:
-                              Text: =ThisItem.N & "건"
-                              X: =332 + 426 * (kx - 1)
+                              Text: =ThisItem.N & "건" & If(ThisItem.Tot > 0, " · " & Round(ThisItem.N / ThisItem.Tot * 100, 0) & "%", "")
+                              X: =296 + 426 * (kx - 1)
                               Y: =0
-                              Width: =54
+                              Width: =90
                               Height: =28
                               Font: =fnt
                               Size: =9.75
@@ -1300,10 +1241,10 @@
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
-                  X: =24 + 892 * kx
-                  Y: =226
+                  X: =24
+                  Y: =964
                   Width: =426 * kx
-                  Height: =470
+                  Height: =390
                   Fill: =cSurface
                   BorderColor: =cLine
                   BorderThickness: =1
@@ -1312,7 +1253,6 @@
                   RadiusTopRight: =8
                   RadiusBottomLeft: =8
                   RadiusBottomRight: =8
-                  Visible: =gStatTab = "kind"
                 Children:
                   - lblStatIndustryTitle:
                       Control: Label@2.5.1
@@ -1350,14 +1290,18 @@
                       Variant: Vertical
                       Properties:
                         Items: |-
-                          =With(
-                              {rows: SortByColumns(Filter(ForAll(Industries As i, {Label: i.Value, N: CountRows(Filter(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), Category = "고객 방문" && (Industry = i.Value || (i.Value = "기타" && StartsWith(Industry, "기타")))))}), N > 0), "N", SortOrder.Descending)},
-                              With({mx: Max(rows, N)}, AddColumns(rows, Mx, mx))
+                          =// [PA 전용] 계산 중복 제거: 기간 · 집계 기준 필터를 한 번만(base) 하고 값순 정렬 · 비율(Tot)을 붙임. 웹은 미리 계산한 통계를 씀
+                          With(
+                              {base: Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text))},
+                              With(
+                              {rows: SortByColumns(Filter(ForAll(Industries As i, {Label: i.Value, N: CountRows(Filter(base, Category = "고객 방문" && (Industry = i.Value || (i.Value = "기타" && StartsWith(Industry, "기타")))))}), N > 0), "N", SortOrder.Descending)},
+                              With({mx: Max(rows, N), tot: Sum(rows, N)}, AddColumns(rows, Mx, mx, Tot, tot))
+                          )
                           )
                         X: =20
                         Y: =70
                         Width: =386 + 426 * (kx - 1)
-                        Height: =380
+                        Height: =300
                         TemplateSize: =30
                         TemplatePadding: =0
                         ShowScrollbar: =true
@@ -1386,7 +1330,7 @@
                             Properties:
                               X: =138
                               Y: =10
-                              Width: =186 + 426 * (kx - 1)
+                              Width: =150 + 426 * (kx - 1)
                               Height: =8
                               Fill: =cSoft
                         - galStatIndustryBar:
@@ -1394,16 +1338,16 @@
                             Properties:
                               X: =138
                               Y: =10
-                              Width: =(186 + 426 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
+                              Width: =(150 + 426 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
                               Height: =8
-                              Fill: =cPrimary
+                              Fill: =If(ThisItem.N > 0 && ThisItem.N = ThisItem.Mx, cPrimary, cInk2) // [PA 전용] 가장 큰 항목만 진하게(강조), 나머지는 보조색
                         - galStatIndustryValue:
                             Control: Label@2.5.1
                             Properties:
-                              Text: =ThisItem.N & "건"
-                              X: =332 + 426 * (kx - 1)
+                              Text: =ThisItem.N & "건" & If(ThisItem.Tot > 0, " · " & Round(ThisItem.N / ThisItem.Tot * 100, 0) & "%", "")
+                              X: =296 + 426 * (kx - 1)
                               Y: =0
-                              Width: =54
+                              Width: =90
                               Height: =28
                               Font: =fnt
                               Size: =9.75
@@ -1419,10 +1363,10 @@
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
-                  X: =24
-                  Y: =226
+                  X: =24 + 446 * kx
+                  Y: =964
                   Width: =426 * kx
-                  Height: =470
+                  Height: =390
                   Fill: =cSurface
                   BorderColor: =cLine
                   BorderThickness: =1
@@ -1431,7 +1375,6 @@
                   RadiusTopRight: =8
                   RadiusBottomLeft: =8
                   RadiusBottomRight: =8
-                  Visible: =gStatTab = "org"
                 Children:
                   - lblStatDivisionTitle:
                       Control: Label@2.5.1
@@ -1469,14 +1412,18 @@
                       Variant: Vertical
                       Properties:
                         Items: |-
-                          =With(
-                              {rows: ForAll(DivisionGroups As g, {Label: g.Value, N: CountRows(Filter(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), DivGroup = g.Value))})},
-                              With({mx: Max(rows, N)}, AddColumns(rows, Mx, mx))
+                          =// [PA 전용] 계산 중복 제거: 기간 · 집계 기준 필터를 한 번만(base) 하고 값순 정렬 · 비율(Tot)을 붙임. 웹은 미리 계산한 통계를 씀
+                          With(
+                              {base: Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text))},
+                              With(
+                              {rows: ForAll(DivisionGroups As g, {Label: g.Value, N: CountRows(Filter(base, DivGroup = g.Value))})},
+                              With({srt: SortByColumns(AddColumns(rows, Rk, If(Label = "기타", 1, 0)), "Rk", SortOrder.Ascending, "N", SortOrder.Descending)}, With({mx: Max(srt, N), tot: Sum(srt, N)}, AddColumns(srt, Mx, mx, Tot, tot)))
+                          )
                           )
                         X: =20
                         Y: =70
                         Width: =386 + 426 * (kx - 1)
-                        Height: =380
+                        Height: =300
                         TemplateSize: =30
                         TemplatePadding: =0
                         ShowScrollbar: =true
@@ -1505,7 +1452,7 @@
                             Properties:
                               X: =148
                               Y: =10
-                              Width: =176 + 426 * (kx - 1)
+                              Width: =140 + 426 * (kx - 1)
                               Height: =8
                               Fill: =cSoft
                         - galStatDivisionBar:
@@ -1513,16 +1460,16 @@
                             Properties:
                               X: =148
                               Y: =10
-                              Width: =(176 + 426 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
+                              Width: =(140 + 426 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
                               Height: =8
-                              Fill: =cPrimary
+                              Fill: =If(ThisItem.N > 0 && ThisItem.N = ThisItem.Mx, cPrimary, cInk2) // [PA 전용] 가장 큰 항목만 진하게(강조), 나머지는 보조색
                         - galStatDivisionValue:
                             Control: Label@2.5.1
                             Properties:
-                              Text: =ThisItem.N & "건"
-                              X: =332 + 426 * (kx - 1)
+                              Text: =ThisItem.N & "건" & If(ThisItem.Tot > 0, " · " & Round(ThisItem.N / ThisItem.Tot * 100, 0) & "%", "")
+                              X: =296 + 426 * (kx - 1)
                               Y: =0
-                              Width: =54
+                              Width: =90
                               Height: =28
                               Font: =fnt
                               Size: =9.75
@@ -1538,10 +1485,10 @@
                 Control: GroupContainer@1.3.0
                 Variant: ManualLayout
                 Properties:
-                  X: =24 + 446 * kx
-                  Y: =226
+                  X: =24 + 892 * kx
+                  Y: =698
                   Width: =426 * kx
-                  Height: =470
+                  Height: =250
                   Fill: =cSurface
                   BorderColor: =cLine
                   BorderThickness: =1
@@ -1550,7 +1497,6 @@
                   RadiusTopRight: =8
                   RadiusBottomLeft: =8
                   RadiusBottomRight: =8
-                  Visible: =gStatTab = "org"
                 Children:
                   - lblStatLangTitle:
                       Control: Label@2.5.1
@@ -1588,14 +1534,18 @@
                       Variant: Vertical
                       Properties:
                         Items: |-
-                          =With(
-                              {rows: ForAll(["한국어", "한국어 · 통역 동반", "영어", "중국어"] As l, {Label: l.Value, N: CountRows(Filter(Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)), LangLabel = l.Value))})},
-                              With({mx: Max(rows, N)}, AddColumns(rows, Mx, mx))
+                          =// [PA 전용] 계산 중복 제거: 기간 · 집계 기준 필터를 한 번만(base) 하고 값순 정렬 · 비율(Tot)을 붙임. 웹은 미리 계산한 통계를 씀
+                          With(
+                              {base: Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text))},
+                              With(
+                              {rows: ForAll(["한국어", "한국어 · 통역 동반", "영어", "중국어"] As l, {Label: l.Value, N: CountRows(Filter(base, LangLabel = l.Value))})},
+                              With({srt: SortByColumns(rows, "N", SortOrder.Descending)}, With({mx: Max(srt, N), tot: Sum(srt, N)}, AddColumns(srt, Mx, mx, Tot, tot)))
+                          )
                           )
                         X: =20
                         Y: =70
                         Width: =386 + 426 * (kx - 1)
-                        Height: =380
+                        Height: =160
                         TemplateSize: =30
                         TemplatePadding: =0
                         ShowScrollbar: =true
@@ -1632,16 +1582,16 @@
                             Properties:
                               X: =158
                               Y: =10
-                              Width: =(166 + 426 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
+                              Width: =(130 + 426 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
                               Height: =8
-                              Fill: =cPrimary
+                              Fill: =If(ThisItem.N > 0 && ThisItem.N = ThisItem.Mx, cPrimary, cInk2) // [PA 전용] 가장 큰 항목만 진하게(강조), 나머지는 보조색
                         - galStatLangValue:
                             Control: Label@2.5.1
                             Properties:
-                              Text: =ThisItem.N & "건"
-                              X: =332 + 426 * (kx - 1)
+                              Text: =ThisItem.N & "건" & If(ThisItem.Tot > 0, " · " & Round(ThisItem.N / ThisItem.Tot * 100, 0) & "%", "")
+                              X: =296 + 426 * (kx - 1)
                               Y: =0
-                              Width: =54
+                              Width: =90
                               Height: =28
                               Font: =fnt
                               Size: =9.75
@@ -1658,9 +1608,9 @@
                 Variant: ManualLayout
                 Properties:
                   X: =24 + 892 * kx
-                  Y: =226
+                  Y: =964
                   Width: =426 * kx
-                  Height: =470
+                  Height: =390
                   Fill: =cSurface
                   BorderColor: =cLine
                   BorderThickness: =1
@@ -1669,7 +1619,6 @@
                   RadiusTopRight: =8
                   RadiusBottomLeft: =8
                   RadiusBottomRight: =8
-                  Visible: =gStatTab = "org"
                 Children:
                   - lblStatJobsTitle:
                       Control: Label@2.5.1
@@ -1707,17 +1656,21 @@
                       Variant: Vertical
                       Properties:
                         Items: |-
-                          =With(
+                          =// [PA 전용] 계산 중복 제거: 기간 · 집계 기준 필터를 한 번만(base) 하고 값순 정렬 · 비율(Tot)을 붙임. 웹은 미리 계산한 통계를 씀
+                          With(
+                              {base: Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text))},
+                              With(
                               {rows: With(
-                              {nos: Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text)).Title},
+                              {nos: base.Title},
                               ForAll(JobOptions As j, {Label: j.Value, N: CountRows(Filter(colStatAtt, RequestNo in nos && j.Value in Jobs))})
                           )},
-                              With({mx: Max(rows, N)}, AddColumns(rows, Mx, mx))
+                              With({srt: SortByColumns(rows, "N", SortOrder.Descending)}, With({mx: Max(srt, N), tot: Sum(srt, N)}, AddColumns(srt, Mx, mx, Tot, tot)))
+                          )
                           )
                         X: =20
                         Y: =70
                         Width: =386 + 426 * (kx - 1)
-                        Height: =380
+                        Height: =300
                         TemplateSize: =30
                         TemplatePadding: =0
                         ShowScrollbar: =true
@@ -1746,7 +1699,7 @@
                             Properties:
                               X: =138
                               Y: =10
-                              Width: =186 + 426 * (kx - 1)
+                              Width: =150 + 426 * (kx - 1)
                               Height: =8
                               Fill: =cSoft
                         - galStatJobsBar:
@@ -1754,16 +1707,16 @@
                             Properties:
                               X: =138
                               Y: =10
-                              Width: =(186 + 426 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
+                              Width: =(150 + 426 * (kx - 1)) * ThisItem.N / Max(1, ThisItem.Mx)
                               Height: =8
-                              Fill: =cPrimary
+                              Fill: =If(ThisItem.N > 0 && ThisItem.N = ThisItem.Mx, cPrimary, cInk2) // [PA 전용] 가장 큰 항목만 진하게(강조), 나머지는 보조색
                         - galStatJobsValue:
                             Control: Label@2.5.1
                             Properties:
-                              Text: =ThisItem.N & "명"
-                              X: =332 + 426 * (kx - 1)
+                              Text: =ThisItem.N & "건" & If(ThisItem.Tot > 0, " · " & Round(ThisItem.N / ThisItem.Tot * 100, 0) & "%", "")
+                              X: =296 + 426 * (kx - 1)
                               Y: =0
-                              Width: =54
+                              Width: =90
                               Height: =28
                               Font: =fnt
                               Size: =9.75
