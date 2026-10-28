@@ -229,6 +229,7 @@ var GUESTBOOK_HEADERS = [
   // 새 열은 기존 시트와 맞도록 맨 뒤에 붙인다.
   '팀',
   '투어',
+  '개인정보동의',
 ];
 /** src/admin/importLegacy.ts 의 VISIT_SHEET_HEADERS 와 같아야 합니다 (가져오기 양식). */
 var VISIT_HEADERS = [
@@ -579,6 +580,8 @@ function addGuestbook_(payload) {
   sheet_(GUESTBOOK_SHEET, GUESTBOOK_HEADERS).appendRow([
     entry.id, entry.createdAt, entry.name, entry.company,
     entry.role, entry.rating, entry.message, name, company, '', team, tour,
+    // 개인정보 수집 · 이용 동의 시각 (동의 칸이 없던 이전 화면에서 온 글은 비어 있다)
+    payload.consent === true ? entry.createdAt : '',
   ]);
 
   // 방명록은 메일을 보내지 않는다. 관리자 페이지(방명록 탭)나 guestbook 시트에서 확인한다.

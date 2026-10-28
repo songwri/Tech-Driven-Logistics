@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { X } from 'lucide-react'
+import { Check, ChevronDown, X } from 'lucide-react'
 import { Button } from './ui/Button'
 import { Field, Input, Label, Textarea } from './ui/Field'
 import { StarRating } from './ui/StarRating'
 import { maskCompany, maskName } from '@/lib/mask'
 import { formatRating, ratingLabel } from '@/lib/rating'
-import { GUESTBOOK_TOURS, TOUR_BY_ID, type GuestbookTour } from '@/lib/visit'
+import { GUESTBOOK_TOURS, TOUR_BY_ID, type GuestbookTour, type Resource } from '@/lib/visit'
 import { cn } from '@/lib/utils'
 import { submitGuestbook, type GuestbookEntry } from '@/lib/labApi'
 import { RobotScene } from '@/guestbook/RobotScene'
@@ -22,13 +22,13 @@ interface GuestbookDialogProps {
   onSubmitted: (entry: GuestbookEntry) => void
 }
 
-type Errors = Partial<Record<'tour' | 'rating' | 'message' | 'name' | 'company' | 'role', string>>
+type Errors = Partial<Record<'tour' | 'rating' | 'message' | 'name' | 'company' | 'role' | 'consent', string>>
 /** intro: 로봇이 빈 용지를 집어 올림 → form: 용지가 커져 작성 화면 → outro: 다 쓴 용지를 컨베이어로 보냄 */
 type Phase = 'intro' | 'form' | 'outro'
 /** 장면 속 용지의 화면 위치. 작성 화면이 여기서 커져 나오고, 등록하면 여기로 돌아간다. */
 type Spot = { x: number; y: number; scale: number } | null
 
-function validate(values: { tour: GuestbookTour | ''; rating: number; message: string; name: string; company: string; role: string }) {
+function validate(values: { tour: GuestbookTour | ''; rating: number; message: string; name: string; company: string; role: string; consent: boolean }) {
   const errors: Errors = {}
   if (!values.tour) errors.tour = '참여하신 투어를 선택해 주세요.'
   if (!values.rating) errors.rating = '별점을 선택해 주세요.'
@@ -36,8 +36,38 @@ function validate(values: { tour: GuestbookTour | ''; rating: number; message: s
   if (!values.name.trim()) errors.name = '이름을 입력해 주세요.'
   if (!values.company.trim()) errors.company = '회사명을 입력해 주세요.'
   if (!values.role.trim()) errors.role = '직책을 입력해 주세요.'
+  if (!values.consent) errors.consent = '개인정보 수집 · 이용에 동의해 주세요.'
   return errors
 }
+
+/* ---------------------------------------------------------------- 투어 고르기 */
+
+/** 화면에 보여 줄 순서: 종합 투어 → TDL Lab 투어 → 메가와이즈 센터 투어 → (열려 있다면) 시화MTV가 들어간 투어 */
+const TOUR_ORDER: GuestbookTour[] = ['combined', 'lab', 'center', 'center_mtv', 'mtv', 'all3']
+
+const PLACE_LABEL: Record<Resource, string> = { lab: 'TDL Lab', center: '메가와이즈', mtv: '시화MTV' }
+const PLACE_COLOR: Record<Resource, string> = {
+  lab: TOUR_BY_ID.lab.color,
+  center: TOUR_BY_ID.center.color,
+  mtv: TOUR_BY_ID.mtv.color,
+}
+
+/** 투어마다 이름과 '어디를 둘러봤는지'를 한눈에: 이름 · 다녀온 곳 배지 · 한 줄 설명 */
+function tourCard(id: GuestbookTour) {
+  const places = [...TOUR_BY_ID[id].places].sort((a, b) => (a === 'lab' ? -1 : b === 'lab' ? 1 : 0)) as Resource[]
+  const title = id === 'combined' ? '종합 투어' : TOUR_BY_ID[id].label
+  const hint =
+    id === 'combined'
+      ? '센터와 Lab을 함께 둘러봤어요'
+      : id === 'lab'
+        ? 'TDL Lab만 둘러봤어요'
+        : id === 'center'
+          ? '메가와이즈 센터만 둘러봤어요'
+          : TOUR_BY_ID[id].description
+  return { id, title, places, hint }
+}
+
+const SORTED_TOURS = [...GUESTBOOK_TOURS].sort((a, b) => TOUR_ORDER.indexOf(a) - TOUR_ORDER.indexOf(b))
 
 const today = () => {
   const now = new Date()
@@ -107,6 +137,8 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
   const [company, setCompany] = useState('')
   const [team, setTeam] = useState('')
   const [role, setRole] = useState('')
+  const [consent, setConsent] = useState(false)
+  const [showConsent, setShowConsent] = useState(false)
   const [tried, setTried] = useState(false)
   const [status, setStatus] = useState<'idle' | 'sending'>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -116,7 +148,7 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
   const sent = useRef<GuestbookEntry | null>(null)
   const opener = useRef<Element | null>(document.activeElement)
 
-  const errors = tried ? validate({ tour, rating, message, name, company, role }) : {}
+  const errors = tried ? validate({ tour, rating, message, name, company, role, consent }) : {}
 
   /** 장면 속 용지 위치를 작성 화면(가운데 정렬) 기준의 이동 · 배율로 바꿔 둔다. */
   const measureSheet = useCallback(() => {
@@ -198,7 +230,7 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     setTried(true)
-    if (Object.keys(validate({ tour, rating, message, name, company, role })).length > 0 || !tour) return
+    if (Object.keys(validate({ tour, rating, message, name, company, role, consent })).length > 0 || !tour) return
     setStatus('sending')
     setError(null)
     try {
@@ -210,6 +242,7 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
         rating,
         tour,
         message: message.trim(),
+        consent: true,
       })
       if (reduce) {
         onSubmitted(entry)
@@ -289,27 +322,54 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
                   <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
                     <div>
                       <Label required>어떤 투어에 참여하셨나요?</Label>
-                      <div className="mt-2 grid grid-cols-3 gap-2" role="radiogroup" aria-label="참여한 투어">
-                        {GUESTBOOK_TOURS.map((id) => (
-                          <button
-                            key={id}
-                            type="button"
-                            role="radio"
-                            aria-checked={tour === id}
-                            onClick={() => setTour(id)}
-                            className={cn(
-                              'border px-2 py-2.5 text-center transition',
-                              tour === id
-                                ? 'border-brand bg-brand/5 text-ink'
-                                : errors.tour
-                                  ? 'border-brand/50 text-warm-600 hover:border-brand'
-                                  : 'border-warm-300/60 text-warm-600 hover:border-warm-800',
-                            )}
-                          >
-                            <span className="block text-[13px] font-semibold">{TOUR_BY_ID[id].label}</span>
-                            <span className="mt-0.5 block text-[12px] font-medium text-warm-800">{TOUR_BY_ID[id].description}</span>
-                          </button>
-                        ))}
+                      <div className="mt-2 grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="참여한 투어">
+                        {SORTED_TOURS.map((id) => {
+                          const card = tourCard(id)
+                          const active = tour === id
+                          return (
+                            <button
+                              key={id}
+                              type="button"
+                              role="radio"
+                              aria-checked={active}
+                              onClick={() => setTour(id)}
+                              className={cn(
+                                'relative flex flex-col items-start gap-2 border-2 p-3 text-left transition',
+                                active
+                                  ? 'border-brand bg-brand/5'
+                                  : errors.tour
+                                    ? 'border-brand/50 hover:border-brand'
+                                    : 'border-warm-300/60 hover:border-warm-800',
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  'absolute right-2.5 top-2.5 flex h-5 w-5 items-center justify-center rounded-full border-[1.5px]',
+                                  active ? 'border-brand bg-brand text-white' : 'border-warm-300',
+                                )}
+                                aria-hidden
+                              >
+                                {active && <Check width={12} height={12} strokeWidth={3} />}
+                              </span>
+                              <span className={cn('pr-6 text-[14px] font-bold leading-snug', active ? 'text-brand' : 'text-ink')}>{card.title}</span>
+                              {/* 다녀온 곳: 센터 · Lab 색 배지 (종합 투어는 두 곳을 + 로 잇는다) */}
+                              <span className="flex flex-wrap items-center gap-1">
+                                {card.places.map((place, index) => (
+                                  <span key={place} className="contents">
+                                    {index > 0 && <span className="text-[11px] font-bold text-warm-600">+</span>}
+                                    <span
+                                      className="rounded-sm px-1.5 py-0.5 text-[11px] font-bold leading-none text-white"
+                                      style={{ background: PLACE_COLOR[place] }}
+                                    >
+                                      {PLACE_LABEL[place]}
+                                    </span>
+                                  </span>
+                                ))}
+                              </span>
+                              <span className="text-[12px] leading-snug text-warm-600">{card.hint}</span>
+                            </button>
+                          )
+                        })}
                       </div>
                       {errors.tour && <p className="mt-1 text-[12px] text-brand">{errors.tour}</p>}
                     </div>
@@ -403,7 +463,42 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
                     )}
                   </div>
 
-                  <footer className="flex justify-end gap-3 border-t border-dashed border-warm-300/70 px-6 py-4">
+                  {/* 개인정보 동의: 맨 아래, 등록 버튼 바로 위에 한 줄로 */}
+                  <div className="border-t border-dashed border-warm-300/70 px-6 pt-3">
+                    <div className="flex items-center gap-2">
+                      <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-[13px] text-ink">
+                        <input
+                          type="checkbox"
+                          checked={consent}
+                          onChange={(e) => setConsent(e.target.checked)}
+                          className="h-4 w-4 shrink-0 accent-[#a72b2b]"
+                          aria-invalid={Boolean(errors.consent) || undefined}
+                        />
+                        <span>
+                          개인정보 수집 · 이용에 동의합니다 <span className="font-semibold text-brand">(필수)</span>
+                        </span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowConsent((current) => !current)}
+                        aria-expanded={showConsent}
+                        className="inline-flex shrink-0 items-center gap-0.5 text-[12px] text-warm-600 underline decoration-warm-300 underline-offset-2 hover:text-brand"
+                      >
+                        자세히 <ChevronDown width={12} height={12} className={cn('transition', showConsent && 'rotate-180')} />
+                      </button>
+                    </div>
+                    {showConsent && (
+                      <p className="mt-2 bg-cream/70 px-3 py-2 text-[12px] leading-relaxed text-warm-600">
+                        · 항목: 이름, 회사명, 팀명(선택), 직책, 별점 · 소감 · 참여 투어<br />
+                        · 목적: 방명록 등록 · 게시(이름과 회사명은 가려서 공개), 방문 서비스 개선<br />
+                        · 보관: 등록일로부터 1년 후 파기, 삭제를 원하시면 담당자에게 요청<br />
+                        · 동의를 거부할 수 있으나, 거부하시면 방명록을 남기실 수 없습니다.
+                      </p>
+                    )}
+                    {errors.consent && <p className="mt-1 text-[12px] text-brand">{errors.consent}</p>}
+                  </div>
+
+                  <footer className="flex justify-end gap-3 px-6 py-4">
                     <Button type="button" variant="outline" onClick={cancel}>
                       취소
                     </Button>
