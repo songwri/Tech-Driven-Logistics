@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Check, ChevronDown, X } from 'lucide-react'
+import { Check, ChevronDown, ShieldCheck, X } from 'lucide-react'
 import { Button } from './ui/Button'
 import { Field, Input, Label, Textarea } from './ui/Field'
 import { StarRating } from './ui/StarRating'
@@ -306,7 +306,7 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
                     <p className="mt-1 text-lg font-bold tracking-tight text-ink" aria-hidden>
                       방명록 남기기
                     </p>
-                    <p className="mt-0.5 text-[13px] text-warm-600">이름과 회사명은 가려서 공개됩니다.</p>
+                    <p className="mt-0.5 text-[13px] text-warm-600">이름과 회사명은 가명 처리(일부 가림)되어 공개됩니다.</p>
                   </div>
                   <button
                     type="button"
@@ -446,12 +446,16 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
 
                     <div className="bg-cream/70 p-1">
                       <div className="border border-warm-300/40 bg-white px-4 py-3">
-                        <p className="text-[12px] text-warm-600">공개 표시</p>
+                        <p className="text-[12px] text-warm-600">공개 표시 · 가명 처리되어 이렇게 보입니다</p>
                         <p className="mt-1 text-sm text-ink">
                           <span className="font-semibold">{maskName(name) || '홍**'}</span>
                           <span className="ml-2 text-warm-600">
                             {[maskCompany(company) || 'L**', maskCompany(team), role.trim()].filter(Boolean).join(' · ')}
                           </span>
+                        </p>
+                        <p className="mt-2 flex items-start gap-1.5 border-t border-warm-300/40 pt-2 text-[12px] leading-relaxed text-warm-600">
+                          <ShieldCheck width={14} height={14} className="mt-0.5 shrink-0 text-brand" aria-hidden />
+                          <span>방명록은 가명 처리해 관리합니다. 실명과 실제 회사명은 공개하지 않으며, 담당 관리자만 확인합니다.</span>
                         </p>
                       </div>
                     </div>
@@ -490,7 +494,8 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
                     {showConsent && (
                       <p className="mt-2 bg-cream/70 px-3 py-2 text-[12px] leading-relaxed text-warm-600">
                         · 항목: 이름, 회사명, 팀명(선택), 직책, 별점 · 소감 · 참여 투어<br />
-                        · 목적: 방명록 등록 · 게시(이름과 회사명은 가려서 공개), 방문 서비스 개선<br />
+                        · 목적: 방명록 등록 · 게시(이름과 회사명은 가명 처리해 공개), 방문 서비스 개선<br />
+                        · 가명 처리: 공개 화면에는 가명(예: 홍**, L**처럼 일부만 표시)만 보이고, 실명 · 실제 회사명은 공개하지 않으며 담당 관리자만 접근해 관리<br />
                         · 보관: 등록일로부터 1년 후 파기, 삭제를 원하시면 담당자에게 요청<br />
                         · 동의를 거부할 수 있으나, 거부하시면 방명록을 남기실 수 없습니다.
                       </p>
