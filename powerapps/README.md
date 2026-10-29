@@ -466,6 +466,7 @@ YAML 구조 · 컨트롤 이름 중복 · 수식 괄호는 스크립트로 검�
 | 본문만 스크롤 (머리말 · 바닥 버튼 고정), `sw` · `sh` · `ox` · 큰 모니터에서 본문 폭 늘리기(`kx` · `pw` · `MaxStretch`) | 모든 화면 `con?Body`, `App.Formulas` | 브라우저 페이지 스크롤 |
 | 신청 담당자 자동 입력 | `App.OnStart` `gMe`, `scrBook` 담당자 칸 | 직접 입력 |
 | 관리자 구분을 회사 로그인 + `TourAdmins` 로 | `App.OnStart` `gAdminSite` | 관리자 키 입력 |
+| 머리말에서 관리자 메뉴(예약 관리 · 달력 · 통계 · 방명록 관리)를 오른쪽 묶음 + 빨간 '관리자' 표시로 구분 | 모든 화면 `hdr?AdmZone` · `hdr?AdmLabel` | 관리자 페이지(/admin)가 따로 있음 |
 | 참석자 Forms 직접 입력 · 동의 (흐름 B) | `App.Formulas` `FormsPrefillUrl`, `scrDone`, `flows.md` B | 신청자가 명단 대리 입력 |
 | 참석자 정보 1년 뒤 자동 삭제 (흐름 D) | `flows.md` D | 없음 |
 | 내 신청 화면 · 신청자 본인 취소 | `scrMy` | 없음 |
