@@ -33,6 +33,7 @@ Power Apps 캔버스 앱은 **HTML 이 아닙니다.** 파워포인트처럼 화
 powerapps/
 ├─ README.md                  ← 지금 이 가이드
 ├─ mockup/index.html          ← 1366×768 화면 설계 (브라우저로 열어 보기)
+├─ mockup/screens.html        ← 화면 12장 한눈에 보기 (이미지는 mockup/screens/*.png)
 ├─ 1-sharepoint/
 │  ├─ VisitRequests.csv       ← 목록 만들기용 (CSV 로 목록 만들기)
 │  ├─ VisitAttendees.csv
