@@ -144,10 +144,10 @@
                   Font: =fnt
                   Size: =10.5
                   FontWeight: =FontWeight.Semibold
-                  RadiusTopLeft: =6
-                  RadiusTopRight: =6
-                  RadiusBottomLeft: =6
-                  RadiusBottomRight: =6
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
                   Fill: =cSurface
                   Color: =cInk
                   HoverFill: =cSoft
@@ -213,10 +213,10 @@
                   Font: =fnt
                   Size: =10.5
                   FontWeight: =FontWeight.Semibold
-                  RadiusTopLeft: =6
-                  RadiusTopRight: =6
-                  RadiusBottomLeft: =6
-                  RadiusBottomRight: =6
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
                   Fill: =cSurface
                   Color: =cInk
                   HoverFill: =cSoft
@@ -283,10 +283,10 @@
                   Font: =fnt
                   Size: =9.75
                   FontWeight: =FontWeight.Semibold
-                  RadiusTopLeft: =6
-                  RadiusTopRight: =6
-                  RadiusBottomLeft: =6
-                  RadiusBottomRight: =6
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
                   Fill: =cSurface
                   Color: =cInk
                   HoverFill: =cSoft
@@ -349,10 +349,10 @@
                         BorderColor: =ThisItem.Color
                         BorderThickness: =1
                         FontWeight: =If(gCalTour = ThisItem.Id, FontWeight.Semibold, FontWeight.Normal)
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
             - galCalWeek:
                 Control: Gallery@2.15.0
                 Variant: Vertical
@@ -432,7 +432,7 @@
                         Fill: =If(ThisItem.Key = gCalDay, cSoft, ThisItem.InMonth && ThisItem.Open && !ThisItem.Holiday, cSurface, cBg)
                         HoverFill: =cSoft
                         PressedFill: =cSoft
-                        BorderColor: =If(ThisItem.Key = gCalDay, cInk, cLine)
+                        BorderColor: =If(ThisItem.Key = gCalDay, cBrand, cLine)
                         BorderThickness: =If(ThisItem.Key = gCalDay, 2, 1)
                         RadiusTopLeft: =0
                         RadiusTopRight: =0
@@ -486,13 +486,13 @@
                         Font: =fnt
                         Size: =9
                         FontWeight: =FontWeight.Semibold
-                        Fill: =ColorValue("#FBF3DB")
-                        Color: =ColorValue("#956400")
+                        Fill: =ColorValue("#FFF4E6")
+                        Color: =ColorValue("#C2410C")
                         BorderThickness: =0
-                        RadiusTopLeft: =11
-                        RadiusTopRight: =11
-                        RadiusBottomLeft: =11
-                        RadiusBottomRight: =11
+                        RadiusTopLeft: =2
+                        RadiusTopRight: =2
+                        RadiusBottomLeft: =2
+                        RadiusBottomRight: =2
                         OnSelect: =false
                         Visible: =CountRows(Filter(colCalItems, Key = ThisItem.Key && Status = "대기" && (gCalTour = "" || Kind = "block" || Tour = gCalTour))) > 0
                   - galCalChips:
@@ -520,14 +520,14 @@
                               Width: =132 + 140 * (kx - 1)
                               Height: =20
                               OnSelect: =If(ThisItem.Kind = "req", Set(gOpenId, ThisItem.ReqId); Navigate(scrAdmin, ScreenTransition.None), Set(gCalDay, ThisItem.Key))
-                              Fill: =Switch(ThisItem.Status, "대기", ColorValue("#FBF3DB"), "승인", ColorValue("#EDF3EC"), "완료", ColorValue("#E1F3FE"), "막기", cSoft, ColorValue("#EFEFED"))
-                              HoverFill: =Switch(ThisItem.Status, "대기", ColorValue("#FBF3DB"), "승인", ColorValue("#EDF3EC"), "완료", ColorValue("#E1F3FE"), "막기", cSoft, ColorValue("#EFEFED"))
-                              PressedFill: =Switch(ThisItem.Status, "대기", ColorValue("#FBF3DB"), "승인", ColorValue("#EDF3EC"), "완료", ColorValue("#E1F3FE"), "막기", cSoft, ColorValue("#EFEFED"))
+                              Fill: =Switch(ThisItem.Status, "대기", ColorValue("#FFF4E6"), "승인", ColorValue("#EBFBEE"), "완료", ColorValue("#E7F5FF"), "막기", cSoft, ColorValue("#F1F3F5"))
+                              HoverFill: =Switch(ThisItem.Status, "대기", ColorValue("#FFF4E6"), "승인", ColorValue("#EBFBEE"), "완료", ColorValue("#E7F5FF"), "막기", cSoft, ColorValue("#F1F3F5"))
+                              PressedFill: =Switch(ThisItem.Status, "대기", ColorValue("#FFF4E6"), "승인", ColorValue("#EBFBEE"), "완료", ColorValue("#E7F5FF"), "막기", cSoft, ColorValue("#F1F3F5"))
                               BorderThickness: =0
-                              RadiusTopLeft: =3
-                              RadiusTopRight: =3
-                              RadiusBottomLeft: =3
-                              RadiusBottomRight: =3
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
                         - rctCalChipBar:
                             Control: Rectangle@2.3.0
                             Properties:
@@ -585,10 +585,10 @@
                   BorderColor: =cLine
                   BorderThickness: =1
                   DropShadow: =DropShadow.None
-                  RadiusTopLeft: =8
-                  RadiusTopRight: =8
-                  RadiusBottomLeft: =8
-                  RadiusBottomRight: =8
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
                 Children:
                   - lblCalDayTitle:
                       Control: Label@2.5.1
@@ -650,10 +650,10 @@
                               PressedFill: =cSoft
                               BorderColor: =cLine
                               BorderThickness: =1
-                              RadiusTopLeft: =6
-                              RadiusTopRight: =6
-                              RadiusBottomLeft: =6
-                              RadiusBottomRight: =6
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
                         - rctCalDayBar:
                             Control: Rectangle@2.3.0
                             Properties:
@@ -710,13 +710,13 @@
                               Font: =fnt
                               Size: =9
                               FontWeight: =FontWeight.Semibold
-                              Fill: =Switch(ThisItem.Status, "대기", ColorValue("#FBF3DB"), "승인", ColorValue("#EDF3EC"), "완료", ColorValue("#E1F3FE"), "막기", cSoft, ColorValue("#EFEFED"))
+                              Fill: =Switch(ThisItem.Status, "대기", ColorValue("#FFF4E6"), "승인", ColorValue("#EBFBEE"), "완료", ColorValue("#E7F5FF"), "막기", cSoft, ColorValue("#F1F3F5"))
                               Color: =If(ThisItem.Status = "막기", cInk2, LookUp(StatusStyle, S = ThisItem.Status, Fg))
                               BorderThickness: =0
-                              RadiusTopLeft: =11
-                              RadiusTopRight: =11
-                              RadiusBottomLeft: =11
-                              RadiusBottomRight: =11
+                              RadiusTopLeft: =2
+                              RadiusTopRight: =2
+                              RadiusBottomLeft: =2
+                              RadiusBottomRight: =2
                               OnSelect: =false
                               Visible: =ThisItem.Kind = "req"
                         - btnCalUnblock:
@@ -773,10 +773,10 @@
                               Font: =fnt
                               Size: =9
                               FontWeight: =FontWeight.Semibold
-                              RadiusTopLeft: =6
-                              RadiusTopRight: =6
-                              RadiusBottomLeft: =6
-                              RadiusBottomRight: =6
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
                               Fill: =cSurface
                               Color: =cInk
                               HoverFill: =cSoft
@@ -823,10 +823,10 @@
                         Font: =fnt
                         Size: =10.5
                         FontWeight: =FontWeight.Semibold
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                         Fill: =cSurface
                         Color: =cInk
                         HoverFill: =cSoft
@@ -875,13 +875,13 @@
                         Font: =fnt
                         Size: =9
                         FontWeight: =FontWeight.Semibold
-                        Fill: =ColorValue("#FBF3DB")
-                        Color: =ColorValue("#956400")
+                        Fill: =ColorValue("#FFF4E6")
+                        Color: =ColorValue("#C2410C")
                         BorderThickness: =0
-                        RadiusTopLeft: =11
-                        RadiusTopRight: =11
-                        RadiusBottomLeft: =11
-                        RadiusBottomRight: =11
+                        RadiusTopLeft: =2
+                        RadiusTopRight: =2
+                        RadiusBottomLeft: =2
+                        RadiusBottomRight: =2
                         OnSelect: =false
                   - tagLgOk:
                       Control: Classic/Button@2.2.0
@@ -895,13 +895,13 @@
                         Font: =fnt
                         Size: =9
                         FontWeight: =FontWeight.Semibold
-                        Fill: =ColorValue("#EDF3EC")
-                        Color: =ColorValue("#346538")
+                        Fill: =ColorValue("#EBFBEE")
+                        Color: =ColorValue("#1E6B2E")
                         BorderThickness: =0
-                        RadiusTopLeft: =11
-                        RadiusTopRight: =11
-                        RadiusBottomLeft: =11
-                        RadiusBottomRight: =11
+                        RadiusTopLeft: =2
+                        RadiusTopRight: =2
+                        RadiusBottomLeft: =2
+                        RadiusBottomRight: =2
                         OnSelect: =false
                   - tagLgDone:
                       Control: Classic/Button@2.2.0
@@ -915,13 +915,13 @@
                         Font: =fnt
                         Size: =9
                         FontWeight: =FontWeight.Semibold
-                        Fill: =ColorValue("#E1F3FE")
-                        Color: =ColorValue("#1F6C9F")
+                        Fill: =ColorValue("#E7F5FF")
+                        Color: =ColorValue("#1864AB")
                         BorderThickness: =0
-                        RadiusTopLeft: =11
-                        RadiusTopRight: =11
-                        RadiusBottomLeft: =11
-                        RadiusBottomRight: =11
+                        RadiusTopLeft: =2
+                        RadiusTopRight: =2
+                        RadiusBottomLeft: =2
+                        RadiusBottomRight: =2
                         OnSelect: =false
                   - tagLgNo:
                       Control: Classic/Button@2.2.0
@@ -935,13 +935,13 @@
                         Font: =fnt
                         Size: =9
                         FontWeight: =FontWeight.Semibold
-                        Fill: =ColorValue("#EFEFED")
+                        Fill: =ColorValue("#F1F3F5")
                         Color: =cInk3
                         BorderThickness: =0
-                        RadiusTopLeft: =11
-                        RadiusTopRight: =11
-                        RadiusBottomLeft: =11
-                        RadiusBottomRight: =11
+                        RadiusTopLeft: =2
+                        RadiusTopRight: =2
+                        RadiusBottomLeft: =2
+                        RadiusBottomRight: =2
                         OnSelect: =false
                   - tagLgBlock:
                       Control: Classic/Button@2.2.0
@@ -958,10 +958,10 @@
                         Fill: =cSoft
                         Color: =cInk2
                         BorderThickness: =0
-                        RadiusTopLeft: =11
-                        RadiusTopRight: =11
-                        RadiusBottomLeft: =11
-                        RadiusBottomRight: =11
+                        RadiusTopLeft: =2
+                        RadiusTopRight: =2
+                        RadiusBottomLeft: =2
+                        RadiusBottomRight: =2
                         OnSelect: =false
                   - lblCalLegend2:
                       Control: Label@2.5.1
@@ -985,168 +985,230 @@
       Y: =0
       Width: =sw
       Height: =56
-      Fill: =cSurface
+      Fill: =cHeader
 - hdrCLine:
     Control: Rectangle@2.3.0
     Properties:
       X: =0
-      Y: =55
+      Y: =52
       Width: =sw
-      Height: =1
-      Fill: =cLine
+      Height: =4
+      Fill: =cBrand
 - hdrCMark:
     Control: Label@2.5.1
     Properties:
       Text: ="TDL"
       X: =ox + 24
-      Y: =16
-      Width: =24
-      Height: =24
+      Y: =12
+      Width: =46
+      Height: =30
+      Font: =fnt
+      Size: =16
+      Color: =cSurface
+      FontWeight: =FontWeight.Bold
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+- hdrCMarkLab:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="LAB"
+      X: =ox + 70
+      Y: =24
+      Width: =26
+      Height: =14
       Font: =fnt
       Size: =7
       Color: =cSurface
+      FontWeight: =FontWeight.Bold
       PaddingLeft: =0
       PaddingRight: =0
       PaddingTop: =0
       PaddingBottom: =0
-      FontWeight: =FontWeight.Bold
-      Align: =Align.Center
-      Fill: =cBrand
 - hdrCTitle:
     Control: Label@2.5.1
     Properties:
-      Text: ="TDL 방문 예약"
-      X: =ox + 58
+      Text: ="방문 예약"
+      X: =ox + 104
       Y: =16
-      Width: =200
+      Width: =96
       Height: =24
       Font: =fnt
-      Size: =12
-      Color: =cInk
+      Size: =11
+      Color: =RGBA(255, 255, 255, 0.85)
+      FontWeight: =FontWeight.Semibold
       PaddingLeft: =0
       PaddingRight: =0
       PaddingTop: =0
       PaddingBottom: =0
-      FontWeight: =FontWeight.Semibold
 - hdrCNavBook:
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="방문 신청"
-      X: =ox + pw / 2 - 163
+      X: =ox + 210
       Y: =12
-      Width: =96
-      Height: =32
+      Width: =92
+      Height: =40
       OnSelect: =Navigate(scrBook, ScreenTransition.None)
       Font: =fnt
       Size: =10.5
       FontWeight: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, FontWeight.Semibold, FontWeight.Normal)
-      Fill: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cSoft, Color.Transparent)
-      Color: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cInk, cInk2)
-      HoverFill: =cSoft
-      HoverColor: =cInk
-      PressedFill: =cSoft
-      PressedColor: =cInk
+      Fill: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cInk, cSurface)
       BorderThickness: =0
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
       Visible: =true
 - hdrCNavMy:
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="내 신청"
-      X: =ox + pw / 2 - 59
+      X: =ox + 304
       Y: =12
-      Width: =96
-      Height: =32
+      Width: =92
+      Height: =40
       OnSelect: =Navigate(scrMy, ScreenTransition.None)
       Font: =fnt
       Size: =10.5
       FontWeight: =If(App.ActiveScreen = scrMy, FontWeight.Semibold, FontWeight.Normal)
-      Fill: =If(App.ActiveScreen = scrMy, cSoft, Color.Transparent)
-      Color: =If(App.ActiveScreen = scrMy, cInk, cInk2)
-      HoverFill: =cSoft
-      HoverColor: =cInk
-      PressedFill: =cSoft
-      PressedColor: =cInk
+      Fill: =If(App.ActiveScreen = scrMy, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrMy, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrMy, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrMy, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrMy, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrMy, cInk, cSurface)
       BorderThickness: =0
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =true
+- hdrCNavGuest:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="방명록"
+      X: =ox + 398
+      Y: =12
+      Width: =92
+      Height: =40
+      OnSelect: =Navigate(scrGuest, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrGuest, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrGuest, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrGuest, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrGuest, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrGuest, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrGuest, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrGuest, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
       Visible: =true
 - hdrCNavAdmin:
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="관리자"
-      X: =ox + pw / 2 + 45
+      X: =ox + 492
       Y: =12
-      Width: =96
-      Height: =32
+      Width: =92
+      Height: =40
       OnSelect: =Navigate(scrAdmin, ScreenTransition.None)
       Font: =fnt
       Size: =10.5
       FontWeight: =If(App.ActiveScreen = scrAdmin, FontWeight.Semibold, FontWeight.Normal)
-      Fill: =If(App.ActiveScreen = scrAdmin, cSoft, Color.Transparent)
-      Color: =If(App.ActiveScreen = scrAdmin, cInk, cInk2)
-      HoverFill: =cSoft
-      HoverColor: =cInk
-      PressedFill: =cSoft
-      PressedColor: =cInk
+      Fill: =If(App.ActiveScreen = scrAdmin, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrAdmin, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrAdmin, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrAdmin, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrAdmin, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrAdmin, cInk, cSurface)
       BorderThickness: =0
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
       Visible: =!IsBlank(gAdminSite)
 - hdrCNavCal:
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="달력"
-      X: =ox + pw / 2 + 149
+      X: =ox + 586
       Y: =12
-      Width: =96
-      Height: =32
+      Width: =92
+      Height: =40
       OnSelect: =Navigate(scrCalendar, ScreenTransition.None)
       Font: =fnt
       Size: =10.5
       FontWeight: =If(App.ActiveScreen = scrCalendar, FontWeight.Semibold, FontWeight.Normal)
-      Fill: =If(App.ActiveScreen = scrCalendar, cSoft, Color.Transparent)
-      Color: =If(App.ActiveScreen = scrCalendar, cInk, cInk2)
-      HoverFill: =cSoft
-      HoverColor: =cInk
-      PressedFill: =cSoft
-      PressedColor: =cInk
+      Fill: =If(App.ActiveScreen = scrCalendar, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrCalendar, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrCalendar, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrCalendar, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrCalendar, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrCalendar, cInk, cSurface)
       BorderThickness: =0
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
       Visible: =!IsBlank(gAdminSite)
 - hdrCNavStats:
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="통계"
-      X: =ox + pw / 2 + 253
+      X: =ox + 680
       Y: =12
-      Width: =96
-      Height: =32
+      Width: =92
+      Height: =40
       OnSelect: =Navigate(scrStats, ScreenTransition.None)
       Font: =fnt
       Size: =10.5
       FontWeight: =If(App.ActiveScreen = scrStats, FontWeight.Semibold, FontWeight.Normal)
-      Fill: =If(App.ActiveScreen = scrStats, cSoft, Color.Transparent)
-      Color: =If(App.ActiveScreen = scrStats, cInk, cInk2)
-      HoverFill: =cSoft
-      HoverColor: =cInk
-      PressedFill: =cSoft
-      PressedColor: =cInk
+      Fill: =If(App.ActiveScreen = scrStats, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrStats, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrStats, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrStats, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrStats, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrStats, cInk, cSurface)
       BorderThickness: =0
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =!IsBlank(gAdminSite)
+- hdrCNavGuestAdmin:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="방명록 관리"
+      X: =ox + 774
+      Y: =12
+      Width: =108
+      Height: =40
+      OnSelect: =Navigate(scrGuestAdmin, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrGuestAdmin, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrGuestAdmin, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrGuestAdmin, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrGuestAdmin, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrGuestAdmin, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrGuestAdmin, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrGuestAdmin, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
       Visible: =!IsBlank(gAdminSite)
 - hdrCUser:
     Control: Label@2.5.1
@@ -1158,7 +1220,7 @@
       Height: =20
       Font: =fnt
       Size: =9.75
-      Color: =cInk2
+      Color: =RGBA(255, 255, 255, 0.7)
       PaddingLeft: =0
       PaddingRight: =0
       PaddingTop: =0

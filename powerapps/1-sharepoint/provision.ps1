@@ -40,7 +40,8 @@ New-ListWithFields 'VisitRequests' (@(
     @('Language','Text'),@('Interpreter','Text'),@('InterpreterLanguage','Text'),
     @('HostName','Text'),@('HostTitle','Text'),@('HostDivision','Text'),@('HostOrg','Text'),@('HostPhone','Text'),
     @('HostEmail','Text'),@('ApplicantEmail','Text'),@('HostComment','Note'),
-    @('ExpectedHeadcount','Number'),@('AttendeeCount','Number'),@('FormsLink','Note'),@('AdminMemo','Note'),@('ConsentAt','DateTime')
+    @('ExpectedHeadcount','Number'),@('AttendeeCount','Number'),@('FormsLink','Note'),@('AdminMemo','Note'),@('ConsentAt','DateTime'),
+    @('FeedbackMailAt','DateTime')
 ))
 
 New-ListWithFields 'VisitAttendees' @(
@@ -57,9 +58,21 @@ New-ListWithFields 'CenterGuides' @(
     @('Address','Text'),@('MapUrl','Text'),@('MapImageUrl','Text'),@('Parking','Text'),@('Meeting','Text'),@('MeetingTours','Text'),@('ArriveBefore','Number')
 )
 
+# 방명록 원본 (실명 · 실제 소속, 관리자만). Title = 이름. 웹은 guestbook 시트
+New-ListWithFields 'Guestbook' @(
+    @('Company','Text'),@('Team','Text'),@('Role','Text'),@('Rating','Number'),@('Message','Note'),@('Tour','Text'),
+    @('Hidden','Text'),@('ConsentAt','DateTime'),@('Source','Text'),@('RequestNo','Text')
+)
+# [PA 전용] 방명록 공개용 (가명 값만, 전 직원 읽기). Title = 원본 Guestbook 의 ID. 웹은 서버가 가명 값만 내려 줌
+New-ListWithFields 'GuestbookPublic' @(
+    @('DisplayName','Text'),@('DisplayCompany','Text'),@('DisplayTeam','Text'),@('Role','Text'),@('Rating','Number'),
+    @('Message','Note'),@('Tour','Text'),@('WrittenAt','DateTime')
+)
+
 # 자주 거르는 열에 인덱스 (목록이 커져도 빠르게)
 foreach ($pair in @(@('VisitRequests','Title'),@('VisitRequests','ApplicantEmail'),@('VisitRequests','VisitDate'),
-                    @('VisitAttendees','RequestNo'),@('TourBusy','MonthKey'),@('TourBusy','DateKey'),@('TourBusy','Title'))) {
+                    @('VisitAttendees','RequestNo'),@('TourBusy','MonthKey'),@('TourBusy','DateKey'),@('TourBusy','Title'),
+                    @('GuestbookPublic','Title'),@('GuestbookPublic','WrittenAt'))) {
     $field = Get-PnPField -List $pair[0] -Identity $pair[1]
     $field.Indexed = $true; $field.Update()
 }
@@ -81,5 +94,14 @@ foreach ($pair in @(@('VisitRequests', 2, 2), @('TourBusy', 1, 2))) {
     $list.Update()
 }
 Invoke-PnPQuery
+
+# 방명록 원본은 관리자만 (VisitAttendees 와 같은 방식). 작성은 흐름이 흐름 소유자 권한으로 저장하므로 작성자에게 권한이 없어도 된다.
+Set-PnPList -Identity 'Guestbook' -BreakRoleInheritance -CopyRoleAssignments:$false
+Set-PnPListPermission -Identity 'Guestbook' -Group $owners.Title -AddRole 'Full Control'
+# 방명록 공개용은 모두 읽기, 고치기는 관리자(소유자)만
+Set-PnPList -Identity 'GuestbookPublic' -BreakRoleInheritance -CopyRoleAssignments:$true
+$members = Get-PnPGroup -AssociatedMemberGroup
+Set-PnPListPermission -Identity 'GuestbookPublic' -Group $members.Title -RemoveRole 'Edit' -AddRole 'Read'
+Write-Host "Guestbook: 소유자 그룹만, GuestbookPublic: 구성원은 읽기만 하도록 바꿨습니다."
 
 Write-Host '완료'

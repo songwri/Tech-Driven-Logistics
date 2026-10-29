@@ -47,5 +47,19 @@ Set(gCalTour, "");
 Set(gOpenId, Blank());
 Set(gBlockDate, Blank());
 
+// 방명록 (scrGuest · scrGuestAdmin)
+Set(gGbWriting, false);
+Set(gGbSending, false);
+Set(gGbTried, false);
+Set(gGbDetail, false);
+Set(gGbTour, "");
+Set(gGbRating, 0);
+Set(gGbOffset, 0);
+Set(gGbPlay, true);
+Set(gGbFresh, "");
+Set(gGbAdmTour, "all");
+Set(gGbAdmFilter, "all");
+Set(gGbConfirmId, 0);
+
 // 이번 달 예약 점유 · 막힌 일정 (개인정보 없음)
 ClearCollect(colBusy, Filter(TourBusy, MonthKey = Text(gMonth, "yyyy-mm")))

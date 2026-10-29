@@ -63,7 +63,7 @@
                   OnSelect: =false
                   Font: =fnt
                   Size: =9
-                  Fill: =If(gStep = 1, cPrimary, gStep > 1, cSoft, cSurface)
+                  Fill: =If(gStep = 1, cPrimary, gStep > 1, cSel, cSurface)
                   Color: =If(gStep = 1, cSurface, cInk2)
                   BorderColor: =If(gStep = 1, cPrimary, cLine)
                   BorderThickness: =1
@@ -99,7 +99,7 @@
                   OnSelect: =false
                   Font: =fnt
                   Size: =9
-                  Fill: =If(gStep = 2, cPrimary, gStep > 2, cSoft, cSurface)
+                  Fill: =If(gStep = 2, cPrimary, gStep > 2, cSel, cSurface)
                   Color: =If(gStep = 2, cSurface, cInk2)
                   BorderColor: =If(gStep = 2, cPrimary, cLine)
                   BorderThickness: =1
@@ -135,7 +135,7 @@
                   OnSelect: =false
                   Font: =fnt
                   Size: =9
-                  Fill: =If(gStep = 3, cPrimary, gStep > 3, cSoft, cSurface)
+                  Fill: =If(gStep = 3, cPrimary, gStep > 3, cSel, cSurface)
                   Color: =If(gStep = 3, cSurface, cInk2)
                   BorderColor: =If(gStep = 3, cPrimary, cLine)
                   BorderThickness: =1
@@ -171,10 +171,10 @@
                   BorderColor: =cLine
                   BorderThickness: =1
                   DropShadow: =DropShadow.None
-                  RadiusTopLeft: =8
-                  RadiusTopRight: =8
-                  RadiusBottomLeft: =8
-                  RadiusBottomRight: =8
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
                   Visible: =gStep = 1
                 Children:
                   - lblToursTitle:
@@ -236,16 +236,16 @@
                               Width: =376 + 400 * (kx - 1)
                               Height: =80
                               OnSelect: =Select(Parent)
-                              Fill: =If(ThisItem.Id = gTour.Id, cSoft, cSurface)
+                              Fill: =If(ThisItem.Id = gTour.Id, cSel, cSurface)
                               HoverFill: =cSoft
                               PressedFill: =cSoft
-                              BorderColor: =If(ThisItem.Id = gTour.Id, cInk, cLine)
+                              BorderColor: =If(ThisItem.Id = gTour.Id, cBrand, cLine)
                               HoverBorderColor: =cInk3
                               BorderThickness: =1
-                              RadiusTopLeft: =6
-                              RadiusTopRight: =6
-                              RadiusBottomLeft: =6
-                              RadiusBottomRight: =6
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
                         - rctTourColor:
                             Control: Rectangle@2.3.0
                             Properties:
@@ -300,13 +300,13 @@
                               Font: =fnt
                               Size: =9
                               FontWeight: =FontWeight.Semibold
-                              Fill: =ColorValue("#EFEFED")
-                              Color: =ColorValue("#5F5E5B")
+                              Fill: =ColorValue("#F1F3F5")
+                              Color: =ColorValue("#6C757D")
                               BorderThickness: =0
-                              RadiusTopLeft: =11
-                              RadiusTopRight: =11
-                              RadiusBottomLeft: =11
-                              RadiusBottomRight: =11
+                              RadiusTopLeft: =2
+                              RadiusTopRight: =2
+                              RadiusBottomLeft: =2
+                              RadiusBottomRight: =2
                               OnSelect: =false
                               Visible: =ThisItem.Multi
             - conCal:
@@ -321,10 +321,10 @@
                   BorderColor: =cLine
                   BorderThickness: =1
                   DropShadow: =DropShadow.None
-                  RadiusTopLeft: =8
-                  RadiusTopRight: =8
-                  RadiusBottomLeft: =8
-                  RadiusBottomRight: =8
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
                   Visible: =gStep = 1
                 Children:
                   - lblCalTitle:
@@ -374,10 +374,10 @@
                         Font: =fnt
                         Size: =10.5
                         FontWeight: =FontWeight.Semibold
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                         Fill: =cSurface
                         Color: =cInk
                         HoverFill: =cSoft
@@ -405,10 +405,10 @@
                         Font: =fnt
                         Size: =10.5
                         FontWeight: =FontWeight.Semibold
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                         Fill: =cSurface
                         Color: =cInk
                         HoverFill: =cSoft
@@ -514,10 +514,10 @@
                               PressedFill: =If((!IsBlank(gDate) && ThisItem.Key = Text(gDate, "yyyy-mm-dd")), cPrimaryHover, cSoft)
                               BorderColor: =If((ThisItem.Open && ThisItem.Free > 0) && !(!IsBlank(gDate) && ThisItem.Key = Text(gDate, "yyyy-mm-dd")), cLine, Color.Transparent)
                               BorderThickness: =1
-                              RadiusTopLeft: =6
-                              RadiusTopRight: =6
-                              RadiusBottomLeft: =6
-                              RadiusBottomRight: =6
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
                         - lblDayNum:
                             Control: Label@2.5.1
                             Properties:
@@ -569,10 +569,10 @@
                         Fill: =cGreenBg
                         Color: =cGreen
                         BorderThickness: =0
-                        RadiusTopLeft: =11
-                        RadiusTopRight: =11
-                        RadiusBottomLeft: =11
-                        RadiusBottomRight: =11
+                        RadiusTopLeft: =2
+                        RadiusTopRight: =2
+                        RadiusBottomLeft: =2
+                        RadiusBottomRight: =2
                         OnSelect: =false
                   - lblLegendOk:
                       Control: Label@2.5.1
@@ -604,10 +604,10 @@
                         Fill: =cRedBg
                         Color: =cRed
                         BorderThickness: =0
-                        RadiusTopLeft: =11
-                        RadiusTopRight: =11
-                        RadiusBottomLeft: =11
-                        RadiusBottomRight: =11
+                        RadiusTopLeft: =2
+                        RadiusTopRight: =2
+                        RadiusBottomLeft: =2
+                        RadiusBottomRight: =2
                         OnSelect: =false
                   - lblLegendFull:
                       Control: Label@2.5.1
@@ -651,10 +651,10 @@
                   BorderColor: =cLine
                   BorderThickness: =1
                   DropShadow: =DropShadow.None
-                  RadiusTopLeft: =8
-                  RadiusTopRight: =8
-                  RadiusBottomLeft: =8
-                  RadiusBottomRight: =8
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
                   Visible: =gStep = 1
                 Children:
                   - lblSlotsTitle:
@@ -721,15 +721,15 @@
                               Width: =342 + 366 * (kx - 1)
                               Height: =84
                               OnSelect: =Select(Parent)
-                              Fill: =If(ThisItem.Busy, cSoft, (!IsBlank(gSlot) && gSlot.Slot = ThisItem.Slot), cSoft, cSurface)
+                              Fill: =If(ThisItem.Busy, cSoft, (!IsBlank(gSlot) && gSlot.Slot = ThisItem.Slot), cSel, cSurface)
                               HoverFill: =cSoft
                               PressedFill: =cSoft
-                              BorderColor: =If((!IsBlank(gSlot) && gSlot.Slot = ThisItem.Slot), cInk, cLine)
+                              BorderColor: =If((!IsBlank(gSlot) && gSlot.Slot = ThisItem.Slot), cBrand, cLine)
                               BorderThickness: =1
-                              RadiusTopLeft: =6
-                              RadiusTopRight: =6
-                              RadiusBottomLeft: =6
-                              RadiusBottomRight: =6
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
                         - lblSlotShow:
                             Control: Label@2.5.1
                             Properties:
@@ -778,10 +778,10 @@
                               Fill: =If(ThisItem.Busy, cRedBg, cGreenBg)
                               Color: =If(ThisItem.Busy, cRed, cGreen)
                               BorderThickness: =0
-                              RadiusTopLeft: =11
-                              RadiusTopRight: =11
-                              RadiusBottomLeft: =11
-                              RadiusBottomRight: =11
+                              RadiusTopLeft: =2
+                              RadiusTopRight: =2
+                              RadiusBottomLeft: =2
+                              RadiusBottomRight: =2
                               OnSelect: =false
                   - rctPicked:
                       Control: Rectangle@2.3.0
@@ -849,10 +849,10 @@
                   BorderColor: =cLine
                   BorderThickness: =1
                   DropShadow: =DropShadow.None
-                  RadiusTopLeft: =8
-                  RadiusTopRight: =8
-                  RadiusBottomLeft: =8
-                  RadiusBottomRight: =8
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
                   Visible: =gStep = 2
                 Children:
                   - lblHostTitle:
@@ -920,10 +920,10 @@
                         BorderThickness: =1
                         FocusedBorderThickness: =1
                         PaddingLeft: =10
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                   - lblHostTitle2:
                       Control: Label@2.5.1
                       Properties:
@@ -958,10 +958,10 @@
                         BorderThickness: =1
                         FocusedBorderThickness: =1
                         PaddingLeft: =10
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                   - lblHostDivision:
                       Control: Label@2.5.1
                       Properties:
@@ -996,10 +996,10 @@
                         BorderThickness: =1
                         FocusedBorderThickness: =1
                         PaddingLeft: =10
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                   - lblHostOrg:
                       Control: Label@2.5.1
                       Properties:
@@ -1034,10 +1034,10 @@
                         BorderThickness: =1
                         FocusedBorderThickness: =1
                         PaddingLeft: =10
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                   - lblHostPhone:
                       Control: Label@2.5.1
                       Properties:
@@ -1072,10 +1072,10 @@
                         BorderThickness: =1
                         FocusedBorderThickness: =1
                         PaddingLeft: =10
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                   - lblHostEmail:
                       Control: Label@2.5.1
                       Properties:
@@ -1110,10 +1110,10 @@
                         BorderThickness: =1
                         FocusedBorderThickness: =1
                         PaddingLeft: =10
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                   - rctHostDivider:
                       Control: Rectangle@2.3.0
                       Properties:
@@ -1173,10 +1173,10 @@
                         BorderColor: =If(gCategory = "internal", cPrimary, cLine)
                         HoverBorderColor: =If(gCategory = "internal", cPrimary, cInk3)
                         BorderThickness: =1
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                   - btnCatExternal:
                       Control: Classic/Button@2.2.0
                       Properties:
@@ -1197,10 +1197,10 @@
                         BorderColor: =If(gCategory = "external", cPrimary, cLine)
                         HoverBorderColor: =If(gCategory = "external", cPrimary, cInk3)
                         BorderThickness: =1
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                   - lblClientType:
                       Control: Label@2.5.1
                       Properties:
@@ -1237,10 +1237,10 @@
                         BorderColor: =If(gClientType = "existing", cPrimary, cLine)
                         HoverBorderColor: =If(gClientType = "existing", cPrimary, cInk3)
                         BorderThickness: =1
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                         Visible: =gCategory = "external"
                   - btnClientNew:
                       Control: Classic/Button@2.2.0
@@ -1262,10 +1262,10 @@
                         BorderColor: =If(gClientType = "new", cPrimary, cLine)
                         HoverBorderColor: =If(gClientType = "new", cPrimary, cInk3)
                         BorderThickness: =1
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                         Visible: =gCategory = "external"
                   - lblCompany:
                       Control: Label@2.5.1
@@ -1302,10 +1302,10 @@
                         BorderThickness: =1
                         FocusedBorderThickness: =1
                         PaddingLeft: =10
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                         Visible: =gCategory = "external"
                   - lblInternalCompany:
                       Control: Label@2.5.1
@@ -1357,10 +1357,10 @@
                         BorderThickness: =1
                         FocusedBorderThickness: =1
                         PaddingLeft: =10
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                         Format: =TextFormat.Number
                   - lblHeadcountHint:
                       Control: Label@2.5.1
@@ -1389,10 +1389,10 @@
                   BorderColor: =cLine
                   BorderThickness: =1
                   DropShadow: =DropShadow.None
-                  RadiusTopLeft: =8
-                  RadiusTopRight: =8
-                  RadiusBottomLeft: =8
-                  RadiusBottomRight: =8
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
                   Visible: =gStep = 2
                 Children:
                   - lblPurposeTitle:
@@ -1456,18 +1456,18 @@
                               Font: =fnt
                               Size: =9.75
                               FontWeight: =If(gIndustry = ThisItem.Value, FontWeight.Semibold, FontWeight.Normal)
-                              Fill: =If(gIndustry = ThisItem.Value, cSoft, cSurface)
+                              Fill: =If(gIndustry = ThisItem.Value, cSel, cSurface)
                               Color: =cInk
                               HoverFill: =cSoft
                               HoverColor: =cInk
                               PressedFill: =cSoft
                               PressedColor: =cInk
-                              BorderColor: =If(gIndustry = ThisItem.Value, cInk, cLine)
+                              BorderColor: =If(gIndustry = ThisItem.Value, cBrand, cLine)
                               BorderThickness: =1
-                              RadiusTopLeft: =6
-                              RadiusTopRight: =6
-                              RadiusBottomLeft: =6
-                              RadiusBottomRight: =6
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
                   - txtIndustryEtc:
                       Control: Classic/TextInput@2.3.2
                       Properties:
@@ -1487,10 +1487,10 @@
                         BorderThickness: =1
                         FocusedBorderThickness: =1
                         PaddingLeft: =10
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                         Visible: =gCategory = "external" && gIndustry = "기타"
                   - lblPurpose:
                       Control: Label@2.5.1
@@ -1535,18 +1535,18 @@
                               Font: =fnt
                               Size: =9
                               FontWeight: =If(gPurpose = ThisItem.Value, FontWeight.Semibold, FontWeight.Normal)
-                              Fill: =If(gPurpose = ThisItem.Value, cSoft, cSurface)
+                              Fill: =If(gPurpose = ThisItem.Value, cSel, cSurface)
                               Color: =cInk
                               HoverFill: =cSoft
                               HoverColor: =cInk
                               PressedFill: =cSoft
                               PressedColor: =cInk
-                              BorderColor: =If(gPurpose = ThisItem.Value, cInk, cLine)
+                              BorderColor: =If(gPurpose = ThisItem.Value, cBrand, cLine)
                               BorderThickness: =1
-                              RadiusTopLeft: =6
-                              RadiusTopRight: =6
-                              RadiusBottomLeft: =6
-                              RadiusBottomRight: =6
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
                   - txtPurposeEtc:
                       Control: Classic/TextInput@2.3.2
                       Properties:
@@ -1566,10 +1566,10 @@
                         BorderThickness: =1
                         FocusedBorderThickness: =1
                         PaddingLeft: =10
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                         Visible: =gPurpose = "기타"
                   - lblLang:
                       Control: Label@2.5.1
@@ -1622,10 +1622,10 @@
                               BorderColor: =If(gLang = ThisItem.Id, cPrimary, cLine)
                               HoverBorderColor: =If(gLang = ThisItem.Id, cPrimary, cInk3)
                               BorderThickness: =1
-                              RadiusTopLeft: =6
-                              RadiusTopRight: =6
-                              RadiusBottomLeft: =6
-                              RadiusBottomRight: =6
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
                   - chkInterp:
                       Control: Classic/CheckBox@2.1.0
                       Properties:
@@ -1661,10 +1661,10 @@
                         BorderThickness: =1
                         FocusedBorderThickness: =1
                         PaddingLeft: =10
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                         Visible: =chkInterp.Value
                   - lblComment:
                       Control: Label@2.5.1
@@ -1700,10 +1700,10 @@
                         BorderThickness: =1
                         FocusedBorderThickness: =1
                         PaddingLeft: =10
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                         Mode: =TextMode.MultiLine
             - conSummary:
                 Control: GroupContainer@1.3.0
@@ -1717,10 +1717,10 @@
                   BorderColor: =cLine
                   BorderThickness: =1
                   DropShadow: =DropShadow.None
-                  RadiusTopLeft: =8
-                  RadiusTopRight: =8
-                  RadiusBottomLeft: =8
-                  RadiusBottomRight: =8
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
                   Visible: =gStep = 3
                 Children:
                   - lblSummaryTitle:
@@ -1836,10 +1836,10 @@
                   BorderColor: =cLine
                   BorderThickness: =1
                   DropShadow: =DropShadow.None
-                  RadiusTopLeft: =8
-                  RadiusTopRight: =8
-                  RadiusBottomLeft: =8
-                  RadiusBottomRight: =8
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
                   Visible: =gStep = 3
                 Children:
                   - lblFormsTitle:
@@ -1997,10 +1997,10 @@
                         BorderThickness: =1
                         FocusedBorderThickness: =1
                         PaddingLeft: =10
-                        RadiusTopLeft: =6
-                        RadiusTopRight: =6
-                        RadiusBottomLeft: =6
-                        RadiusBottomRight: =6
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
                         Mode: =TextMode.MultiLine
                   - lblAttendeeHint:
                       Control: Label@2.5.1
@@ -2065,168 +2065,230 @@
       Y: =0
       Width: =sw
       Height: =56
-      Fill: =cSurface
+      Fill: =cHeader
 - hdrBLine:
     Control: Rectangle@2.3.0
     Properties:
       X: =0
-      Y: =55
+      Y: =52
       Width: =sw
-      Height: =1
-      Fill: =cLine
+      Height: =4
+      Fill: =cBrand
 - hdrBMark:
     Control: Label@2.5.1
     Properties:
       Text: ="TDL"
       X: =ox + 24
-      Y: =16
-      Width: =24
-      Height: =24
+      Y: =12
+      Width: =46
+      Height: =30
+      Font: =fnt
+      Size: =16
+      Color: =cSurface
+      FontWeight: =FontWeight.Bold
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+- hdrBMarkLab:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="LAB"
+      X: =ox + 70
+      Y: =24
+      Width: =26
+      Height: =14
       Font: =fnt
       Size: =7
       Color: =cSurface
+      FontWeight: =FontWeight.Bold
       PaddingLeft: =0
       PaddingRight: =0
       PaddingTop: =0
       PaddingBottom: =0
-      FontWeight: =FontWeight.Bold
-      Align: =Align.Center
-      Fill: =cBrand
 - hdrBTitle:
     Control: Label@2.5.1
     Properties:
-      Text: ="TDL 방문 예약"
-      X: =ox + 58
+      Text: ="방문 예약"
+      X: =ox + 104
       Y: =16
-      Width: =200
+      Width: =96
       Height: =24
       Font: =fnt
-      Size: =12
-      Color: =cInk
+      Size: =11
+      Color: =RGBA(255, 255, 255, 0.85)
+      FontWeight: =FontWeight.Semibold
       PaddingLeft: =0
       PaddingRight: =0
       PaddingTop: =0
       PaddingBottom: =0
-      FontWeight: =FontWeight.Semibold
 - hdrBNavBook:
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="방문 신청"
-      X: =ox + pw / 2 - 163
+      X: =ox + 210
       Y: =12
-      Width: =96
-      Height: =32
+      Width: =92
+      Height: =40
       OnSelect: =Navigate(scrBook, ScreenTransition.None)
       Font: =fnt
       Size: =10.5
       FontWeight: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, FontWeight.Semibold, FontWeight.Normal)
-      Fill: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cSoft, Color.Transparent)
-      Color: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cInk, cInk2)
-      HoverFill: =cSoft
-      HoverColor: =cInk
-      PressedFill: =cSoft
-      PressedColor: =cInk
+      Fill: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cInk, cSurface)
       BorderThickness: =0
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
       Visible: =true
 - hdrBNavMy:
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="내 신청"
-      X: =ox + pw / 2 - 59
+      X: =ox + 304
       Y: =12
-      Width: =96
-      Height: =32
+      Width: =92
+      Height: =40
       OnSelect: =Navigate(scrMy, ScreenTransition.None)
       Font: =fnt
       Size: =10.5
       FontWeight: =If(App.ActiveScreen = scrMy, FontWeight.Semibold, FontWeight.Normal)
-      Fill: =If(App.ActiveScreen = scrMy, cSoft, Color.Transparent)
-      Color: =If(App.ActiveScreen = scrMy, cInk, cInk2)
-      HoverFill: =cSoft
-      HoverColor: =cInk
-      PressedFill: =cSoft
-      PressedColor: =cInk
+      Fill: =If(App.ActiveScreen = scrMy, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrMy, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrMy, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrMy, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrMy, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrMy, cInk, cSurface)
       BorderThickness: =0
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =true
+- hdrBNavGuest:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="방명록"
+      X: =ox + 398
+      Y: =12
+      Width: =92
+      Height: =40
+      OnSelect: =Navigate(scrGuest, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrGuest, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrGuest, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrGuest, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrGuest, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrGuest, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrGuest, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrGuest, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
       Visible: =true
 - hdrBNavAdmin:
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="관리자"
-      X: =ox + pw / 2 + 45
+      X: =ox + 492
       Y: =12
-      Width: =96
-      Height: =32
+      Width: =92
+      Height: =40
       OnSelect: =Navigate(scrAdmin, ScreenTransition.None)
       Font: =fnt
       Size: =10.5
       FontWeight: =If(App.ActiveScreen = scrAdmin, FontWeight.Semibold, FontWeight.Normal)
-      Fill: =If(App.ActiveScreen = scrAdmin, cSoft, Color.Transparent)
-      Color: =If(App.ActiveScreen = scrAdmin, cInk, cInk2)
-      HoverFill: =cSoft
-      HoverColor: =cInk
-      PressedFill: =cSoft
-      PressedColor: =cInk
+      Fill: =If(App.ActiveScreen = scrAdmin, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrAdmin, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrAdmin, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrAdmin, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrAdmin, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrAdmin, cInk, cSurface)
       BorderThickness: =0
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
       Visible: =!IsBlank(gAdminSite)
 - hdrBNavCal:
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="달력"
-      X: =ox + pw / 2 + 149
+      X: =ox + 586
       Y: =12
-      Width: =96
-      Height: =32
+      Width: =92
+      Height: =40
       OnSelect: =Navigate(scrCalendar, ScreenTransition.None)
       Font: =fnt
       Size: =10.5
       FontWeight: =If(App.ActiveScreen = scrCalendar, FontWeight.Semibold, FontWeight.Normal)
-      Fill: =If(App.ActiveScreen = scrCalendar, cSoft, Color.Transparent)
-      Color: =If(App.ActiveScreen = scrCalendar, cInk, cInk2)
-      HoverFill: =cSoft
-      HoverColor: =cInk
-      PressedFill: =cSoft
-      PressedColor: =cInk
+      Fill: =If(App.ActiveScreen = scrCalendar, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrCalendar, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrCalendar, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrCalendar, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrCalendar, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrCalendar, cInk, cSurface)
       BorderThickness: =0
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
       Visible: =!IsBlank(gAdminSite)
 - hdrBNavStats:
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="통계"
-      X: =ox + pw / 2 + 253
+      X: =ox + 680
       Y: =12
-      Width: =96
-      Height: =32
+      Width: =92
+      Height: =40
       OnSelect: =Navigate(scrStats, ScreenTransition.None)
       Font: =fnt
       Size: =10.5
       FontWeight: =If(App.ActiveScreen = scrStats, FontWeight.Semibold, FontWeight.Normal)
-      Fill: =If(App.ActiveScreen = scrStats, cSoft, Color.Transparent)
-      Color: =If(App.ActiveScreen = scrStats, cInk, cInk2)
-      HoverFill: =cSoft
-      HoverColor: =cInk
-      PressedFill: =cSoft
-      PressedColor: =cInk
+      Fill: =If(App.ActiveScreen = scrStats, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrStats, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrStats, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrStats, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrStats, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrStats, cInk, cSurface)
       BorderThickness: =0
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =!IsBlank(gAdminSite)
+- hdrBNavGuestAdmin:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="방명록 관리"
+      X: =ox + 774
+      Y: =12
+      Width: =108
+      Height: =40
+      OnSelect: =Navigate(scrGuestAdmin, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrGuestAdmin, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrGuestAdmin, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrGuestAdmin, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrGuestAdmin, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrGuestAdmin, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrGuestAdmin, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrGuestAdmin, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
       Visible: =!IsBlank(gAdminSite)
 - hdrBUser:
     Control: Label@2.5.1
@@ -2238,7 +2300,7 @@
       Height: =20
       Font: =fnt
       Size: =9.75
-      Color: =cInk2
+      Color: =RGBA(255, 255, 255, 0.7)
       PaddingLeft: =0
       PaddingRight: =0
       PaddingTop: =0
@@ -2287,10 +2349,10 @@
       Font: =fnt
       Size: =10.5
       FontWeight: =FontWeight.Semibold
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
       Fill: =cSurface
       Color: =cInk
       HoverFill: =cSoft
@@ -2435,10 +2497,10 @@
       Font: =fnt
       Size: =10.5
       FontWeight: =FontWeight.Semibold
-      RadiusTopLeft: =6
-      RadiusTopRight: =6
-      RadiusBottomLeft: =6
-      RadiusBottomRight: =6
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
       Fill: =cPrimary
       Color: =cSurface
       HoverFill: =cPrimaryHover
