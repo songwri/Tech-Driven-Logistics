@@ -115,6 +115,7 @@
   <button data-s="blk">일정 막기 창</button>
   <button data-s="cal">예약 달력</button>
   <button data-s="st">통계</button>
+  <button data-s="gd">가이드 배정</button>
   <button data-s="gb">방명록</button>
   <button data-s="gbw">방명록 남기기 창</button>
   <button data-s="gba">방명록 관리</button>
@@ -130,12 +131,13 @@
   <div class="abs nav" id="n2" style="left:304px">내 신청</div>
   <div class="abs nav" id="n6" style="left:398px">방명록</div>
   <!-- 관리자 메뉴 묶음: 관리자에게만 보임 -->
-  <div class="abs admz" style="left:566px;top:0;width:446px;height:52px;background:rgba(255,255,255,.07)"></div>
+  <div class="abs admz" style="left:566px;top:0;width:534px;height:52px;background:rgba(255,255,255,.07)"></div>
   <div class="abs admz" style="left:582px;top:23px;width:54px;height:18px;background:var(--brand);color:#fff;font-size:11px;font-weight:600;line-height:18px;text-align:center">관리자</div>
-  <div class="abs nav admz" id="n3" style="left:652px;width:96px">예약 관리</div>
-  <div class="abs nav admz" id="n5" style="left:748px;width:72px">달력</div>
-  <div class="abs nav admz" id="n4" style="left:820px;width:72px">통계</div>
-  <div class="abs nav admz" id="n7" style="left:892px;width:108px">방명록 관리</div>
+  <div class="abs nav admz" id="n3" style="left:652px;width:92px">예약 관리</div>
+  <div class="abs nav admz" id="n5" style="left:744px;width:68px">달력</div>
+  <div class="abs nav admz" id="n4" style="left:812px;width:68px">통계</div>
+  <div class="abs nav admz" id="n8" style="left:880px;width:100px">가이드 배정</div>
+  <div class="abs nav admz" id="n7" style="left:980px;width:108px">방명록 관리</div>
   <div class="abs user">김서연 책임 · CL운영담당</div>
 
   <!-- ============ 신청 1단계 ============ -->
@@ -428,6 +430,9 @@
   </div>
 
   <!-- ============ 예약 달력 ============ -->
+  <!-- ============ 가이드 배정 (scrGuides) ============ -->
+  <div class="screen" id="s-gd"><div id="gdroot"></div></div>
+
   <div class="screen" id="s-cal">
     <div class="abs" style="left:24px;top:72px;height:36px;line-height:36px;font-size:20px;font-weight:600">2026년 10월</div>
     <div class="abs seg" style="left:196px;top:74px;width:36px;height:32px;line-height:30px">‹</div>
@@ -701,17 +706,143 @@
       <div class="abs btn sec" style="left:1134px;top:10px;width:64px;height:30px;line-height:28px;font-size:12px;color:var(--red)">삭제</div></div>` }).join('')
     document.getElementById('gbrows').innerHTML = rows
   })()
+
+  // 가이드 배정 (scrGuides): 달력 + 배정 패널 · 주간 배정표 · 월간 M/M · 연간 M/M
+  ;(function () {
+    const R = [['이길호', '팀장', 0], ['권요한', '책임', 1], ['김대현', '책임', 1], ['박상원', '책임', 1], ['최창현', '책임', 1], ['이원식', '선임', 1], ['진호현', '선임', 1], ['도영민', '사원', 1]]
+    const TC = { lab: '#7C5CC4', combined: '#DC2626' }
+    // [날짜, 시각(Lab 구간), 투어, 업체, 인솔, 운영]
+    const V = [[7, '10:30', 'lab', 'CL전자담당 기획팀', ['김대현'], ['이원식', '도영민']], [7, '13:00', 'combined', '서진유통', ['권요한'], ['진호현', '최창현', '도영민']],
+      [12, '14:00', 'lab', '한국물류협회', ['박상원'], ['진호현']], [14, '09:30', 'combined', '오리온푸드', ['이길호', '최창현'], ['권요한', '김대현', '박상원', '이원식', '진호현', '도영민']],
+      [16, '10:30', 'lab', '미래전자', [], []], [21, '14:00', 'lab', 'CL운영담당 운영혁신팀', [], []], [26, '14:00', 'lab', 'CL전자담당 기획팀', ['김대현'], ['이원식']],
+      [28, '09:30', 'combined', '서진유통', ['권요한'], ['박상원', '도영민']], [28, '10:30', 'lab', '바른제약', [], []], [30, '14:00', 'lab', '대성전자', ['박상원'], ['최창현', '진호현']]]
+    const SEL = 5, OFF = [3, 4, 5, 9, 10, 11, 17, 18, 24, 25, 31], TODAY = 13
+    const card = (x, y, w, h, inner) => `<div class="abs card" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px">${inner}</div>`
+    const T = (x, y, txt, st = '') => `<div class="abs" style="left:${x}px;top:${y}px;${st}">${txt}</div>`
+    const navb = (x, y, t) => `<div class="abs seg" style="left:${x}px;top:${y}px;width:32px;height:32px;line-height:30px;font-weight:600;color:var(--ink2)">${t}</div>`
+    let h = ''
+    // ① 달력
+    const cw = 932 / 7
+    let cal = T(16, 14, '투어 가이드 배정', 'font-size:15px;font-weight:600;color:var(--title)') + navb(184, 10, '‹') + T(220, 16, '2026년 10월', 'width:110px;text-align:center;font-size:15px;font-weight:600') + navb(334, 10, '›')
+    cal += T(380, 18, `${V.length}건 · <b style="color:var(--brand)">인솔자 미배정 3건</b>`, 'font-size:12px;color:var(--ink2)')
+    cal += T(596, 18, '승인 · 완료된 Lab 포함 투어 · 칩을 눌러 배정', 'width:344px;text-align:right;font-size:12px;color:var(--ink3)')
+    ;['일', '월', '화', '수', '목', '금', '토'].forEach((d, i) => { cal += T(12 + i * cw, 52, d, `width:${cw}px;height:26px;line-height:26px;text-align:center;font-size:12px;font-weight:600;background:var(--bg);color:${i % 6 ? 'var(--ink)' : 'var(--ink3)'}`) })
+    for (let i = 0; i < 42; i++) {
+      const day = i - 3, x = 12 + (i % 7) * cw, y = 80 + Math.floor(i / 7) * 100, inM = day >= 1 && day <= 31, off = !inM || OFF.includes(day)
+      const dn = inM ? day : (day < 1 ? 30 + day : day - 31)
+      cal += `<div class="abs" style="left:${x}px;top:${y}px;width:${cw}px;height:100px;border:1px solid var(--line);margin:-0.5px;background:${off ? 'var(--bg)' : '#fff'}"></div>`
+      cal += `<div class="abs round" style="left:${x + 4}px;top:${y + 4}px;width:22px;height:22px;border-radius:11px;text-align:center;line-height:22px;font-size:12px;font-weight:600;${day === TODAY ? 'background:var(--brand);color:#fff' : `color:${!inM ? 'var(--ink3)' : off ? '#C77A7A' : 'var(--ink)'}`}">${dn}</div>`
+      if (!inM) continue
+      const list = V.map((v, k) => [v, k]).filter(([v]) => v[0] === day)
+      list.slice(0, list.length > 2 ? 1 : 2).forEach(([v, k], j) => {
+        const sel = k === SEL, un = v[4].length === 0
+        const bg = sel ? 'var(--ink)' : un ? 'var(--red-bg)' : '#fff', fg = sel ? '#fff' : 'var(--ink)'
+        cal += `<div class="abs" style="left:${x + 3}px;top:${y + 28 + j * 34}px;width:${cw - 6}px;height:32px;background:${bg};border:1px ${un && !sel ? 'dashed var(--brand)' : 'solid var(--line)'};border-left:4px solid ${TC[v[2]]}">
+          <div class="abs" style="left:4px;top:2px;width:${cw - 18}px;font-size:11px;font-weight:600;color:${fg};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v[1]}&nbsp; ${v[3]}</div>
+          <div class="abs" style="left:4px;top:16px;width:${cw - 18}px;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${sel ? '#fff' : un ? 'var(--brand)' : 'var(--ink2)'}">${un ? '인솔자 미배정' : v[4].join(', ') + (v[5].length ? ` + ${v[5].length}명` : '')}</div></div>`
+      })
+      if (list.length > 2) cal += T(x + 6, y + 64, `+${list.length - 1}건 더 (아래 주간 표)`, 'font-size:11px;color:var(--ink2)')
+    }
+    h += card(24, 72, 956, 696, cal)
+    // ② 배정 패널 (10/21 CL운영담당 · 작성 중)
+    const leads = ['김대현'], ops = ['이원식', '도영민']
+    let pn = T(16, 14, '배정', 'font-size:15px;font-weight:600;color:var(--title)')
+    pn += `<div class="abs" style="left:16px;top:48px;width:314px;height:74px;background:var(--soft);border-left:5px solid ${TC.lab}"></div>`
+    pn += T(30, 54, '10/21 (수) · 14:00 – 15:00', 'font-size:12px;color:var(--ink2)') + T(30, 72, 'CL운영담당 운영혁신팀', 'font-size:15px;font-weight:700') + T(30, 98, 'TDL Lab 투어 · 8명 · 투입 1타임(4시간)', 'font-size:12px;color:var(--ink2)')
+    pn += T(16, 130, '인솔자 <span style="font-weight:400;color:var(--ink2);font-size:12px">&nbsp;복수 선택</span>', 'font-size:13px;font-weight:600')
+    R.forEach((m, i) => { const on = leads.includes(m[0]); pn += `<div class="abs" style="left:16px;top:${150 + i * 28}px;width:314px;height:28px;border:1px solid var(--line);margin-top:-1px;padding-left:12px;line-height:26px;font-size:13px;${on ? 'background:var(--ink);color:#fff;font-weight:600' : 'background:#fff'}">${m[0]} ${m[1]}${on ? '<span style="float:right;margin-right:10px">✓</span>' : ''}</div>` })
+    pn += T(16, 378, '인솔자가 둘 이상이어도 됩니다 · 모두 해제하면 미배정', 'font-size:11px;color:var(--ink2)')
+    pn += T(16, 412, '운영 인원 <span style="font-weight:400;color:var(--ink2);font-size:12px">&nbsp;복수 선택</span>', 'font-size:13px;font-weight:600') + T(270, 412, '☐ 전체', 'font-size:12px;font-weight:600;color:var(--ink2)')
+    R.filter((m) => m[2]).forEach((m, i) => {
+      const isL = leads.includes(m[0]), on = ops.includes(m[0]), x = 16 + (i % 2) * 157, y = 440 + Math.floor(i / 2) * 34
+      pn += `<div class="abs" style="left:${x}px;top:${y}px;width:153px;height:30px;padding-left:8px;line-height:28px;font-size:12px;border:1px solid ${on ? 'var(--ink)' : 'var(--line)'};background:${isL ? 'var(--bg)' : on ? 'var(--soft)' : '#fff'};color:${isL ? 'var(--ink3)' : 'var(--ink)'};${on ? 'font-weight:600' : ''}">${isL ? '' : on ? '☑ ' : '☐ '}${m[0]} ${m[1]}${isL ? ' · 인솔자' : ''}</div>`
+    })
+    pn += T(16, 580, '인솔자로 고른 인원은 운영 인원에서 빠집니다 · 팀장은 인솔자만', 'font-size:11px;color:var(--ink2)')
+    pn += `<div class="abs btn sec" style="left:150px;top:646px;width:84px;height:34px;line-height:32px;font-size:13px">되돌리기</div><div class="abs btn pri" style="left:240px;top:646px;width:90px;height:34px;line-height:34px;font-size:13px">저장</div>`
+    h += card(996, 72, 346, 696, pn)
+    // ③ 주간 배정표 (10/26 ~ 11/1)
+    const wk = [[26, '월'], [27, '화'], [28, '수'], [29, '목'], [30, '금'], [31, '토'], [1, '일']], wc = (1318 - 32 - 76) / 7
+    let wb = T(16, 12, '주간 인솔 · 운영 배정', 'font-size:15px;font-weight:600;color:var(--title)')
+    wb += T(16, 40, '인솔자', 'width:46px;height:18px;line-height:18px;text-align:center;font-size:11px;font-weight:600;background:var(--ink);color:#fff')
+    wb += T(68, 40, '운영 인원', 'width:56px;height:18px;line-height:16px;text-align:center;font-size:11px;background:var(--soft);border:1px solid var(--line)')
+    wb += T(130, 40, '미배정', 'width:46px;height:18px;line-height:16px;text-align:center;font-size:11px;font-weight:600;color:var(--brand);border:1px dashed var(--brand)')
+    wb += T(186, 41, '4건 · 인솔자 미배정 1건 · 오전 · 오후는 Lab 구간 시작 시각 기준', 'font-size:12px;color:var(--ink2)')
+    wb += `<div class="abs seg on" style="left:918px;top:14px;width:72px;height:30px;line-height:28px;font-size:12px">이번 주</div><div class="abs seg" style="left:994px;top:14px;width:72px;height:30px;line-height:28px;font-size:12px">다음 주</div>`
+    wb += navb(1078, 13, '‹') + T(1114, 20, '10/26 – 11/1', 'width:150px;text-align:center;font-size:14px;font-weight:600') + navb(1268, 13, '›')
+    wk.forEach(([d, n], i) => { const off = i > 4; wb += T(92 + i * wc, 70, `${d === 1 ? 11 : 10}/${d} (${n})`, `width:${wc}px;height:40px;line-height:40px;text-align:center;font-size:13px;font-weight:600;border:1px solid var(--line);margin-left:-1px;background:${off ? 'var(--bg)' : '#fff'};color:${off ? '#C77A7A' : 'var(--ink)'}`) })
+    ;[['오전', 110], ['오후', 246], ['시간 미정', 382]].forEach(([n, y]) => { wb += T(16, y, n, `width:76px;height:136px;line-height:136px;text-align:center;font-size:${n.length > 2 ? 12 : 13}px;font-weight:600;background:var(--soft);border:1px solid var(--line);margin-top:-1px`) })
+    for (let r = 0; r < 3; r++) wk.forEach(([d], i) => {
+      const x = 92 + i * wc, y = 110 + r * 136, off = i > 4
+      wb += `<div class="abs" style="left:${x}px;top:${y}px;width:${wc}px;height:136px;border:1px solid var(--line);margin:-1px 0 0 -1px;background:${off ? 'var(--bg)' : '#fff'}"></div>`
+      const items = V.filter((v) => v[0] === d && d !== 1 && r < 2 && (r === 0 ? v[1] < '12' : v[1] >= '12'))
+      if (!items.length) { wb += T(x, y + 58, '–', `width:${wc}px;text-align:center;font-size:12px;color:var(--ink3)`); return }
+      items.forEach((v, j) => {
+        const un = !v[4].length, yy = y + 4 + j * 64
+        wb += `<div class="abs" style="left:${x + 4}px;top:${yy}px;width:${wc - 8}px;height:60px;background:#fff;border:1px solid var(--line);border-left:4px solid ${TC[v[2]]}">
+          <div class="abs" style="left:4px;top:3px;width:${wc - 20}px;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v[1]}&nbsp; ${v[3]}</div>
+          <div class="abs" style="left:4px;top:21px;max-width:${wc - 20}px;height:18px;line-height:16px;padding:0 4px;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;${un ? 'color:var(--brand);border:1px dashed var(--brand)' : 'background:var(--ink);color:#fff;line-height:18px'}">인솔&nbsp; ${un ? '미배정' : v[4].join(', ')}</div>
+          <div class="abs" style="left:4px;top:41px;width:${wc - 20}px;font-size:11px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">운영&nbsp; ${v[5].length ? v[5].join(', ') : '–'}</div></div>`
+      })
+    })
+    wb += `<div class="abs" style="left:0;top:530px;width:1316px;height:116px;background:var(--bg)"></div>` + T(16, 538, '이 주 인원별 · 근무 5일 기준 가동률', 'font-size:12px;font-weight:600;color:var(--ink2)')
+    const wv = V.filter((v) => v[0] >= 26)
+    R.forEach((m, i) => {
+      const l = wv.filter((v) => v[4].includes(m[0])).length, o = wv.filter((v) => v[5].includes(m[0])).length, x = 16 + i * 160.75
+      wb += `<div class="abs" style="left:${x}px;top:562px;width:152px;height:72px;background:#fff;border:1px solid var(--line)">${T(10, 6, `${m[0]} ${m[1]}`, 'font-size:12px;font-weight:600')}${T(10, 28, `인솔 ${l}${m[2] ? ` · 운영 ${o}` : ''}`, 'font-size:12px;color:var(--ink2)')}${T(10, 48, `${Math.round((l + o) * 4 / 40 * 100)}%`, `font-size:12px;font-weight:600;color:${l + o ? 'var(--ink)' : 'var(--ink3)'}`)}</div>`
+    })
+    h += card(24, 784, 1318, 648, wb)
+    // ④ 월간 M/M (10월: 근무일 20일 = 160시간)
+    let mm = T(16, 12, '월간 인원별 투입 (M/M) · 2026년 10월', 'font-size:15px;font-weight:600;color:var(--title)') + T(16, 38, '투어 1건 = 1타임(반일 4시간) · 근무일 20일 × 8시간 = 160시간을 1 M/M 으로 계산 · 달은 위 달력과 함께 움직임', 'font-size:12px;color:var(--ink2)')
+    mm += navb(1228, 14, '‹') + navb(1268, 14, '›')
+    const cols = [['이름', 16, 220], ['인솔', 236, 80], ['운영', 316, 80], ['합계', 396, 80], ['투입 시간', 476, 100], ['M/M', 576, 90]]
+    cols.forEach(([n, x, w], i) => { mm += T(x, 64, n, `width:${w - 12}px;height:32px;line-height:32px;font-size:12px;font-weight:600;color:var(--ink2);${i ? 'text-align:right' : ''}`) })
+    mm += `<div class="abs" style="left:16px;top:96px;width:1286px;height:1px;background:var(--line)"></div>`
+    const rows = R.map((m) => { const l = V.filter((v) => v[4].includes(m[0])).length, o = V.filter((v) => v[5].includes(m[0])).length; return [m, l, o, (l + o) * 4, (l + o) * 4 / 160] })
+    const mx = Math.max(...rows.map((r) => r[4])), f2 = (v) => (Math.round(v * 100 + 1e-9) / 100).toFixed(2)
+    rows.forEach(([m, l, o, hh, v], i) => {
+      const y = 98 + i * 34, cells = [`${m[0]} ${m[1]}`, l, m[2] ? o : '–', l + o, hh + 'h', f2(v)]
+      cells.forEach((c, j) => { mm += T(cols[j][1], y, c, `width:${cols[j][2] - 12}px;height:34px;line-height:34px;font-size:13px;${j ? 'text-align:right' : ''};${j === 0 || j === 5 ? 'font-weight:600' : ''}`) })
+      mm += `<div class="abs" style="left:696px;top:${y + 12}px;width:586px;height:10px;background:var(--soft)"><b style="display:block;height:10px;width:${v / mx * 100}%;background:#30405F"></b></div><div class="abs" style="left:16px;top:${y + 33}px;width:1286px;height:1px;background:var(--line)"></div>`
+    })
+    const tot = rows.reduce((a, r) => [a[0] + r[1], a[1] + r[2], a[2] + r[3], a[3] + r[4]], [0, 0, 0, 0])
+    mm += `<div class="abs" style="left:16px;top:372px;width:1286px;height:32px;background:var(--soft)"></div>`
+    ;['합계', tot[0], tot[1], tot[0] + tot[1], tot[2] + 'h', f2(tot[3])].forEach((c, j) => { mm += T(cols[j][1], 372, c, `width:${cols[j][2] - 12}px;height:32px;line-height:32px;font-size:13px;font-weight:600;${j ? 'text-align:right' : ''}`) })
+    h += card(24, 1448, 1318, 404, mm)
+    // ⑤ 연간 M/M
+    let yr = T(16, 12, '2026년 월별 M/M', 'font-size:15px;font-weight:600;color:var(--title)') + T(16, 38, '사람 × 월 · 값이 클수록 진하게', 'font-size:12px;color:var(--ink2)')
+    const yc = (1318 - 32 - 180 - 90) / 12
+    yr += T(16, 64, '이름', 'height:30px;line-height:30px;font-size:12px;font-weight:600;color:var(--ink2)')
+    for (let k = 1; k <= 12; k++) yr += T(196 + (k - 1) * yc, 64, `${k}월`, `width:${yc - 8}px;height:30px;line-height:30px;text-align:right;font-size:12px;font-weight:600;color:${k === 10 ? 'var(--ink)' : 'var(--ink2)'}`)
+    yr += T(196 + 12 * yc, 64, '연 합계', 'width:78px;height:30px;line-height:30px;text-align:right;font-size:12px;font-weight:600;color:var(--ink2)')
+    yr += `<div class="abs" style="left:16px;top:94px;width:1286px;height:1px;background:var(--line)"></div>`
+    const seed = [[2, 1, 3, 2, 1, 0, 1, 2, 3, 3], [4, 3, 5, 4, 3, 2, 3, 4, 6, 5], [3, 4, 4, 5, 4, 3, 2, 5, 5, 6], [2, 3, 3, 4, 3, 2, 3, 3, 4, 5], [3, 2, 4, 3, 2, 2, 2, 4, 4, 4], [2, 3, 3, 3, 4, 2, 2, 3, 4, 4], [1, 2, 2, 3, 3, 1, 2, 2, 3, 4], [2, 2, 3, 3, 4, 2, 3, 3, 4, 5]]
+    const wd = [21, 17, 20, 22, 18, 20, 23, 19, 18, 20]
+    const ym = seed.map((r) => r.map((n, k) => n * 4 / (wd[k] * 8))), ymax = Math.max(...ym.flat())
+    R.forEach((m, i) => {
+      const y = 96 + i * 32
+      yr += T(16, y, `${m[0]} ${m[1]}`, 'height:32px;line-height:32px;font-size:13px;font-weight:600')
+      for (let k = 0; k < 12; k++) {
+        const v = ym[i][k] || 0, r = v / ymax
+        yr += T(196 + k * yc, y + 2, v ? f2(v) : '–', `width:${yc - 2}px;height:28px;line-height:28px;text-align:right;padding-right:8px;box-sizing:border-box;font-size:12px;${v ? `background:rgba(48,64,95,${0.08 + r * 0.6});color:${r > 0.6 ? '#fff' : 'var(--ink)'}` : 'color:var(--ink3)'}`)
+      }
+      yr += T(196 + 12 * yc, y, f2(ym[i].reduce((a, b) => a + b, 0)), 'width:78px;height:32px;line-height:32px;text-align:right;font-size:13px;font-weight:600')
+      yr += `<div class="abs" style="left:16px;top:${y + 31}px;width:1286px;height:1px;background:var(--line)"></div>`
+    })
+    h += card(24, 1868, 1318, 372, yr)
+    document.getElementById('gdroot').innerHTML = h
+  })()
   // 변경 표시: [번호, x, y, w, h] (앱 좌표). 배지는 상자 왼쪽 위에 붙는다
   const ANNO = {
-    b1: [['C-1', 0, 0, 200, 56], ['C-2', 206, 8, 286, 48], ['C-9', 566, 0, 446, 52], ['C-3', 1110, 10, 240, 36], ['B-4', 186, 68, 628, 44], ['B-2', 36, 256, 376, 80], ['B-2', 988, 288, 342, 84], ['B-1', 669, 385, 62, 52], ['B-3', 462, 572, 476, 24], ['C-4', 1222, 716, 120, 40]],
+    b1: [['C-1', 0, 0, 200, 56], ['C-2', 206, 8, 286, 48], ['C-9', 566, 0, 534, 52], ['C-3', 1110, 10, 240, 36], ['B-4', 186, 68, 628, 44], ['B-2', 36, 256, 376, 80], ['B-2', 988, 288, 342, 84], ['B-1', 669, 385, 62, 52], ['B-3', 462, 572, 476, 24], ['C-4', 1222, 716, 120, 40]],
     b2: [['F-01', 708, 190, 620, 74], ['F-02', 356, 440, 300, 140]],
     my: [['C-8', 586, 490, 730, 36]],
-    adm: [['C-9', 566, 0, 446, 52], ['A-2', 1080, 112, 108, 42], ['A-1', 1202, 112, 108, 42], ['A-3', 46, 278, 398, 22], ['A-4', 508, 408, 802, 32], ['C-8', 508, 202, 396, 34]],
+    adm: [['C-9', 566, 0, 534, 52], ['A-2', 1080, 112, 108, 42], ['A-1', 1202, 112, 108, 42], ['A-3', 46, 278, 398, 22], ['A-4', 508, 408, 802, 32], ['C-8', 508, 202, 396, 34]],
     cal: [['K-1', 447, 477, 134, 66], ['K-3', 308, 354, 22, 22], ['K-4', 520, 455, 60, 20], ['K-2', 447, 577, 134, 44]],
     st: [['T-1', 24, 230, 1318, 24], ['T-2', 900, 258, 442, 470], ['T-3', 24, 744, 426, 340], ['T-4', 916, 744, 426, 340]],
     gb: [['N-1', 24, 64, 1318, 690]],
     gbw: [['N-1', 264, 100, 838, 560]],
     gba: [['N-2', 24, 64, 1318, 690]],
+    gd: [['F-05', 880, 4, 100, 48], ['F-05', 24, 72, 1318, 696], ['F-05', 24, 784, 1318, 648], ['F-05', 24, 1448, 1318, 792]],
   }
   function drawAnno(id) {
     document.querySelectorAll('.anno, .anno-box').forEach((e) => e.remove())
@@ -725,12 +856,12 @@
     })
   }
   // 화면 전환 · 크기 맞춤
-  const navOf = { b1: 'n1', b2: 'n1', b3: 'n1', done: 'n1', my: 'n2', adm: 'n3', blk: 'n3', st: 'n4', cal: 'n5', gb: 'n6', gbw: 'n6', gba: 'n7' }
+  const navOf = { b1: 'n1', b2: 'n1', b3: 'n1', done: 'n1', my: 'n2', adm: 'n3', blk: 'n3', st: 'n4', gd: 'n8', cal: 'n5', gb: 'n6', gbw: 'n6', gba: 'n7' }
   document.querySelectorAll('.toolbar button').forEach((b) => b.addEventListener('click', () => {
     document.querySelectorAll('.toolbar button').forEach((x) => x.classList.toggle('on', x === b))
     document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('on', s.id === 's-' + b.dataset.s))
     document.querySelectorAll('.nav').forEach((n) => n.classList.toggle('on', n.id === navOf[b.dataset.s]))
-    document.getElementById('app').style.height = b.dataset.s === 'st' ? '1460px' : '768px'
+    document.getElementById('app').style.height = ({ st: '1460px', gd: '2264px' })[b.dataset.s] || '768px'
     document.getElementById('scaler').style.height = document.getElementById('app').style.height
     drawAnno(b.dataset.s)
     fit()
