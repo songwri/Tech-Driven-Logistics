@@ -22,7 +22,7 @@ interface GuestbookDialogProps {
   onSubmitted: (entry: GuestbookEntry) => void
 }
 
-type Errors = Partial<Record<'tour' | 'rating' | 'message' | 'name' | 'company' | 'role' | 'consent', string>>
+type Errors = Partial<Record<'tour' | 'rating' | 'message' | 'name' | 'consent', string>>
 /** intro: 로봇이 빈 용지를 집어 올림 → form: 용지가 커져 작성 화면 → outro: 다 쓴 용지를 컨베이어로 보냄 */
 type Phase = 'intro' | 'form' | 'outro'
 /** 장면 속 용지의 화면 위치. 작성 화면이 여기서 커져 나오고, 등록하면 여기로 돌아간다. */
@@ -34,8 +34,6 @@ function validate(values: { tour: GuestbookTour | ''; rating: number; message: s
   if (!values.rating) errors.rating = '별점을 선택해 주세요.'
   if (!values.message.trim()) errors.message = '방문 소감을 한 줄 남겨 주세요.'
   if (!values.name.trim()) errors.name = '이름을 입력해 주세요.'
-  if (!values.company.trim()) errors.company = '회사명을 입력해 주세요.'
-  if (!values.role.trim()) errors.role = '직책을 입력해 주세요.'
   if (!values.consent) errors.consent = '개인정보 수집 · 이용에 동의해 주세요.'
   return errors
 }
@@ -415,31 +413,29 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
                             invalid={Boolean(errors.name)}
                             autoComplete="name"
                             onChange={(e) => setName(e.target.value)}
-                            placeholder="홍길동"
+                            placeholder="이름"
                           />
                         </Field>
                       </div>
                       <div className="sm:col-span-2">
-                        <Field label="회사명" required error={errors.company}>
+                        <Field label="회사명" optional hint="쓰지 않으면 비워서 등록됩니다">
                           <Input
                             value={company}
-                            invalid={Boolean(errors.company)}
-                            autoComplete="organization"
+                            autoComplete="off"
                             onChange={(e) => setCompany(e.target.value)}
-                            placeholder="LX판토스"
+                            placeholder="선택 입력"
                           />
                         </Field>
                       </div>
                       <Field label="팀명" optional>
-                        <Input value={team} onChange={(e) => setTeam(e.target.value)} placeholder="물류혁신팀" />
+                        <Input value={team} autoComplete="off" onChange={(e) => setTeam(e.target.value)} placeholder="선택 입력" />
                       </Field>
-                      <Field label="직책" required error={errors.role}>
+                      <Field label="직책" optional>
                         <Input
                           value={role}
-                          invalid={Boolean(errors.role)}
-                          autoComplete="organization-title"
+                          autoComplete="off"
                           onChange={(e) => setRole(e.target.value)}
-                          placeholder="책임"
+                          placeholder="선택 입력"
                         />
                       </Field>
                     </div>
@@ -448,9 +444,10 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
                       <div className="border border-warm-300/40 bg-white px-4 py-3">
                         <p className="text-[12px] text-warm-600">공개 표시 · 가명 처리되어 이렇게 보입니다</p>
                         <p className="mt-1 text-sm text-ink">
-                          <span className="font-semibold">{maskName(name) || '홍**'}</span>
+                          <span className="font-semibold">{maskName(name) || '이름을 입력하면 표시됩니다'}</span>
+                          {/* 쓰지 않은 소속 · 직책은 채우지 않고 비워 둔다 */}
                           <span className="ml-2 text-warm-600">
-                            {[maskCompany(company) || 'L**', maskCompany(team), role.trim()].filter(Boolean).join(' · ')}
+                            {[maskCompany(company), maskCompany(team), role.trim()].filter(Boolean).join(' · ')}
                           </span>
                         </p>
                         <p className="mt-2 flex items-start gap-1.5 border-t border-warm-300/40 pt-2 text-[12px] leading-relaxed text-warm-600">
@@ -493,7 +490,7 @@ export default function GuestbookDialog({ onClose, onSubmitted }: GuestbookDialo
                     </div>
                     {showConsent && (
                       <p className="mt-2 bg-cream/70 px-3 py-2 text-[12px] leading-relaxed text-warm-600">
-                        · 항목: 이름, 회사명, 팀명(선택), 직책, 별점 · 소감 · 참여 투어<br />
+                        · 항목: 이름, 회사명(선택), 팀명(선택), 직책(선택), 별점 · 소감 · 참여 투어<br />
                         · 목적: 방명록 등록 · 게시(이름과 회사명은 가명 처리해 공개), 방문 서비스 개선<br />
                         · 가명 처리: 공개 화면에는 가명(예: 홍**, L**처럼 일부만 표시)만 보이고, 실명 · 실제 회사명은 공개하지 않으며 담당 관리자만 접근해 관리<br />
                         · 보관: 등록일로부터 1년 후 파기, 삭제를 원하시면 담당자에게 요청<br />

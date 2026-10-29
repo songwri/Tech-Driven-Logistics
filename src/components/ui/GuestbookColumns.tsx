@@ -30,7 +30,7 @@ export function GuestbookCard({ entry, className }: { entry: GuestbookEntry; cla
           <span className="ml-2 font-normal text-warm-600">{entry.role}</span>
         </p>
         <p className="mt-0.5 font-mono text-[11px] text-warm-600">
-          {entry.company} · {formatDate(entry.createdAt)}
+          {[entry.company, formatDate(entry.createdAt)].filter(Boolean).join(' · ')}
         </p>
       </div>
     </div>
