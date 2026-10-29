@@ -15,6 +15,9 @@
     --green-bg: #D3F9D8; --green: #1E6B2E; --yellow-bg: #FFF4E6; --yellow: #C2410C;
     --gray-bg: #E9ECEF; --gray: #6C757D; --approve: #2B8A3E;
   }
+  /* 변경 표시(to-be 이미지용): 주소 끝에 +to  예) index.html#adm+to */
+  .anno-box { position: absolute; border: 2px dashed #E03131; z-index: 49; pointer-events: none; }
+  .anno { position: absolute; z-index: 50; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: #E03131; color: #fff; font: 700 11px/22px "Segoe UI", sans-serif; text-align: center; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,.3); pointer-events: none; }
   * { box-sizing: border-box; margin: 0; }
   body { background: #DAD9D4; font-family: "Segoe UI", "Malgun Gothic", sans-serif; color: var(--ink); word-break: keep-all; }
   .toolbar { position: sticky; top: 0; z-index: 10; background: #fff; border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
@@ -75,7 +78,7 @@
   .tour .m { right: 12px; top: 14px; }
   .cal { width: 62px; height: 52px; border-radius: 6px; font-size: 14px; text-align: center; padding-top: 7px; }
   .cal small { display: block; font-size: 10px; margin-top: 1px; }
-  .cal.ok { border: 1px solid var(--line); background: #fff; } .cal.ok small { color: var(--green); }
+  .cal.ok { border: 1px solid rgba(167,43,43,.45); background: #fff; font-weight: 600; } .cal.ok small { color: var(--green); }
   .cal.full { background: var(--soft); color: var(--ink3); } .cal.full small { color: var(--red); }
   .cal.off { color: #CFCDC8; } .cal.out { visibility: hidden; }
   .cal.sel { background: var(--primary); color: #fff; } .cal.sel small { color: #fff; }
@@ -138,6 +141,7 @@
     <div class="abs step on" style="left:846px"><i>1</i>투어 · 일정</div>
     <div class="abs step" style="left:1012px"><i>2</i>신청 정보</div>
     <div class="abs step" style="left:1178px"><i>3</i>확인 · 제출</div>
+    <div class="abs" style="left:190px;top:72px;width:620px;height:36px;background:var(--yellow-bg);border:1px solid #F5C27A;color:var(--yellow);font-size:12px;line-height:34px;padding-left:12px;font-weight:600">⚠ 방문일 확정 전 여러 날짜 동시 신청 금지 · 승인 대기 2건 이상이면 반려될 수 있습니다</div>
 
     <div class="abs card" style="left:24px;top:120px;width:400px;height:568px">
       <div class="abs h3" style="left:20px;top:16px">투어 선택</div>
@@ -153,8 +157,8 @@
       <div class="abs seg" style="left:420px;top:12px;width:36px;height:32px;line-height:30px">‹</div>
       <div class="abs seg" style="left:464px;top:12px;width:36px;height:32px;line-height:30px">›</div>
       <div id="cal"></div>
-      <div class="abs" style="left:22px;top:452px;font-size:12px;color:var(--ink2)">
-        <span class="tag t-green">가능</span>&nbsp; 빈 시간 있음 &nbsp;&nbsp; <span class="tag t-red">마감</span>&nbsp; 모두 예약됨 &nbsp;&nbsp; 흐린 날짜 · 운영 안 함
+      <div class="abs" style="left:22px;top:452px;font-size:12px;color:var(--ink2);white-space:nowrap">
+        <span class="tag t-green">가능</span>&nbsp; 빈 시간 있음 &nbsp;&nbsp; <span class="tag t-red">마감</span>&nbsp; 모두 예약됨 &nbsp;&nbsp; 흐린 날짜 · 운영 안 함 &nbsp; <b style="color:var(--brand)">이번 달 예약 가능 6일</b>
       </div>
       <div class="abs hint" style="left:22px;top:486px;width:476px;line-height:1.6">월 · 수 · 금 운영 · 당일 · 익일 신청 불가 · 공휴일 제외</div>
     </div>
@@ -199,9 +203,11 @@
       <div class="abs seg" style="left:20px;top:346px;width:140px">내부 방문</div>
       <div class="abs seg on" style="left:168px;top:346px;width:140px">고객 방문</div>
       <div class="abs lbl" style="left:336px;top:324px">고객 유형 *</div>
-      <div class="abs seg" style="left:336px;top:346px;width:140px">기존 고객사</div>
-      <div class="abs seg on" style="left:484px;top:346px;width:140px">신규 고객사</div>
-      <div class="abs lbl" style="left:20px;top:398px">업체명 *</div><div class="abs input" style="left:20px;top:420px;width:612px">한빛식품</div>
+      <div class="abs seg" style="left:336px;top:346px;width:92px;font-size:13px">기존 고객사</div>
+      <div class="abs seg" style="left:432px;top:346px;width:92px;font-size:13px">신규 고객사</div>
+      <div class="abs seg on" style="left:528px;top:346px;width:104px;font-size:13px">파트너사 소개</div>
+      <div class="abs lbl" style="left:20px;top:398px">업체명 *</div><div class="abs input" style="left:20px;top:420px;width:296px">한빛식품</div>
+      <div class="abs lbl" style="left:336px;top:398px">파트너사명 *</div><div class="abs input" style="left:336px;top:420px;width:296px">한솔로지스</div>
       <div class="abs lbl" style="left:20px;top:472px">예상 방문 인원 *</div><div class="abs input" style="left:20px;top:494px;width:140px">5</div>
       <div class="abs hint" style="left:172px;top:504px">참석자 개인정보는 신청 후 Forms 링크로 각자 입력합니다.</div>
     </div>
@@ -401,16 +407,13 @@
       <div class="abs seg" style="left:1166px;top:10px;width:132px;height:32px;line-height:30px;font-size:13px">승인 · 완료만</div>
     </div>
     <div id="kpis"></div>
-    <div class="abs seg on" style="left:24px;top:240px;width:140px;height:32px;line-height:30px;font-size:13px">추이 · 센터</div>
-    <div class="abs seg" style="left:170px;top:240px;width:140px;height:32px;line-height:30px;font-size:13px">유형 · 목적 · 업종</div>
-    <div class="abs seg" style="left:316px;top:240px;width:140px;height:32px;line-height:30px;font-size:13px">담당 · 언어 · 직무</div>
-    <div class="abs lbl" style="left:760px;top:248px;width:582px;text-align:right">2026.09.01~2026.10.13 · 거절 · 취소 제외</div>
-    <div class="abs card" style="left:24px;top:282px;width:860px;height:470px">
+    <div class="abs lbl" style="left:560px;top:236px;width:776px;text-align:right;white-space:nowrap">2026.09.01~2026.10.13 · 거절 · 취소 제외 · 탭 없이 한 화면(아래로 스크롤)</div>
+    <div class="abs card" style="left:24px;top:258px;width:860px;height:470px">
       <div class="abs h3" style="left:20px;top:16px">월별 추이</div>
       <div class="abs lbl" style="left:20px;top:42px">2026년 · 월별 신청 건수 · 선택 기간 밖의 달은 흐리게</div>
       <div id="trend"></div>
     </div>
-    <div class="abs card" style="left:896px;top:282px;width:446px;height:470px">
+    <div class="abs card" style="left:896px;top:258px;width:446px;height:470px">
       <div class="abs h3" style="left:20px;top:16px">센터별 방문 건수</div>
       <div class="abs hint" style="left:20px;top:42px">복합 투어는 들르는 센터마다 1건씩</div>
       <div id="places"></div>
@@ -418,6 +421,7 @@
       <div class="abs h3" style="left:20px;top:206px">투어 종류</div>
       <div id="tourbars"></div>
     </div>
+    <div id="stgrid"></div>
   </div>
 
   <!-- ============ 예약 달력 ============ -->
@@ -551,14 +555,14 @@
   })()
   // 업종 칩 (5열)
   ;(function () {
-    const items = ['제조','전자','가전','자동차','화학','식품','화장품','의류','제약/헬스케어','가구/인테리어','유통','이커머스','CVS/편의점','물류','기타']
+    const items = ['리테일','화학','헬스케어','패션&뷰티','전자','식품용품','오토(Auto)','기계&금속','건자재','기타']
     document.getElementById('ind').innerHTML = items.map((t, i) =>
-      `<div class="abs chip ${t === '식품' ? 'on' : ''}" style="left:${20 + (i % 5) * 123}px;top:${74 + Math.floor(i / 5) * 36}px;width:117px">${t}</div>`).join('')
-      + '<div class="abs hint" style="left:20px;top:194px">기타를 고르면 직접 입력 칸이 나옵니다.</div>'
+      `<div class="abs chip ${t === '식품용품' ? 'on' : ''}" style="left:${20 + (i % 5) * 123}px;top:${74 + Math.floor(i / 5) * 36}px;width:117px">${t}</div>`).join('')
+      + '<div class="abs hint" style="left:20px;top:156px">9종 + 기타 · 기타는 직접 입력 없음</div>'
   })()
   // 확인 표
   ;(function () {
-    const rows = [['투어','메가와이즈 센터 투어'],['일정','2026년 10월 21일 (수) 13:00 – 14:00'],['신청 담당자','김서연 책임'],['소속','CL운영담당 운영혁신팀'],['연락처','010-2345-6789 · seoyeon.kim@company.com'],['방문 유형','고객 방문 · 신규 고객사'],['업체명','한빛식품'],['업종','식품'],['방문 목적','신규 영업'],['진행 언어','한국어 · 통역 동반(베트남어)'],['예상 인원','5명'],['담당자 의견','신규 식품 물류 수주 건. 저온 구역과 AMR 피킹…']]
+    const rows = [['투어','메가와이즈 센터 투어'],['일정','2026년 10월 21일 (수) 13:00 – 14:00'],['신청 담당자','김서연 책임'],['소속','CL운영담당 운영혁신팀'],['연락처','010-2345-6789 · seoyeon.kim@company.com'],['방문 유형','고객 방문 · 파트너사 소개 고객 (한솔로지스)'],['업체명','한빛식품'],['업종','식품용품'],['방문 목적','신규 영업'],['진행 언어','한국어 · 통역 동반(베트남어)'],['예상 인원','5명'],['담당자 의견','신규 식품 물류 수주 건. 저온 구역과 AMR 피킹…']]
     document.getElementById('sum').innerHTML = rows.map((r, i) => `<div class="abs row" style="top:${56 + i * 36}px"><span>${r[0]}</span>${r[1]}</div>`).join('')
       + '<div class="abs hint" style="left:20px;top:500px">고칠 내용이 있으면 [이전]으로 돌아가세요.</div>'
   })()
@@ -585,13 +589,22 @@
         <div class="abs" style="left:${x + (820 / 12 - 36) / 2}px;top:${76 + 322 - h}px;width:36px;height:${h}px;background:${dim ? 'var(--line)' : 'var(--primary)'}"></div>
         <div class="abs lbl" style="left:${x}px;top:${76 + 330}px;width:${820 / 12}px;text-align:center">${i + 1}월</div>`
     }).join('') + '<div class="abs" style="left:20px;top:398px;width:820px;height:1px;background:var(--line)"></div>'
-    const bars = (rows, top, lw) => { const mx = Math.max(...rows.map((r) => r[1]), 1), bw = 406 - lw - 70
-      return rows.map((r, i) => `<div class="abs" style="left:20px;top:${top + i * 30}px;width:${lw}px;line-height:28px;font-size:13px;color:var(--ink2)">${r[0]}</div>
+    const bars = (rows, top, lw, colors, w = 406) => { rows = [...rows].sort((p, q) => q[1] - p[1]); const tot = rows.reduce((t, r) => t + r[1], 0) || 1, mx = Math.max(...rows.map((r) => r[1]), 1), bw = w - lw - 96
+      return rows.map((r, i) => `<div class="abs" style="left:20px;top:${top + i * 30}px;width:${lw}px;line-height:28px;font-size:13px;color:var(--ink2);white-space:nowrap;overflow:hidden">${r[0]}</div>
         <div class="abs" style="left:${28 + lw}px;top:${top + i * 30 + 10}px;width:${bw}px;height:8px;background:var(--soft)"></div>
-        <div class="abs" style="left:${28 + lw}px;top:${top + i * 30 + 10}px;width:${bw * r[1] / mx}px;height:8px;background:var(--primary)"></div>
-        <div class="abs" style="left:${36 + lw + bw}px;top:${top + i * 30}px;width:54px;line-height:28px;font-size:13px;font-weight:600;text-align:right">${r[1]}건</div>`).join('') }
-    document.getElementById('places').innerHTML = bars([['메가와이즈 센터', 24], ['TDL Lab', 19]], 70, 130)
-    document.getElementById('tourbars').innerHTML = bars([['TDL Lab 투어', 7], ['메가와이즈 센터 투어', 12], ['메가와이즈 + TDL Lab', 12]], 240, 150)
+        <div class="abs" style="left:${28 + lw}px;top:${top + i * 30 + 10}px;width:${bw * r[1] / mx}px;height:8px;background:${colors ? colors[r[0]] : i === 0 && r[1] > 0 ? 'var(--brand)' : '#C9C4C2'}"></div>
+        <div class="abs" style="left:${32 + lw + bw}px;top:${top + i * 30}px;width:80px;line-height:28px;font-size:13px;text-align:right"><b>${r[1]}</b><span style="color:var(--ink3);font-size:11px"> ${Math.round(r[1] / tot * 100)}%</span></div>`).join('') }
+    const TC = { '메가와이즈 센터': '#1A8FA0', 'TDL Lab': '#7C5CC4', 'TDL Lab 투어': '#7C5CC4', '메가와이즈 센터 투어': '#1A8FA0', '메가와이즈 + TDL Lab': '#DC2626' }
+    document.getElementById('places').innerHTML = bars([['메가와이즈 센터', 24], ['TDL Lab', 19]], 70, 130, TC)
+    document.getElementById('tourbars').innerHTML = bars([['TDL Lab 투어', 7], ['메가와이즈 센터 투어', 12], ['메가와이즈 + TDL Lab', 12]], 240, 150, TC)
+    const card = (x, y, title, sub, rows, lw) => `<div class="abs card" style="left:${x}px;top:${y}px;width:426px;height:340px"><div class="abs h3" style="left:20px;top:16px">${title}</div><div class="abs hint" style="left:20px;top:42px">${sub}</div>${bars(rows, 70, lw, null, 406)}</div>`
+    document.getElementById('stgrid').innerHTML =
+      card(24, 744, '방문 유형', '한 가지 분류 체계 · 합계 = 신청 건수', [['고객 · 기존', 9], ['고객 · 신규', 11], ['고객 · 파트너사', 4], ['내부 방문', 6], ['고객 · 미분류', 1]], 120) +
+      card(470, 744, '방문 목적', '한 건에 하나', [['기존 고객사 Lock-in', 12], ['신규 영업', 10], ['교육', 5], ['투어', 3], ['기타', 1]], 140) +
+      card(916, 744, '업종 (고객 방문)', '9종 + 기타 · 값 큰 순 · 0건은 숨김', [['리테일', 6], ['식품용품', 5], ['전자', 4], ['화학', 3], ['헬스케어', 2], ['패션&뷰티', 2], ['오토(Auto)', 1], ['기계&금속', 1], ['기타', 1]], 110) +
+      card(24, 1100, '담당(실)별 방문 건수', '주요 6개 담당 + 기타', [['CL운영담당', 8], ['CL영업담당', 6], ['CL전자담당', 5], ['EC사업담당', 3], ['CL LG/LX담당', 2], ['CL컨설팅담당', 2], ['기타', 5]], 120) +
+      card(470, 1100, '투어 언어', '진행 언어 · 한국어 투어의 통역 동반', [['한국어', 22], ['한국어 · 통역 동반', 3], ['영어', 5], ['중국어', 1]], 140) +
+      card(916, 1100, '방문자 직무', '참석자 Forms 의 직무 · 방문자 수 기준', [['영업', 34], ['운영', 28], ['물류', 22], ['기획', 18], ['경영진', 12], ['구매', 9], ['IT/개발', 6]], 110)
   })()
 
   // 예약 달력: 칸마다 칩 (시간 · 투어 · 업체), 상태 색
@@ -685,20 +698,47 @@
       <div class="abs btn sec" style="left:1134px;top:10px;width:64px;height:30px;line-height:28px;font-size:12px;color:var(--red)">삭제</div></div>` }).join('')
     document.getElementById('gbrows').innerHTML = rows
   })()
+  // 변경 표시: [번호, x, y, w, h] (앱 좌표). 배지는 상자 왼쪽 위에 붙는다
+  const ANNO = {
+    b1: [['C-1', 0, 0, 200, 56], ['C-2', 206, 8, 680, 48], ['C-3', 1110, 10, 240, 36], ['B-4', 186, 68, 628, 44], ['B-2', 36, 256, 376, 80], ['B-2', 988, 288, 342, 84], ['B-1', 669, 385, 62, 52], ['B-3', 462, 572, 476, 24], ['C-4', 1222, 716, 120, 40]],
+    b2: [['F-01', 708, 190, 620, 74], ['F-02', 356, 440, 300, 140]],
+    my: [['C-8', 586, 490, 730, 36]],
+    adm: [['A-2', 1080, 112, 108, 42], ['A-1', 1202, 112, 108, 42], ['A-3', 46, 278, 398, 22], ['A-4', 508, 408, 802, 32], ['C-8', 508, 202, 396, 34]],
+    cal: [['K-1', 447, 477, 134, 66], ['K-3', 308, 354, 22, 22], ['K-4', 520, 455, 60, 20], ['K-2', 447, 577, 134, 44]],
+    st: [['T-1', 24, 230, 1318, 24], ['T-2', 900, 258, 442, 470], ['T-3', 24, 744, 426, 340], ['T-4', 916, 744, 426, 340]],
+    gb: [['N-1', 24, 64, 1318, 690]],
+    gbw: [['N-1', 264, 100, 838, 560]],
+    gba: [['N-2', 24, 64, 1318, 690]],
+  }
+  function drawAnno(id) {
+    document.querySelectorAll('.anno, .anno-box').forEach((e) => e.remove())
+    if (!location.hash.includes('+to')) return
+    const app = document.getElementById('app')
+    ;(ANNO[id] || []).forEach(([t, x, y, w, h]) => {
+      const b = document.createElement('div'); b.className = 'anno-box'
+      Object.assign(b.style, { left: x - 2 + 'px', top: y - 2 + 'px', width: w + 4 + 'px', height: h + 4 + 'px' }); app.appendChild(b)
+      const a = document.createElement('div'); a.className = 'anno'; a.textContent = t
+      Object.assign(a.style, { left: Math.max(0, x - 10) + 'px', top: Math.max(0, y - 12) + 'px' }); app.appendChild(a)
+    })
+  }
   // 화면 전환 · 크기 맞춤
   const navOf = { b1: 'n1', b2: 'n1', b3: 'n1', done: 'n1', my: 'n2', adm: 'n3', blk: 'n3', st: 'n4', cal: 'n5', gb: 'n6', gbw: 'n6', gba: 'n7' }
   document.querySelectorAll('.toolbar button').forEach((b) => b.addEventListener('click', () => {
     document.querySelectorAll('.toolbar button').forEach((x) => x.classList.toggle('on', x === b))
     document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('on', s.id === 's-' + b.dataset.s))
     document.querySelectorAll('.nav').forEach((n) => n.classList.toggle('on', n.id === navOf[b.dataset.s]))
+    document.getElementById('app').style.height = b.dataset.s === 'st' ? '1460px' : '768px'
+    document.getElementById('scaler').style.height = document.getElementById('app').style.height
+    drawAnno(b.dataset.s)
+    fit()
   }))
   document.getElementById('n1').classList.add('on')
   function fit() {
     const s = Math.min(1, (window.innerWidth - 32) / 1366)
-    const el = document.getElementById('scaler'); el.style.transform = `scale(${s})`; el.style.marginBottom = (768 * s - 768) + "px"
+    const el = document.getElementById('scaler'); el.style.transform = `scale(${s})`; const h = document.getElementById('app').offsetHeight; el.style.marginBottom = (h * s - h) + "px"
   }
   window.addEventListener('resize', fit); fit()
-  const start = document.querySelector(`.toolbar button[data-s="${location.hash.slice(1)}"]`)
+  const start = document.querySelector(`.toolbar button[data-s="${location.hash.slice(1).split('+')[0]}"]`)
   if (start) start.click()
 </script>
 </body>
