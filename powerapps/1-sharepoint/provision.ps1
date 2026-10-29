@@ -1,5 +1,5 @@
 # =====================================================================
-#  SharePoint 목록 4개를 한 번에 만드는 스크립트 (선택 사항)
+#  SharePoint 목록 8개를 한 번에 만드는 스크립트 (선택 사항)
 #  - PnP.PowerShell 2.x 이상 필요:  Install-Module PnP.PowerShell -Scope CurrentUser
 #  - 회사 테넌트에 PnP 로그인용 Entra ID 앱 등록(ClientId)이 있어야 합니다.
 #    없으면 IT 팀에 요청하거나, 가이드의 'CSV 로 목록 만들기' 방법을 쓰세요.
@@ -41,7 +41,7 @@ New-ListWithFields 'VisitRequests' (@(
     @('HostName','Text'),@('HostTitle','Text'),@('HostDivision','Text'),@('HostOrg','Text'),@('HostPhone','Text'),
     @('HostEmail','Text'),@('ApplicantEmail','Text'),@('HostComment','Note'),
     @('ExpectedHeadcount','Number'),@('AttendeeCount','Number'),@('FormsLink','Note'),@('AdminMemo','Note'),@('ConsentAt','DateTime'),
-    @('FeedbackMailAt','DateTime')
+    @('FeedbackMailAt','DateTime'),@('Guides','Note')
 ))
 
 New-ListWithFields 'VisitAttendees' @(
@@ -57,6 +57,9 @@ New-ListWithFields 'TourAdmins' @(@('Site','Text'))
 New-ListWithFields 'CenterGuides' @(
     @('Address','Text'),@('MapUrl','Text'),@('MapImageUrl','Text'),@('Parking','Text'),@('Meeting','Text'),@('MeetingTours','Text'),@('ArriveBefore','Number')
 )
+
+# [PA 전용] 투어 가이드 명단 (인솔자 · 운영 인원). Title = 이름, CanOperate = Y/N (N = 인솔자만). 웹은 src/admin/guideRoster.ts 에 고정
+New-ListWithFields 'GuideRoster' @(@('RankTitle','Text'),@('CanOperate','Text'),@('SortOrder','Number'))
 
 # 방명록 원본 (실명 · 실제 소속, 관리자만). Title = 이름. 웹은 guestbook 시트
 New-ListWithFields 'Guestbook' @(

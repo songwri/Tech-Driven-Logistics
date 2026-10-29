@@ -1,7 +1,7 @@
 # scrCalendar — 예약 달력 (관리자만). 웹 관리자 대시보드의 달력과 같은 역할
 # ── [PA 전용] 웹앱에 없는 기능 · 수정하면 이 목록과 수식 속 '// [PA 전용]' 주석도 함께 고칠 것 (README 14) ──
 #   · conCBody: 본문만 스크롤 · 폭은 창 폭에 맞춰 kx 배(최대 MaxStretch)로 늘어남
-#   · hdrCAdmZone · hdrCAdmLabel: 관리자 메뉴(예약 관리 · 달력 · 통계 · 방명록 관리)를 오른쪽 묶음 + 관리자 표시로 구분 (관리자만 보임)
+#   · hdrCAdmZone · hdrCAdmLabel: 관리자 메뉴(예약 관리 · 달력 · 통계 · 가이드 배정 · 방명록 관리)를 오른쪽 묶음 + 관리자 표시로 구분 (관리자만 보임)
 # 날짜 칸마다 예약을 '시간 · 투어 · 업체' 칩으로 3건까지 보여주고, 더 있으면 '+n건 더보기'.
 # 칩 색 = 상태(대기 노랑 · 승인 초록 · 완료 파랑 · 거절/취소 회색 취소선), 왼쪽 띠 = 투어 색, 막힌 일정은 '막힘' 칩.
 # 칩을 누르면 관리자 화면에서 그 신청이 열리고, 칸을 누르면 오른쪽에 그날 전체 목록 · 일정 막기 · 해제.
@@ -1120,7 +1120,7 @@
     Properties:
       X: =ox + 566
       Y: =0
-      Width: =446
+      Width: =534
       Height: =52
       Fill: =RGBA(255, 255, 255, 0.07)
       Visible: =!IsBlank(gAdminSite)  // [PA 전용] 관리자 메뉴를 오른쪽 묶음으로 구분 · 웹은 관리자 페이지가 따로 있음
@@ -1149,7 +1149,7 @@
       Text: ="예약 관리"
       X: =ox + 652
       Y: =12
-      Width: =96
+      Width: =92
       Height: =40
       OnSelect: =Navigate(scrAdmin, ScreenTransition.None)
       Font: =fnt
@@ -1171,9 +1171,9 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="달력"
-      X: =ox + 748
+      X: =ox + 744
       Y: =12
-      Width: =72
+      Width: =68
       Height: =40
       OnSelect: =Navigate(scrCalendar, ScreenTransition.None)
       Font: =fnt
@@ -1195,9 +1195,9 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="통계"
-      X: =ox + 820
+      X: =ox + 812
       Y: =12
-      Width: =72
+      Width: =68
       Height: =40
       OnSelect: =Navigate(scrStats, ScreenTransition.None)
       Font: =fnt
@@ -1215,11 +1215,35 @@
       RadiusBottomLeft: =0
       RadiusBottomRight: =0
       Visible: =!IsBlank(gAdminSite)
+- hdrCNavGuides:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="가이드 배정"
+      X: =ox + 880
+      Y: =12
+      Width: =100
+      Height: =40
+      OnSelect: =Navigate(scrGuides, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrGuides, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrGuides, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrGuides, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrGuides, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrGuides, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrGuides, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrGuides, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =gAdminSite = "main"
 - hdrCNavGuestAdmin:
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="방명록 관리"
-      X: =ox + 892
+      X: =ox + 980
       Y: =12
       Width: =108
       Height: =40
@@ -1243,9 +1267,9 @@
     Control: Label@2.5.1
     Properties:
       Text: =gMe.displayName & If(IsBlank(gMe.department), "", " · " & gMe.department)
-      X: =ox + pw - 324
+      X: =ox + pw - 244
       Y: =18
-      Width: =300
+      Width: =220
       Height: =20
       Font: =fnt
       Size: =9.75

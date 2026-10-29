@@ -1,0 +1,2651 @@
+# scrGuides — 투어 가이드 배정 (센터 관리자 main 만). 웹 관리자 '가이드 배정' 탭(GuideAssignView · GuideWeekly)과 같은 화면
+# ── [PA 전용] 웹앱에 없는 기능 · 수정하면 이 목록과 수식 속 '// [PA 전용]' 주석도 함께 고칠 것 (README 14) ──
+#   · conGdBody: 본문만 스크롤 · 폭은 창 폭에 맞춰 kx 배(최대 MaxStretch)로 늘어남
+#   · btnGdLoad: 그 해 확정 방문을 한 번에 읽어 둠 (SharePoint 2000행 제한 회피)
+#   · btnGdSave: 연속 클릭 잠금
+#   · 가이드 명단을 SharePoint GuideRoster 목록에서 읽음 (웹은 코드 guideRoster.ts 에 고정)
+#   · hdrGDAdmZone · hdrGDAdmLabel: 관리자 메뉴(예약 관리 · 달력 · 통계 · 가이드 배정 · 방명록 관리)를 오른쪽 묶음 + 관리자 표시로 구분 (관리자만 보임)
+# 화면 구성 (위에서 아래로, 본문 스크롤)
+#   ① 달력: 그 달 배정 대상 방문(승인 · 완료 + TDL Lab 이 들어간 투어 · 수기 등록) 칩. 인솔자 미배정은 빨간 점선
+#   ② 배정 패널: 인솔자(복수) · 운영 인원(복수, 전체 선택) → 저장하면 VisitRequests.Guides 에 줄마다 한 명
+#   ③ 주간 배정표: 월~일 × 오전 · 오후 · 시간 미정 (Lab 구간 시작 시각 기준) + 이 주 인원별 가동률
+#   ④ 월간 인원별 투입 (M/M): 인솔 · 운영 · 합계 · 투입 시간 · M/M (1건 = 4시간, 근무일 × 8시간 = 1 M/M)
+#   ⑤ 연간 월별 M/M: 사람 × 월 (값이 클수록 진하게)
+# 준비: SharePoint 목록 GuideRoster (Title 이름 · RankTitle 직책 · CanOperate Y/N · SortOrder 순서), VisitRequests 에 Guides(여러 줄 텍스트) 열
+# 1) 새 화면(빈 화면) → 이름 scrGuides, 화면 Fill = cBg, Width = sw, Height = sh
+#    OnVisible =
+#      If(gAdminSite <> "main", Notify("센터 관리자만 볼 수 있습니다.", NotificationType.Error); Navigate(scrAdmin),
+#         ClearCollect(colRoster, SortByColumns(GuideRoster, "SortOrder"));
+#         If(IsBlank(gGdMonth), Set(gGdMonth, Date(Year(Today()), Month(Today()), 1)));
+#         If(IsBlank(gGdWeek), Set(gGdWeek, DateAdd(Today(), 1 - Weekday(Today(), StartOfWeek.Monday), TimeUnit.Days)));
+#         Set(gGdYear, Year(gGdMonth));
+#         Set(gGdSel, Blank());
+#         Set(gGdBusy, false);
+#         Set(gGdLeads, Filter(Table({Value: ""}), false));
+#         Set(gGdOps, Filter(Table({Value: ""}), false));
+#         Select(btnGdLoad))
+# 2) 이 파일 내용을 전부 복사 → 트리 뷰에서 scrGuides 오른쪽 클릭 → '붙여넣기'
+- conGdBody:
+    Control: GroupContainer@1.3.0
+    Variant: AutoLayout
+    Properties:
+      X: =0
+      Y: =56
+      Width: =sw
+      Height: =sh - 56
+      LayoutDirection: =LayoutDirection.Vertical
+      LayoutAlignItems: =LayoutAlignItems.Center
+      LayoutOverflowY: =LayoutOverflow.Scroll // [PA 전용] 본문 스크롤 레이아웃. 웹은 페이지 스크롤
+      Fill: =Color.Transparent
+      BorderThickness: =0
+      DropShadow: =DropShadow.None
+    Children:
+      - conGdPage:
+          Control: GroupContainer@1.3.0
+          Variant: ManualLayout
+          Properties:
+            Width: =pw
+            Height: =2208
+            FillPortions: =0
+            Fill: =Color.Transparent
+            BorderThickness: =0
+            DropShadow: =DropShadow.None
+          Children:
+            - conGdCal:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  X: =24
+                  Y: =16
+                  Width: =956 * kx
+                  Height: =696
+                  Fill: =cSurface
+                  BorderColor: =cLine
+                  BorderThickness: =1
+                  DropShadow: =DropShadow.None
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                Children:
+                  - lblGdCalTitle:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="투어 가이드 배정"
+                        X: =16
+                        Y: =14
+                        Width: =160
+                        Height: =24
+                        Font: =fnt
+                        Size: =11.25
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - btnGdPrev:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="‹"
+                        X: =184
+                        Y: =10
+                        Width: =32
+                        Height: =32
+                        OnSelect: =Set(gGdMonth, DateAdd(gGdMonth, -1, TimeUnit.Months)); Set(gGdSel, Blank()); If(Year(gGdMonth) <> gGdYear, Set(gGdYear, Year(gGdMonth)); Select(btnGdLoad))
+                        Font: =fnt
+                        Size: =10.5
+                        FontWeight: =FontWeight.Semibold
+                        Fill: =cSurface
+                        Color: =cInk2
+                        HoverFill: =cSoft
+                        HoverColor: =cInk
+                        PressedFill: =cSoft
+                        PressedColor: =cInk
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                  - lblGdMonth:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =Text(gGdMonth, "yyyy년 m월")
+                        X: =220
+                        Y: =10
+                        Width: =110
+                        Height: =32
+                        Font: =fnt
+                        Size: =11.25
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Center
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - btnGdNext:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="›"
+                        X: =334
+                        Y: =10
+                        Width: =32
+                        Height: =32
+                        OnSelect: =Set(gGdMonth, DateAdd(gGdMonth, 1, TimeUnit.Months)); Set(gGdSel, Blank()); If(Year(gGdMonth) <> gGdYear, Set(gGdYear, Year(gGdMonth)); Select(btnGdLoad))
+                        Font: =fnt
+                        Size: =10.5
+                        FontWeight: =FontWeight.Semibold
+                        Fill: =cSurface
+                        Color: =cInk2
+                        HoverFill: =cSoft
+                        HoverColor: =cInk
+                        PressedFill: =cSoft
+                        PressedColor: =cInk
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                  - lblGdCount:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: |-
+                          =With({n: CountRows(Filter(colGdVisits, Year(D) = Year(gGdMonth) && Month(D) = Month(gGdMonth)))}, n & "건 · ")
+                        X: =380
+                        Y: =14
+                        Width: =60
+                        Height: =24
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Right
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblGdUnassigned:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="인솔자 미배정 " & CountRows(Filter(colGdVisits, Year(D) = Year(gGdMonth) && Month(D) = Month(gGdMonth) && !(ID in Filter(colGdAssign, Role = "인솔").VisitId))) & "건"
+                        X: =442
+                        Y: =14
+                        Width: =160
+                        Height: =24
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Color: =If(CountRows(Filter(colGdVisits, Year(D) = Year(gGdMonth) && Month(D) = Month(gGdMonth) && !(ID in Filter(colGdAssign, Role = "인솔").VisitId))) > 0, cBrand, cGreen)
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblGdHint:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="승인 · 완료된 Lab 포함 투어 · 칩을 눌러 배정"
+                        X: =956 * kx - 360
+                        Y: =14
+                        Width: =344
+                        Height: =24
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk3
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Right
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - galGdWeekday:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        Items: =["일", "월", "화", "수", "목", "금", "토"]
+                        X: =12
+                        Y: =52
+                        Width: =956 * kx - 24
+                        Height: =26
+                        TemplateSize: =26
+                        TemplatePadding: =0
+                        ShowScrollbar: =false
+                        BorderThickness: =0
+                        Fill: =Color.Transparent
+                        WrapCount: =7
+                      Children:
+                        - lblGdWeekday:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =ThisItem.Value
+                              X: =0
+                              Y: =0
+                              Width: =(956 * kx - 24) / 7
+                              Height: =26
+                              Font: =fnt
+                              Size: =9
+                              FontWeight: =FontWeight.Semibold
+                              Color: =If(ThisItem.Value in ["일", "토"], cInk3, cInk)
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Align: =Align.Center
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                              Fill: =cBg
+                  - galGdGrid:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        Items: |-
+                          =With(
+                              {start: DateAdd(gGdMonth, 1 - Weekday(gGdMonth), TimeUnit.Days)},
+                              ForAll(
+                                  Sequence(42, 0) As n,
+                                  With(
+                                      {d: DateAdd(start, n.Value, TimeUnit.Days)},
+                                      {D: d, Key: Text(d, "yyyy-mm-dd"), InMonth: Month(d) = Month(gGdMonth), Off: Weekday(d) in [1, 7] || Text(d, "yyyy-mm-dd") in HolidayKeys.Value, IsToday: d = Today()}
+                                  )
+                              )
+                          )
+                        X: =12
+                        Y: =80
+                        Width: =956 * kx - 24
+                        Height: =600
+                        TemplateSize: =100
+                        TemplatePadding: =0
+                        ShowScrollbar: =false
+                        BorderThickness: =0
+                        Fill: =Color.Transparent
+                        WrapCount: =7
+                      Children:
+                        - rctGdCell:
+                            Control: Rectangle@2.3.0
+                            Properties:
+                              X: =0
+                              Y: =0
+                              Width: =(956 * kx - 24) / 7
+                              Height: =100
+                              Fill: =If(ThisItem.InMonth && !ThisItem.Off, cSurface, cBg)
+                              BorderColor: =cLine
+                              BorderThickness: =1
+                        - btnGdDayNum:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              Text: =Day(ThisItem.D)
+                              X: =4
+                              Y: =4
+                              Width: =22
+                              Height: =22
+                              OnSelect: =false
+                              Font: =fnt
+                              Size: =9
+                              FontWeight: =FontWeight.Semibold
+                              Fill: =If(ThisItem.IsToday, cBrand, Color.Transparent)
+                              Color: =If(ThisItem.IsToday, cSurface, !ThisItem.InMonth, cInk3, ThisItem.Off, ColorValue("#C77A7A"), cInk)
+                              HoverFill: =cSoft
+                              HoverColor: =If(ThisItem.IsToday, cSurface, !ThisItem.InMonth, cInk3, ThisItem.Off, ColorValue("#C77A7A"), cInk)
+                              PressedFill: =cSoft
+                              PressedColor: =If(ThisItem.IsToday, cSurface, !ThisItem.InMonth, cInk3, ThisItem.Off, ColorValue("#C77A7A"), cInk)
+                              BorderColor: =Color.Transparent
+                              BorderThickness: =0
+                              RadiusTopLeft: =11
+                              RadiusTopRight: =11
+                              RadiusBottomLeft: =11
+                              RadiusBottomRight: =11
+                              DisplayMode: =DisplayMode.View
+                        - galGdChips:
+                            Control: Gallery@2.15.0
+                            Variant: Vertical
+                            Properties:
+                              Items: |-
+                                =With({all: SortByColumns(Filter(colGdVisits, Key = ThisItem.Key), "Start")}, FirstN(all, If(CountRows(all) > 2, 1, 2)))
+                              X: =3
+                              Y: =28
+                              Width: =(956 * kx - 24) / 7 - 6
+                              Height: =68
+                              TemplateSize: =34
+                              TemplatePadding: =0
+                              ShowScrollbar: =false
+                              BorderThickness: =0
+                              Fill: =Color.Transparent
+                            Children:
+                              - btnGdChip:
+                                  Control: Classic/Button@2.2.0
+                                  Properties:
+                                    Text: =""
+                                    X: =0
+                                    Y: =0
+                                    Width: =(956 * kx - 24) / 7 - 6
+                                    Height: =32
+                                    OnSelect: |-
+                                      =Set(gGdSel, LookUp(colGdVisits, ID = ThisItem.ID)); Set(gGdLeads, ForAll(Filter(colGdAssign, VisitId = ThisItem.ID && Role = "인솔"), {Value: Name})); Set(gGdOps, ForAll(Filter(colGdAssign, VisitId = ThisItem.ID && Role = "운영"), {Value: Name}))
+                                    Font: =fnt
+                                    Size: =9.75
+                                    Fill: =If(gGdSel.ID = ThisItem.ID, cInk, IsBlank(Concat(Filter(colGdAssign, VisitId = ThisItem.ID && Role = "인솔"), Name, ", ")), cRedBg, cSurface)
+                                    Color: =cInk
+                                    HoverFill: =If(gGdSel.ID = ThisItem.ID, cInk, cSoft)
+                                    HoverColor: =cInk
+                                    PressedFill: =If(gGdSel.ID = ThisItem.ID, cInk, cSoft)
+                                    PressedColor: =cInk
+                                    BorderColor: =If(IsBlank(Concat(Filter(colGdAssign, VisitId = ThisItem.ID && Role = "인솔"), Name, ", ")) && gGdSel.ID <> ThisItem.ID, cBrand, cLine)
+                                    BorderThickness: =1
+                                    RadiusTopLeft: =0
+                                    RadiusTopRight: =0
+                                    RadiusBottomLeft: =0
+                                    RadiusBottomRight: =0
+                                    BorderStyle: =If(IsBlank(Concat(Filter(colGdAssign, VisitId = ThisItem.ID && Role = "인솔"), Name, ", ")), BorderStyle.Dashed, BorderStyle.Solid)
+                              - rctGdChipBar:
+                                  Control: Rectangle@2.3.0
+                                  Properties:
+                                    X: =0
+                                    Y: =0
+                                    Width: =4
+                                    Height: =32
+                                    Fill: =ThisItem.Color
+                                    OnSelect: =Select(btnGdChip)
+                              - lblGdChip1:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Text: =ThisItem.Time & "  " & ThisItem.Company
+                                    X: =8
+                                    Y: =2
+                                    Width: =(956 * kx - 24) / 7 - 18
+                                    Height: =15
+                                    Font: =fnt
+                                    Size: =8.25
+                                    FontWeight: =FontWeight.Semibold
+                                    Color: =If(gGdSel.ID = ThisItem.ID, cSurface, cInk)
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    PaddingBottom: =0
+                                    VerticalAlign: =VerticalAlign.Middle
+                                    Wrap: =false
+                                    OnSelect: =Select(btnGdChip)
+                              - lblGdChip2:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Text: =If(IsBlank(Concat(Filter(colGdAssign, VisitId = ThisItem.ID && Role = "인솔"), Name, ", ")), "인솔자 미배정", Concat(Filter(colGdAssign, VisitId = ThisItem.ID && Role = "인솔"), Name, ", ") & If(CountRows(Filter(colGdAssign, VisitId = ThisItem.ID && Role = "운영")) > 0, " + " & CountRows(Filter(colGdAssign, VisitId = ThisItem.ID && Role = "운영")) & "명", ""))
+                                    X: =8
+                                    Y: =16
+                                    Width: =(956 * kx - 24) / 7 - 18
+                                    Height: =14
+                                    Font: =fnt
+                                    Size: =8.25
+                                    FontWeight: =FontWeight.Semibold
+                                    Color: =If(gGdSel.ID = ThisItem.ID, cSurface, IsBlank(Concat(Filter(colGdAssign, VisitId = ThisItem.ID && Role = "인솔"), Name, ", ")), cBrand, cInk2)
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    PaddingBottom: =0
+                                    VerticalAlign: =VerticalAlign.Middle
+                                    Wrap: =false
+                                    OnSelect: =Select(btnGdChip)
+                        - lblGdMore:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: ="+" & (CountRows(Filter(colGdVisits, Key = ThisItem.Key)) - 1) & "건 더 (아래 주간 표)"
+                              X: =6
+                              Y: =64
+                              Width: =(956 * kx - 24) / 7 - 10
+                              Height: =18
+                              Font: =fnt
+                              Size: =8.25
+                              Color: =cInk2
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                              Visible: =CountRows(Filter(colGdVisits, Key = ThisItem.Key)) > 2
+                              OnSelect: =Set(gGdWeek, DateAdd(ThisItem.D, 1 - Weekday(ThisItem.D, StartOfWeek.Monday), TimeUnit.Days))
+            - conGdPanel:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  X: =24 + 956 * kx + 16
+                  Y: =16
+                  Width: =346
+                  Height: =696
+                  Fill: =cSurface
+                  BorderColor: =cLine
+                  BorderThickness: =1
+                  DropShadow: =DropShadow.None
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                Children:
+                  - lblGdPanelTitle:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="배정"
+                        X: =16
+                        Y: =14
+                        Width: =200
+                        Height: =24
+                        Font: =fnt
+                        Size: =11.25
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblGdPanelEmpty:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =If(CountRows(Filter(colGdVisits, Year(D) = Year(gGdMonth) && Month(D) = Month(gGdMonth))) = 0, "이 달에는 확정된 방문이 없습니다.", "달력에서 일정을 누르면" & Char(10) & "인솔자와 운영 인원을 정할 수 있습니다.")
+                        X: =16
+                        Y: =260
+                        Width: =314
+                        Height: =60
+                        Font: =fnt
+                        Size: =9.75
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Center
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =true
+                        Visible: =IsBlank(gGdSel)
+                  - rctGdSelBox:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        X: =16
+                        Y: =48
+                        Width: =314
+                        Height: =74
+                        Fill: =cSoft
+                        Visible: =!IsBlank(gGdSel)
+                  - rctGdSelBar:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        X: =16
+                        Y: =48
+                        Width: =5
+                        Height: =74
+                        Fill: =gGdSel.Color
+                        Visible: =!IsBlank(gGdSel)
+                  - lblGdSelWhen:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =Text(gGdSel.D, "m/d (ddd)") & " · " & gGdSel.Sched
+                        X: =30
+                        Y: =54
+                        Width: =292
+                        Height: =18
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                        Visible: =!IsBlank(gGdSel)
+                  - lblGdSelCompany:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =gGdSel.Company
+                        X: =30
+                        Y: =72
+                        Width: =292
+                        Height: =24
+                        Font: =fnt
+                        Size: =11.25
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                        Visible: =!IsBlank(gGdSel)
+                  - lblGdSelInfo:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =gGdSel.TourName & " · " & gGdSel.Heads & "명 · 투입 1타임(4시간)"
+                        X: =30
+                        Y: =98
+                        Width: =292
+                        Height: =18
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                        Visible: =!IsBlank(gGdSel)
+                  - lblGdLeadHead:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="인솔자"
+                        X: =16
+                        Y: =128
+                        Width: =80
+                        Height: =20
+                        Font: =fnt
+                        Size: =9.75
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                        Visible: =!IsBlank(gGdSel)
+                  - lblGdLeadHint:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="복수 선택"
+                        X: =70
+                        Y: =128
+                        Width: =100
+                        Height: =20
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                        Visible: =!IsBlank(gGdSel)
+                  - conGdAssign:
+                      Control: GroupContainer@1.3.0
+                      Variant: ManualLayout
+                      Properties:
+                        X: =0
+                        Y: =0
+                        Width: =346
+                        Height: =696
+                        Fill: =Color.Transparent
+                        BorderThickness: =0
+                        DropShadow: =DropShadow.None
+                        Visible: =!IsBlank(gGdSel)
+                      Children:
+                        - galGdLeads:
+                            Control: Gallery@2.15.0
+                            Variant: Vertical
+                            Properties:
+                              Items: =colRoster
+                              X: =16
+                              Y: =150
+                              Width: =314
+                              Height: =8 * 28
+                              TemplateSize: =28
+                              TemplatePadding: =0
+                              ShowScrollbar: =false
+                              BorderThickness: =0
+                              Fill: =Color.Transparent
+                            Children:
+                              - btnGdLead:
+                                  Control: Classic/Button@2.2.0
+                                  Properties:
+                                    Text: =Title & " " & RankTitle & If(Title in gGdLeads.Value, "   ✓", "")
+                                    X: =0
+                                    Y: =0
+                                    Width: =314
+                                    Height: =28
+                                    OnSelect: |-
+                                      =If(Title in gGdLeads.Value, Set(gGdLeads, Filter(gGdLeads, Value <> ThisItem.Title)), Set(gGdLeads, ForAll(Filter(colRoster, Title in gGdLeads.Value || Title = ThisItem.Title), {Value: Title})); Set(gGdOps, Filter(gGdOps, Value <> ThisItem.Title)))
+                                    Font: =fnt
+                                    Size: =9.75
+                                    FontWeight: =If(Title in gGdLeads.Value, FontWeight.Semibold, FontWeight.Normal)
+                                    Fill: =If(Title in gGdLeads.Value, cInk, cSurface)
+                                    Color: =If(Title in gGdLeads.Value, cSurface, cInk)
+                                    HoverFill: =If(Title in gGdLeads.Value, cInk, cSoft)
+                                    HoverColor: =If(Title in gGdLeads.Value, cSurface, cInk)
+                                    PressedFill: =If(Title in gGdLeads.Value, cInk, cSoft)
+                                    PressedColor: =If(Title in gGdLeads.Value, cSurface, cInk)
+                                    BorderColor: =cLine
+                                    BorderThickness: =1
+                                    RadiusTopLeft: =0
+                                    RadiusTopRight: =0
+                                    RadiusBottomLeft: =0
+                                    RadiusBottomRight: =0
+                                    Align: =Align.Left
+                                    PaddingLeft: =12
+                        - lblGdLeadNote:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: ="인솔자가 둘 이상이어도 됩니다 · 모두 해제하면 미배정"
+                              X: =16
+                              Y: =378
+                              Width: =314
+                              Height: =18
+                              Font: =fnt
+                              Size: =8.25
+                              Color: =cInk2
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - lblGdOpHead:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: ="운영 인원"
+                              X: =16
+                              Y: =410
+                              Width: =80
+                              Height: =22
+                              Font: =fnt
+                              Size: =9.75
+                              FontWeight: =FontWeight.Semibold
+                              Color: =cInk
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - lblGdOpHint:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: ="복수 선택"
+                              X: =86
+                              Y: =410
+                              Width: =100
+                              Height: =22
+                              Font: =fnt
+                              Size: =9
+                              Color: =cInk2
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - btnGdOpAll:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              Text: =If((CountRows(Filter(colRoster, CanOperate = "Y" && !(Title in gGdLeads.Value))) > 0 && CountRows(Filter(Filter(colRoster, CanOperate = "Y" && !(Title in gGdLeads.Value)), !(Title in gGdOps.Value))) = 0), "☑  전체", "☐  전체")
+                              X: =262
+                              Y: =408
+                              Width: =68
+                              Height: =26
+                              OnSelect: |-
+                                =If((CountRows(Filter(colRoster, CanOperate = "Y" && !(Title in gGdLeads.Value))) > 0 && CountRows(Filter(Filter(colRoster, CanOperate = "Y" && !(Title in gGdLeads.Value)), !(Title in gGdOps.Value))) = 0), Set(gGdOps, Filter(gGdOps, false)), Set(gGdOps, ForAll(Filter(colRoster, CanOperate = "Y" && !(Title in gGdLeads.Value)), {Value: Title})))
+                              Font: =fnt
+                              Size: =9
+                              FontWeight: =FontWeight.Semibold
+                              Fill: =cSurface
+                              Color: =cInk2
+                              HoverFill: =cSoft
+                              HoverColor: =cInk
+                              PressedFill: =cSoft
+                              PressedColor: =cInk
+                              BorderColor: =Color.Transparent
+                              BorderThickness: =1
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                        - galGdOps:
+                            Control: Gallery@2.15.0
+                            Variant: Vertical
+                            Properties:
+                              Items: =Filter(colRoster, CanOperate = "Y")
+                              X: =16
+                              Y: =440
+                              Width: =314
+                              Height: =4 * 34
+                              TemplateSize: =34
+                              TemplatePadding: =0
+                              ShowScrollbar: =false
+                              BorderThickness: =0
+                              Fill: =Color.Transparent
+                              WrapCount: =2
+                            Children:
+                              - btnGdOp:
+                                  Control: Classic/Button@2.2.0
+                                  Properties:
+                                    Text: =If(Title in gGdLeads.Value, "", If(Title in gGdOps.Value, "☑  ", "☐  ")) & Title & " " & RankTitle & If(Title in gGdLeads.Value, "  · 인솔자", "")
+                                    X: =0
+                                    Y: =0
+                                    Width: =153
+                                    Height: =30
+                                    OnSelect: |-
+                                      =If(Title in gGdOps.Value, Set(gGdOps, Filter(gGdOps, Value <> ThisItem.Title)), Set(gGdOps, ForAll(Filter(colRoster, Title in gGdOps.Value || Title = ThisItem.Title), {Value: Title})))
+                                    Font: =fnt
+                                    Size: =9
+                                    Fill: =If(Title in gGdLeads.Value, cBg, Title in gGdOps.Value, cSoft, cSurface)
+                                    Color: =If(Title in gGdLeads.Value, cInk3, cInk)
+                                    HoverFill: =cSoft
+                                    HoverColor: =If(Title in gGdLeads.Value, cInk3, cInk)
+                                    PressedFill: =cSoft
+                                    PressedColor: =If(Title in gGdLeads.Value, cInk3, cInk)
+                                    BorderColor: =If(Title in gGdOps.Value && !(Title in gGdLeads.Value), cInk, cLine)
+                                    BorderThickness: =1
+                                    RadiusTopLeft: =0
+                                    RadiusTopRight: =0
+                                    RadiusBottomLeft: =0
+                                    RadiusBottomRight: =0
+                                    Align: =Align.Left
+                                    PaddingLeft: =8
+                                    DisplayMode: =If(Title in gGdLeads.Value, DisplayMode.Disabled, DisplayMode.Edit)
+                                    DisabledFill: =cBg
+                                    DisabledColor: =cInk3
+                                    DisabledBorderColor: =cLine
+                        - lblGdOpNote:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: ="인솔자로 고른 인원은 운영 인원에서 빠집니다 · 팀장은 인솔자만"
+                              X: =16
+                              Y: =578
+                              Width: =314
+                              Height: =18
+                              Font: =fnt
+                              Size: =8.25
+                              Color: =cInk2
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - lblGdOthers:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: |-
+                                ="명단 외 기존 기록: " & Concat(Filter(Split(Substitute(gGdSel.Guides, ",", Char(10)), Char(10)), !IsBlank(Trim(Value)) && CountRows(Filter(colRoster As m, Find(m.Title, Value) > 0)) = 0), Trim(Value), ", ") & " (그대로 유지)"
+                              X: =16
+                              Y: =600
+                              Width: =314
+                              Height: =36
+                              Font: =fnt
+                              Size: =8.25
+                              Color: =cInk2
+                              PaddingLeft: =8
+                              PaddingRight: =8
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =true
+                              Fill: =cSoft
+                              Visible: =CountRows(Filter(Split(Substitute(gGdSel.Guides, ",", Char(10)), Char(10)), !IsBlank(Trim(Value)) && CountRows(Filter(colRoster As m, Find(m.Title, Value) > 0)) = 0)) > 0
+                        - btnGdRevert:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              Text: ="되돌리기"
+                              X: =150
+                              Y: =646
+                              Width: =84
+                              Height: =34
+                              OnSelect: |-
+                                =Set(gGdSel, LookUp(colGdVisits, ID = gGdSel.ID)); Set(gGdLeads, ForAll(Filter(colGdAssign, VisitId = gGdSel.ID && Role = "인솔"), {Value: Name})); Set(gGdOps, ForAll(Filter(colGdAssign, VisitId = gGdSel.ID && Role = "운영"), {Value: Name}))
+                              Font: =fnt
+                              Size: =9.75
+                              Fill: =cSurface
+                              Color: =cInk
+                              HoverFill: =cSoft
+                              HoverColor: =cInk
+                              PressedFill: =cSoft
+                              PressedColor: =cInk
+                              BorderColor: =cLine
+                              BorderThickness: =1
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              DisplayMode: =If((Concat(Filter(colRoster, Title in gGdLeads.Value), Title, ",") <> Concat(SortByColumns(Filter(colGdAssign, VisitId = gGdSel.ID && Role = "인솔"), "Sort"), Name, ",") || Concat(Filter(colRoster, CanOperate = "Y" && Title in gGdOps.Value && !(Title in gGdLeads.Value)), Title, ",") <> Concat(SortByColumns(Filter(colGdAssign, VisitId = gGdSel.ID && Role = "운영"), "Sort"), Name, ",")) && !gGdBusy, DisplayMode.Edit, DisplayMode.Disabled)
+                              DisabledFill: =cSurface
+                              DisabledColor: =cInk3
+                              DisabledBorderColor: =cLine
+                        - btnGdSave:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              Text: =If(gGdBusy, "저장 중…", "저장")
+                              X: =240
+                              Y: =646
+                              Width: =90
+                              Height: =34
+                              OnSelect: |-
+                                =// [PA 전용] 연속 클릭 잠금 · 웹은 저장 중 버튼 잠금
+                                Set(gGdBusy, true);
+                                With(
+                                    {v: LookUp(VisitRequests, ID = gGdSel.ID)},
+                                    With(
+                                        {
+                                            txt: Concat(
+                                                Filter(
+                                                    Table(
+                                                        {S: Concat(Filter(colRoster, Title in gGdLeads.Value), Title & " " & RankTitle & " (인솔자)", Char(10))},
+                                                        {S: Concat(Filter(colRoster, CanOperate = "Y" && Title in gGdOps.Value && !(Title in gGdLeads.Value)), Title & " " & RankTitle, Char(10))},
+                                                        {S: Concat(Filter(Split(Substitute(Coalesce(v.Guides, ""), ",", Char(10)), Char(10)), !IsBlank(Trim(Value)) && CountRows(Filter(colRoster As m, Find(m.Title, Value) > 0)) = 0), Trim(Value), Char(10))}
+                                                    ),
+                                                    !IsBlank(S)
+                                                ),
+                                                S,
+                                                Char(10)
+                                            )
+                                        },
+                                        IfError(
+                                            Patch(VisitRequests, v, {Guides: txt});
+                                            Patch(colGdVisits, LookUp(colGdVisits, ID = gGdSel.ID), {Guides: txt});
+                                            Select(btnGdParse);
+                                            Notify("저장했습니다.", NotificationType.Success),
+                                            Notify("저장에 실패했습니다. 잠시 뒤 다시 시도해 주세요.", NotificationType.Error)
+                                        )
+                                    )
+                                );
+                                Set(gGdBusy, false)
+                              Font: =fnt
+                              Size: =9.75
+                              FontWeight: =FontWeight.Semibold
+                              Fill: =cPrimary
+                              Color: =cSurface
+                              HoverFill: =cPrimaryHover
+                              HoverColor: =cSurface
+                              PressedFill: =cPrimaryHover
+                              PressedColor: =cSurface
+                              BorderColor: =cPrimary
+                              BorderThickness: =1
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              DisplayMode: =If((Concat(Filter(colRoster, Title in gGdLeads.Value), Title, ",") <> Concat(SortByColumns(Filter(colGdAssign, VisitId = gGdSel.ID && Role = "인솔"), "Sort"), Name, ",") || Concat(Filter(colRoster, CanOperate = "Y" && Title in gGdOps.Value && !(Title in gGdLeads.Value)), Title, ",") <> Concat(SortByColumns(Filter(colGdAssign, VisitId = gGdSel.ID && Role = "운영"), "Sort"), Name, ",")) && !gGdBusy, DisplayMode.Edit, DisplayMode.Disabled)
+                              DisabledFill: =cLine
+                              DisabledColor: =cSurface
+                              DisabledBorderColor: =cLine
+            - conGdWeek:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  X: =24
+                  Y: =728
+                  Width: =1318 * kx
+                  Height: =648
+                  Fill: =cSurface
+                  BorderColor: =cLine
+                  BorderThickness: =1
+                  DropShadow: =DropShadow.None
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                Children:
+                  - lblGdWeekTitle:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="주간 인솔 · 운영 배정"
+                        X: =16
+                        Y: =12
+                        Width: =300
+                        Height: =24
+                        Font: =fnt
+                        Size: =11.25
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblGdWeekLegend1:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="인솔자"
+                        X: =16
+                        Y: =40
+                        Width: =46
+                        Height: =18
+                        Font: =fnt
+                        Size: =8.25
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cSurface
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Center
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                        Fill: =cInk
+                  - lblGdWeekLegend2:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="운영 인원"
+                        X: =68
+                        Y: =40
+                        Width: =56
+                        Height: =18
+                        Font: =fnt
+                        Size: =8.25
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Center
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                        Fill: =cSoft
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                  - lblGdWeekLegend3:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="미배정"
+                        X: =130
+                        Y: =40
+                        Width: =46
+                        Height: =18
+                        Font: =fnt
+                        Size: =8.25
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cBrand
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Center
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                        BorderColor: =cBrand
+                        BorderThickness: =1
+                        BorderStyle: =BorderStyle.Dashed
+                  - lblGdWeekCount:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =CountRows(Filter(colGdVisits, D >= gGdWeek && D < DateAdd(gGdWeek, 7, TimeUnit.Days))) & "건 · 인솔자 미배정 " & CountRows(Filter(Filter(colGdVisits, D >= gGdWeek && D < DateAdd(gGdWeek, 7, TimeUnit.Days)), !(ID in Filter(colGdAssign, Role = "인솔").VisitId))) & "건 · 오전 · 오후는 Lab 구간 시작 시각 기준"
+                        X: =186
+                        Y: =40
+                        Width: =500
+                        Height: =18
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - btnGdThisWeek:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="이번 주"
+                        X: =1318 * kx - 400
+                        Y: =14
+                        Width: =72
+                        Height: =30
+                        OnSelect: =Set(gGdWeek, DateAdd(Today(), 1 - Weekday(Today(), StartOfWeek.Monday), TimeUnit.Days)); If(Year(gGdWeek) <> gGdYear, Set(gGdYear, Year(gGdWeek)); Select(btnGdLoad))
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Fill: =cSurface
+                        Color: =cInk
+                        HoverFill: =cSoft
+                        HoverColor: =cInk
+                        PressedFill: =cSoft
+                        PressedColor: =cInk
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                  - btnGdNextWeek:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="다음 주"
+                        X: =1318 * kx - 324
+                        Y: =14
+                        Width: =72
+                        Height: =30
+                        OnSelect: =Set(gGdWeek, DateAdd(DateAdd(Today(), 1 - Weekday(Today(), StartOfWeek.Monday), TimeUnit.Days), 7, TimeUnit.Days)); If(Year(gGdWeek) <> gGdYear, Set(gGdYear, Year(gGdWeek)); Select(btnGdLoad))
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Fill: =cSurface
+                        Color: =cInk
+                        HoverFill: =cSoft
+                        HoverColor: =cInk
+                        PressedFill: =cSoft
+                        PressedColor: =cInk
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                  - btnGdWeekPrev:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="‹"
+                        X: =1318 * kx - 240
+                        Y: =13
+                        Width: =32
+                        Height: =32
+                        OnSelect: =Set(gGdWeek, DateAdd(gGdWeek, -7, TimeUnit.Days)); If(Year(gGdWeek) <> gGdYear, Set(gGdYear, Year(gGdWeek)); Set(gGdMonth, Date(Year(gGdWeek), Month(gGdWeek), 1)); Select(btnGdLoad))
+                        Font: =fnt
+                        Size: =10.5
+                        FontWeight: =FontWeight.Semibold
+                        Fill: =cSurface
+                        Color: =cInk2
+                        HoverFill: =cSoft
+                        HoverColor: =cInk
+                        PressedFill: =cSoft
+                        PressedColor: =cInk
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                  - lblGdWeekRange:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =Text(gGdWeek, "m/d") & " – " & Text(DateAdd(gGdWeek, 6, TimeUnit.Days), "m/d")
+                        X: =1318 * kx - 204
+                        Y: =14
+                        Width: =150
+                        Height: =30
+                        Font: =fnt
+                        Size: =10.5
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Center
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - btnGdWeekNext:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="›"
+                        X: =1318 * kx - 50
+                        Y: =13
+                        Width: =32
+                        Height: =32
+                        OnSelect: =Set(gGdWeek, DateAdd(gGdWeek, 7, TimeUnit.Days)); If(Year(gGdWeek) <> gGdYear, Set(gGdYear, Year(gGdWeek)); Set(gGdMonth, Date(Year(gGdWeek), Month(gGdWeek), 1)); Select(btnGdLoad))
+                        Font: =fnt
+                        Size: =10.5
+                        FontWeight: =FontWeight.Semibold
+                        Fill: =cSurface
+                        Color: =cInk2
+                        HoverFill: =cSoft
+                        HoverColor: =cInk
+                        PressedFill: =cSoft
+                        PressedColor: =cInk
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                  - galGdWeekHead:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        Items: |-
+                          =ForAll(Sequence(7, 0) As i, {D: DateAdd(gGdWeek, i.Value, TimeUnit.Days)})
+                        X: =16 + 76
+                        Y: =70
+                        Width: =1318 * kx - 32 - 76
+                        Height: =40
+                        TemplateSize: =40
+                        TemplatePadding: =0
+                        ShowScrollbar: =false
+                        BorderThickness: =0
+                        Fill: =Color.Transparent
+                        WrapCount: =7
+                      Children:
+                        - lblGdWeekDay:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =Text(ThisItem.D, "m/d (ddd)")
+                              X: =0
+                              Y: =0
+                              Width: =(1318 * kx - 32 - 76) / 7
+                              Height: =40
+                              Font: =fnt
+                              Size: =9.75
+                              FontWeight: =FontWeight.Semibold
+                              Color: =If(ThisItem.D = Today(), cBrand, Weekday(ThisItem.D, StartOfWeek.Monday) > 5 || Text(ThisItem.D, "yyyy-mm-dd") in HolidayKeys.Value, ColorValue("#C77A7A"), cInk)
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Align: =Align.Center
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                              Fill: =If(Weekday(ThisItem.D, StartOfWeek.Monday) > 5 || Text(ThisItem.D, "yyyy-mm-dd") in HolidayKeys.Value, cBg, cSurface)
+                              BorderColor: =cLine
+                              BorderThickness: =1
+                  - lblGdHalfAm:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="오전"
+                        X: =16
+                        Y: =110
+                        Width: =76
+                        Height: =136
+                        Font: =fnt
+                        Size: =9.75
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Center
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                        Fill: =cSoft
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                  - lblGdHalfPm:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="오후"
+                        X: =16
+                        Y: =246
+                        Width: =76
+                        Height: =136
+                        Font: =fnt
+                        Size: =9.75
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Center
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                        Fill: =cSoft
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                  - lblGdHalfTbd:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="시간 미정"
+                        X: =16
+                        Y: =382
+                        Width: =76
+                        Height: =136
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Center
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                        Fill: =cSoft
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                  - galGdWeek:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        Items: |-
+                          =ForAll(
+                              Sequence(21, 0) As n,
+                              With(
+                                  {d: DateAdd(gGdWeek, Mod(n.Value, 7), TimeUnit.Days)},
+                                  {D: d, Key: Text(d, "yyyy-mm-dd"), Half: Switch(RoundDown(n.Value / 7, 0), 0, "am", 1, "pm", "tbd"), Off: Weekday(d, StartOfWeek.Monday) > 5 || Text(d, "yyyy-mm-dd") in HolidayKeys.Value}
+                              )
+                          )
+                        X: =16 + 76
+                        Y: =110
+                        Width: =1318 * kx - 32 - 76
+                        Height: =408
+                        TemplateSize: =136
+                        TemplatePadding: =0
+                        ShowScrollbar: =false
+                        BorderThickness: =0
+                        Fill: =Color.Transparent
+                        WrapCount: =7
+                      Children:
+                        - rctGdWeekCell:
+                            Control: Rectangle@2.3.0
+                            Properties:
+                              X: =0
+                              Y: =0
+                              Width: =(1318 * kx - 32 - 76) / 7
+                              Height: =136
+                              Fill: =If(ThisItem.Off, cBg, cSurface)
+                              BorderColor: =cLine
+                              BorderThickness: =1
+                        - lblGdWeekNone:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: ="–"
+                              X: =0
+                              Y: =56
+                              Width: =(1318 * kx - 32 - 76) / 7
+                              Height: =20
+                              Font: =fnt
+                              Size: =9
+                              Color: =cInk3
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Align: =Align.Center
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                              Visible: =CountRows(Filter(colGdVisits, Key = ThisItem.Key && Half = ThisItem.Half)) = 0
+                        - galGdWeekItems:
+                            Control: Gallery@2.15.0
+                            Variant: Vertical
+                            Properties:
+                              Items: =SortByColumns(Filter(colGdVisits, Key = ThisItem.Key && Half = ThisItem.Half), "Start")
+                              X: =4
+                              Y: =4
+                              Width: =(1318 * kx - 32 - 76) / 7 - 8
+                              Height: =128
+                              TemplateSize: =64
+                              TemplatePadding: =0
+                              ShowScrollbar: =false
+                              BorderThickness: =0
+                              Fill: =Color.Transparent
+                            Children:
+                              - btnGdWeekItem:
+                                  Control: Classic/Button@2.2.0
+                                  Properties:
+                                    Text: =""
+                                    X: =0
+                                    Y: =0
+                                    Width: =(1318 * kx - 32 - 76) / 7 - 8
+                                    Height: =60
+                                    OnSelect: |-
+                                      =Set(gGdSel, LookUp(colGdVisits, ID = ThisItem.ID)); Set(gGdLeads, ForAll(Filter(colGdAssign, VisitId = ThisItem.ID && Role = "인솔"), {Value: Name})); Set(gGdOps, ForAll(Filter(colGdAssign, VisitId = ThisItem.ID && Role = "운영"), {Value: Name})); Set(gGdMonth, Date(Year(ThisItem.D), Month(ThisItem.D), 1))
+                                    Font: =fnt
+                                    Size: =9.75
+                                    Fill: =If(gGdSel.ID = ThisItem.ID, cSel, cSurface)
+                                    Color: =cInk
+                                    HoverFill: =cSoft
+                                    HoverColor: =cInk
+                                    PressedFill: =cSoft
+                                    PressedColor: =cInk
+                                    BorderColor: =If(gGdSel.ID = ThisItem.ID, cBrand, cLine)
+                                    BorderThickness: =1
+                                    RadiusTopLeft: =0
+                                    RadiusTopRight: =0
+                                    RadiusBottomLeft: =0
+                                    RadiusBottomRight: =0
+                              - rctGdWeekBar:
+                                  Control: Rectangle@2.3.0
+                                  Properties:
+                                    X: =0
+                                    Y: =0
+                                    Width: =4
+                                    Height: =60
+                                    Fill: =ThisItem.Color
+                                    OnSelect: =Select(btnGdWeekItem)
+                              - lblGdWeekItem1:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Text: =ThisItem.Time & "  " & ThisItem.Company
+                                    X: =8
+                                    Y: =3
+                                    Width: =(1318 * kx - 32 - 76) / 7 - 20
+                                    Height: =16
+                                    Font: =fnt
+                                    Size: =8.25
+                                    FontWeight: =FontWeight.Semibold
+                                    Color: =cInk
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    PaddingBottom: =0
+                                    VerticalAlign: =VerticalAlign.Middle
+                                    Wrap: =false
+                                    OnSelect: =Select(btnGdWeekItem)
+                              - lblGdWeekLead:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Text: =If(IsBlank(Concat(Filter(colGdAssign, VisitId = ThisItem.ID && Role = "인솔"), Name, ", ")), "인솔  미배정", "인솔  " & Concat(Filter(colGdAssign, VisitId = ThisItem.ID && Role = "인솔"), Name, ", "))
+                                    X: =8
+                                    Y: =21
+                                    Width: =(1318 * kx - 32 - 76) / 7 - 20
+                                    Height: =18
+                                    Font: =fnt
+                                    Size: =8.25
+                                    FontWeight: =FontWeight.Semibold
+                                    Color: =If(IsBlank(Concat(Filter(colGdAssign, VisitId = ThisItem.ID && Role = "인솔"), Name, ", ")), cBrand, cSurface)
+                                    PaddingLeft: =4
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    PaddingBottom: =0
+                                    VerticalAlign: =VerticalAlign.Middle
+                                    Wrap: =false
+                                    Fill: =If(IsBlank(Concat(Filter(colGdAssign, VisitId = ThisItem.ID && Role = "인솔"), Name, ", ")), Color.Transparent, cInk)
+                                    BorderColor: =cBrand
+                                    BorderThickness: =If(IsBlank(Concat(Filter(colGdAssign, VisitId = ThisItem.ID && Role = "인솔"), Name, ", ")), 1, 0)
+                                    BorderStyle: =BorderStyle.Dashed
+                                    OnSelect: =Select(btnGdWeekItem)
+                              - lblGdWeekOps:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Text: ="운영  " & If(CountRows(Filter(colGdAssign, VisitId = ThisItem.ID && Role = "운영")) = 0, "–", Concat(Filter(colGdAssign, VisitId = ThisItem.ID && Role = "운영"), Name, ", "))
+                                    X: =8
+                                    Y: =41
+                                    Width: =(1318 * kx - 32 - 76) / 7 - 20
+                                    Height: =16
+                                    Font: =fnt
+                                    Size: =8.25
+                                    Color: =cInk2
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    PaddingBottom: =0
+                                    VerticalAlign: =VerticalAlign.Middle
+                                    Wrap: =false
+                                    OnSelect: =Select(btnGdWeekItem)
+                  - rctGdWeekLoadBg:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        X: =1
+                        Y: =530
+                        Width: =1318 * kx - 2
+                        Height: =117
+                        Fill: =cBg
+                  - lblGdWeekLoadHead:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="이 주 인원별 · 근무 " & CountRows(Filter(Sequence(7, 0) As i, Weekday(DateAdd(gGdWeek, i.Value, TimeUnit.Days), StartOfWeek.Monday) <= 5 && !(Text(DateAdd(gGdWeek, i.Value, TimeUnit.Days), "yyyy-mm-dd") in HolidayKeys.Value))) & "일 기준 가동률"
+                        X: =16
+                        Y: =538
+                        Width: =400
+                        Height: =18
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - galGdWeekLoad:
+                      Control: Gallery@2.15.0
+                      Variant: Horizontal
+                      Properties:
+                        Items: =colRoster
+                        X: =16
+                        Y: =562
+                        Width: =1318 * kx - 32
+                        Height: =72
+                        TemplateSize: =(1318 * kx - 32) / 8
+                        TemplatePadding: =0
+                        ShowScrollbar: =false
+                        BorderThickness: =0
+                        Fill: =Color.Transparent
+                      Children:
+                        - rctGdLoadBox:
+                            Control: Rectangle@2.3.0
+                            Properties:
+                              X: =0
+                              Y: =0
+                              Width: =(1318 * kx - 32) / 8 - 8
+                              Height: =72
+                              Fill: =cSurface
+                              BorderColor: =cLine
+                              BorderThickness: =1
+                        - lblGdLoadName:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =Title & " " & RankTitle
+                              X: =10
+                              Y: =6
+                              Width: =(1318 * kx - 32) / 8 - 28
+                              Height: =20
+                              Font: =fnt
+                              Size: =9
+                              FontWeight: =FontWeight.Semibold
+                              Color: =cInk
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - lblGdLoadCnt:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: |-
+                                =With({w: Filter(colGdAssign, Name = ThisItem.Title && D >= gGdWeek && D < DateAdd(gGdWeek, 7, TimeUnit.Days))}, "인솔 " & CountRows(Filter(w, Role = "인솔")) & If(ThisItem.CanOperate = "Y", " · 운영 " & CountRows(Filter(w, Role = "운영")), ""))
+                              X: =10
+                              Y: =28
+                              Width: =(1318 * kx - 32) / 8 - 28
+                              Height: =18
+                              Font: =fnt
+                              Size: =9
+                              Color: =cInk2
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - lblGdLoadRate:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: |-
+                                =With({h: 4 * CountRows(Filter(colGdAssign, Name = ThisItem.Title && D >= gGdWeek && D < DateAdd(gGdWeek, 7, TimeUnit.Days))), c: CountRows(Filter(Sequence(7, 0) As i, Weekday(DateAdd(gGdWeek, i.Value, TimeUnit.Days), StartOfWeek.Monday) <= 5 && !(Text(DateAdd(gGdWeek, i.Value, TimeUnit.Days), "yyyy-mm-dd") in HolidayKeys.Value))) * 8}, If(c = 0, "-", Round(h / c * 100, 0) & "%"))
+                              X: =10
+                              Y: =48
+                              Width: =(1318 * kx - 32) / 8 - 28
+                              Height: =18
+                              Font: =fnt
+                              Size: =9
+                              FontWeight: =FontWeight.Semibold
+                              Color: =cInk
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+            - conGdMonth:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  X: =24
+                  Y: =1392
+                  Width: =1318 * kx
+                  Height: =404
+                  Fill: =cSurface
+                  BorderColor: =cLine
+                  BorderThickness: =1
+                  DropShadow: =DropShadow.None
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                Children:
+                  - lblGdMMTitle:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="월간 인원별 투입 (M/M) · " & Text(gGdMonth, "yyyy년 m월")
+                        X: =16
+                        Y: =12
+                        Width: =500
+                        Height: =24
+                        Font: =fnt
+                        Size: =11.25
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblGdMMSub:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="투어 1건 = 1타임(반일 4시간) · 근무일 " & LookUp(colGdWork, M = Month(gGdMonth), Days) & "일 × 8시간 = " & LookUp(colGdWork, M = Month(gGdMonth), Days) * 8 & "시간을 1 M/M 으로 계산 · 달은 위 달력과 함께 움직임"
+                        X: =16
+                        Y: =36
+                        Width: =800
+                        Height: =18
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - btnGdMMPrev:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="‹"
+                        X: =1318 * kx - 90
+                        Y: =14
+                        Width: =32
+                        Height: =32
+                        OnSelect: =Set(gGdMonth, DateAdd(gGdMonth, -1, TimeUnit.Months)); Set(gGdSel, Blank()); If(Year(gGdMonth) <> gGdYear, Set(gGdYear, Year(gGdMonth)); Select(btnGdLoad))
+                        Font: =fnt
+                        Size: =10.5
+                        FontWeight: =FontWeight.Semibold
+                        Fill: =cSurface
+                        Color: =cInk2
+                        HoverFill: =cSoft
+                        HoverColor: =cInk
+                        PressedFill: =cSoft
+                        PressedColor: =cInk
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                  - btnGdMMNext:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="›"
+                        X: =1318 * kx - 50
+                        Y: =14
+                        Width: =32
+                        Height: =32
+                        OnSelect: =Set(gGdMonth, DateAdd(gGdMonth, 1, TimeUnit.Months)); Set(gGdSel, Blank()); If(Year(gGdMonth) <> gGdYear, Set(gGdYear, Year(gGdMonth)); Select(btnGdLoad))
+                        Font: =fnt
+                        Size: =10.5
+                        FontWeight: =FontWeight.Semibold
+                        Fill: =cSurface
+                        Color: =cInk2
+                        HoverFill: =cSoft
+                        HoverColor: =cInk
+                        PressedFill: =cSoft
+                        PressedColor: =cInk
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                  - lblGdMMH0:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="이름"
+                        X: =16
+                        Y: =64
+                        Width: =220
+                        Height: =32
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =12
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblGdMMH1:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="인솔"
+                        X: =236
+                        Y: =64
+                        Width: =80
+                        Height: =32
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =12
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Right
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblGdMMH2:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="운영"
+                        X: =316
+                        Y: =64
+                        Width: =80
+                        Height: =32
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =12
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Right
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblGdMMH3:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="합계"
+                        X: =396
+                        Y: =64
+                        Width: =80
+                        Height: =32
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =12
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Right
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblGdMMH4:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="투입 시간"
+                        X: =476
+                        Y: =64
+                        Width: =100
+                        Height: =32
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =12
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Right
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblGdMMH5:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="M/M"
+                        X: =576
+                        Y: =64
+                        Width: =90
+                        Height: =32
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =12
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Right
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - rctGdMMHeadLine:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        X: =16
+                        Y: =96
+                        Width: =1318 * kx - 32
+                        Height: =1
+                        Fill: =cLine
+                  - galGdMM:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        Items: =SortByColumns(Filter(colGdMM, M = Month(gGdMonth)), "Sort")
+                        X: =16
+                        Y: =98
+                        Width: =1318 * kx - 32
+                        Height: =8 * 34
+                        TemplateSize: =34
+                        TemplatePadding: =0
+                        ShowScrollbar: =false
+                        BorderThickness: =0
+                        Fill: =Color.Transparent
+                      Children:
+                        - lblGdMMLabel:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =ThisItem.Label
+                              X: =0
+                              Y: =0
+                              Width: =220
+                              Height: =34
+                              Font: =fnt
+                              Size: =9.75
+                              FontWeight: =FontWeight.Semibold
+                              Color: =cInk
+                              PaddingLeft: =0
+                              PaddingRight: =12
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - lblGdMMLead:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =ThisItem.Lead
+                              X: =220
+                              Y: =0
+                              Width: =80
+                              Height: =34
+                              Font: =fnt
+                              Size: =9.75
+                              Color: =cInk
+                              PaddingLeft: =0
+                              PaddingRight: =12
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Align: =Align.Right
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - lblGdMMOp:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =If(ThisItem.CanOp, Text(ThisItem.Op), "–")
+                              X: =300
+                              Y: =0
+                              Width: =80
+                              Height: =34
+                              Font: =fnt
+                              Size: =9.75
+                              Color: =cInk
+                              PaddingLeft: =0
+                              PaddingRight: =12
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Align: =Align.Right
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - lblGdMMSum:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =ThisItem.Lead + ThisItem.Op
+                              X: =380
+                              Y: =0
+                              Width: =80
+                              Height: =34
+                              Font: =fnt
+                              Size: =9.75
+                              Color: =cInk
+                              PaddingLeft: =0
+                              PaddingRight: =12
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Align: =Align.Right
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - lblGdMMHours:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =ThisItem.Hours & "h"
+                              X: =460
+                              Y: =0
+                              Width: =100
+                              Height: =34
+                              Font: =fnt
+                              Size: =9.75
+                              Color: =cInk
+                              PaddingLeft: =0
+                              PaddingRight: =12
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Align: =Align.Right
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - lblGdMMMM:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =Text(Round(ThisItem.MM + 0.000000001, 2), "0.00")
+                              X: =560
+                              Y: =0
+                              Width: =90
+                              Height: =34
+                              Font: =fnt
+                              Size: =9.75
+                              FontWeight: =FontWeight.Semibold
+                              Color: =cInk
+                              PaddingLeft: =0
+                              PaddingRight: =12
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Align: =Align.Right
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - rctGdMMBarBg:
+                            Control: Rectangle@2.3.0
+                            Properties:
+                              X: =680
+                              Y: =12
+                              Width: =1318 * kx - 32 - 700
+                              Height: =10
+                              Fill: =cSoft
+                        - rctGdMMBar:
+                            Control: Rectangle@2.3.0
+                            Properties:
+                              X: =680
+                              Y: =12
+                              Width: =(1318 * kx - 32 - 700) * ThisItem.MM / Max(0.01, Max(SortByColumns(Filter(colGdMM, M = Month(gGdMonth)), "Sort"), MM))
+                              Height: =10
+                              Fill: =ColorValue("#30405F")
+                        - rctGdMMLine:
+                            Control: Rectangle@2.3.0
+                            Properties:
+                              X: =0
+                              Y: =33
+                              Width: =1318 * kx - 32
+                              Height: =1
+                              Fill: =cLine
+                  - rctGdMMTotalBg:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        X: =16
+                        Y: =372
+                        Width: =1318 * kx - 32
+                        Height: =32
+                        Fill: =cSoft
+                  - lblGdMMTotLabel:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="합계"
+                        X: =16
+                        Y: =372
+                        Width: =220
+                        Height: =32
+                        Font: =fnt
+                        Size: =9.75
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblGdMMTotLead:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =Sum(SortByColumns(Filter(colGdMM, M = Month(gGdMonth)), "Sort"), Lead)
+                        X: =236
+                        Y: =372
+                        Width: =80
+                        Height: =32
+                        Font: =fnt
+                        Size: =9.75
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =12
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Right
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblGdMMTotOp:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =Sum(SortByColumns(Filter(colGdMM, M = Month(gGdMonth)), "Sort"), Op)
+                        X: =316
+                        Y: =372
+                        Width: =80
+                        Height: =32
+                        Font: =fnt
+                        Size: =9.75
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =12
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Right
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblGdMMTotSum:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =Sum(SortByColumns(Filter(colGdMM, M = Month(gGdMonth)), "Sort"), Lead + Op)
+                        X: =396
+                        Y: =372
+                        Width: =80
+                        Height: =32
+                        Font: =fnt
+                        Size: =9.75
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =12
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Right
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblGdMMTotHours:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =Sum(SortByColumns(Filter(colGdMM, M = Month(gGdMonth)), "Sort"), Hours) & "h"
+                        X: =476
+                        Y: =372
+                        Width: =100
+                        Height: =32
+                        Font: =fnt
+                        Size: =9.75
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =12
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Right
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblGdMMTotMM:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =Text(Round(Sum(SortByColumns(Filter(colGdMM, M = Month(gGdMonth)), "Sort"), MM) + 0.000000001, 2), "0.00")
+                        X: =576
+                        Y: =372
+                        Width: =90
+                        Height: =32
+                        Font: =fnt
+                        Size: =9.75
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =12
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Right
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+            - conGdYear:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  X: =24
+                  Y: =1812
+                  Width: =1318 * kx
+                  Height: =372
+                  Fill: =cSurface
+                  BorderColor: =cLine
+                  BorderThickness: =1
+                  DropShadow: =DropShadow.None
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                Children:
+                  - lblGdYTitle:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: =gGdYear & "년 월별 M/M"
+                        X: =16
+                        Y: =12
+                        Width: =400
+                        Height: =24
+                        Font: =fnt
+                        Size: =11.25
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblGdYSub:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="사람 × 월 · 값이 클수록 진하게"
+                        X: =16
+                        Y: =36
+                        Width: =400
+                        Height: =18
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblGdYHName:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="이름"
+                        X: =16
+                        Y: =64
+                        Width: =180
+                        Height: =30
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - galGdYHead:
+                      Control: Gallery@2.15.0
+                      Variant: Horizontal
+                      Properties:
+                        Items: =Sequence(12)
+                        X: =196
+                        Y: =64
+                        Width: =12 * (1318 * kx - 32 - 180 - 90) / 12
+                        Height: =30
+                        TemplateSize: =(1318 * kx - 32 - 180 - 90) / 12
+                        TemplatePadding: =0
+                        ShowScrollbar: =false
+                        BorderThickness: =0
+                        Fill: =Color.Transparent
+                      Children:
+                        - lblGdYHM:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =ThisItem.Value & "월"
+                              X: =0
+                              Y: =0
+                              Width: =(1318 * kx - 32 - 180 - 90) / 12
+                              Height: =30
+                              Font: =fnt
+                              Size: =9
+                              FontWeight: =FontWeight.Semibold
+                              Color: =If(ThisItem.Value = Month(gGdMonth), cInk, cInk2)
+                              PaddingLeft: =0
+                              PaddingRight: =8
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Align: =Align.Right
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                  - lblGdYHSum:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="연 합계"
+                        X: =196 + 12 * (1318 * kx - 32 - 180 - 90) / 12
+                        Y: =64
+                        Width: =90
+                        Height: =30
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =12
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Right
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - rctGdYHeadLine:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        X: =16
+                        Y: =94
+                        Width: =1318 * kx - 32
+                        Height: =1
+                        Fill: =cLine
+                  - galGdYear:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        Items: =colRoster
+                        X: =16
+                        Y: =96
+                        Width: =1318 * kx - 32
+                        Height: =8 * 32
+                        TemplateSize: =32
+                        TemplatePadding: =0
+                        ShowScrollbar: =false
+                        BorderThickness: =0
+                        Fill: =Color.Transparent
+                      Children:
+                        - lblGdYName:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =Title & " " & RankTitle
+                              X: =0
+                              Y: =0
+                              Width: =180
+                              Height: =32
+                              Font: =fnt
+                              Size: =9.75
+                              FontWeight: =FontWeight.Semibold
+                              Color: =cInk
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - galGdYCells:
+                            Control: Gallery@2.15.0
+                            Variant: Horizontal
+                            Properties:
+                              Items: =SortByColumns(Filter(colGdMM, Name = ThisItem.Title), "M")
+                              X: =180
+                              Y: =0
+                              Width: =12 * (1318 * kx - 32 - 180 - 90) / 12
+                              Height: =32
+                              TemplateSize: =(1318 * kx - 32 - 180 - 90) / 12
+                              TemplatePadding: =0
+                              ShowScrollbar: =false
+                              BorderThickness: =0
+                              Fill: =Color.Transparent
+                            Children:
+                              - lblGdYV:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Text: =If(ThisItem.MM = 0, "–", Text(Round(ThisItem.MM + 0.000000001, 2), "0.00"))
+                                    X: =0
+                                    Y: =2
+                                    Width: =(1318 * kx - 32 - 180 - 90) / 12 - 2
+                                    Height: =28
+                                    Font: =fnt
+                                    Size: =9
+                                    Color: =If(ThisItem.MM / gGdYearMax > 0.6, cSurface, ThisItem.MM = 0, cInk3, cInk)
+                                    PaddingLeft: =0
+                                    PaddingRight: =8
+                                    PaddingTop: =0
+                                    PaddingBottom: =0
+                                    Align: =Align.Right
+                                    VerticalAlign: =VerticalAlign.Middle
+                                    Wrap: =false
+                                    Fill: =If(ThisItem.MM > 0, RGBA(48, 64, 95, 0.08 + ThisItem.MM / gGdYearMax * 0.6), Color.Transparent)
+                        - lblGdYSum:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =Text(Round(Sum(Filter(colGdMM, Name = ThisItem.Title), MM) + 0.000000001, 2), "0.00")
+                              X: =180 + 12 * (1318 * kx - 32 - 180 - 90) / 12
+                              Y: =0
+                              Width: =90
+                              Height: =32
+                              Font: =fnt
+                              Size: =9.75
+                              FontWeight: =FontWeight.Semibold
+                              Color: =cInk
+                              PaddingLeft: =0
+                              PaddingRight: =12
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Align: =Align.Right
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - rctGdYLine:
+                            Control: Rectangle@2.3.0
+                            Properties:
+                              X: =0
+                              Y: =31
+                              Width: =1318 * kx - 32
+                              Height: =1
+                              Fill: =cLine
+- hdrGDBar:
+    Control: Rectangle@2.3.0
+    Properties:
+      X: =0
+      Y: =0
+      Width: =sw
+      Height: =56
+      Fill: =cHeader
+- hdrGDLine:
+    Control: Rectangle@2.3.0
+    Properties:
+      X: =0
+      Y: =52
+      Width: =sw
+      Height: =4
+      Fill: =cBrand
+- hdrGDMark:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="TDL"
+      X: =ox + 24
+      Y: =12
+      Width: =46
+      Height: =30
+      Font: =fnt
+      Size: =16
+      Color: =cSurface
+      FontWeight: =FontWeight.Bold
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+- hdrGDMarkLab:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="LAB"
+      X: =ox + 70
+      Y: =24
+      Width: =26
+      Height: =14
+      Font: =fnt
+      Size: =7
+      Color: =cSurface
+      FontWeight: =FontWeight.Bold
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+- hdrGDTitle:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="방문 예약"
+      X: =ox + 104
+      Y: =16
+      Width: =96
+      Height: =24
+      Font: =fnt
+      Size: =11
+      Color: =RGBA(255, 255, 255, 0.85)
+      FontWeight: =FontWeight.Semibold
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+- hdrGDNavBook:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="방문 신청"
+      X: =ox + 210
+      Y: =12
+      Width: =92
+      Height: =40
+      OnSelect: =Navigate(scrBook, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrBook || App.ActiveScreen = scrDone, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =true
+- hdrGDNavMy:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="내 신청"
+      X: =ox + 304
+      Y: =12
+      Width: =92
+      Height: =40
+      OnSelect: =Navigate(scrMy, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrMy, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrMy, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrMy, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrMy, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrMy, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrMy, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrMy, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =true
+- hdrGDNavGuest:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="방명록"
+      X: =ox + 398
+      Y: =12
+      Width: =92
+      Height: =40
+      OnSelect: =Navigate(scrGuest, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrGuest, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrGuest, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrGuest, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrGuest, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrGuest, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrGuest, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrGuest, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =true
+- hdrGDAdmZone:
+    Control: Rectangle@2.3.0
+    Properties:
+      X: =ox + 566
+      Y: =0
+      Width: =534
+      Height: =52
+      Fill: =RGBA(255, 255, 255, 0.07)
+      Visible: =!IsBlank(gAdminSite)  // [PA 전용] 관리자 메뉴를 오른쪽 묶음으로 구분 · 웹은 관리자 페이지가 따로 있음
+- hdrGDAdmLabel:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="관리자"
+      X: =ox + 582
+      Y: =23
+      Width: =54
+      Height: =18
+      Font: =fnt
+      Size: =8.25
+      FontWeight: =FontWeight.Semibold
+      Color: =cSurface
+      Fill: =cBrand
+      Align: =Align.Center
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      Visible: =!IsBlank(gAdminSite)
+- hdrGDNavAdmin:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="예약 관리"
+      X: =ox + 652
+      Y: =12
+      Width: =92
+      Height: =40
+      OnSelect: =Navigate(scrAdmin, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrAdmin, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrAdmin, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrAdmin, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrAdmin, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrAdmin, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrAdmin, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrAdmin, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =!IsBlank(gAdminSite)
+- hdrGDNavCal:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="달력"
+      X: =ox + 744
+      Y: =12
+      Width: =68
+      Height: =40
+      OnSelect: =Navigate(scrCalendar, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrCalendar, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrCalendar, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrCalendar, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrCalendar, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrCalendar, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrCalendar, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrCalendar, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =!IsBlank(gAdminSite)
+- hdrGDNavStats:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="통계"
+      X: =ox + 812
+      Y: =12
+      Width: =68
+      Height: =40
+      OnSelect: =Navigate(scrStats, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrStats, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrStats, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrStats, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrStats, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrStats, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrStats, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrStats, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =!IsBlank(gAdminSite)
+- hdrGDNavGuides:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="가이드 배정"
+      X: =ox + 880
+      Y: =12
+      Width: =100
+      Height: =40
+      OnSelect: =Navigate(scrGuides, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrGuides, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrGuides, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrGuides, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrGuides, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrGuides, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrGuides, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrGuides, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =gAdminSite = "main"
+- hdrGDNavGuestAdmin:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: ="방명록 관리"
+      X: =ox + 980
+      Y: =12
+      Width: =108
+      Height: =40
+      OnSelect: =Navigate(scrGuestAdmin, ScreenTransition.None)
+      Font: =fnt
+      Size: =10.5
+      FontWeight: =If(App.ActiveScreen = scrGuestAdmin, FontWeight.Semibold, FontWeight.Normal)
+      Fill: =If(App.ActiveScreen = scrGuestAdmin, cBg, Color.Transparent)
+      Color: =If(App.ActiveScreen = scrGuestAdmin, cInk, RGBA(255, 255, 255, 0.72))
+      HoverFill: =If(App.ActiveScreen = scrGuestAdmin, cBg, RGBA(255, 255, 255, 0.08))
+      HoverColor: =If(App.ActiveScreen = scrGuestAdmin, cInk, cSurface)
+      PressedFill: =If(App.ActiveScreen = scrGuestAdmin, cBg, RGBA(255, 255, 255, 0.12))
+      PressedColor: =If(App.ActiveScreen = scrGuestAdmin, cInk, cSurface)
+      BorderThickness: =0
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =!IsBlank(gAdminSite)
+- hdrGDUser:
+    Control: Label@2.5.1
+    Properties:
+      Text: =gMe.displayName & If(IsBlank(gMe.department), "", " · " & gMe.department)
+      X: =ox + pw - 244
+      Y: =18
+      Width: =220
+      Height: =20
+      Font: =fnt
+      Size: =9.75
+      Color: =RGBA(255, 255, 255, 0.7)
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      Align: =Align.Right
+- btnGdLoad:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: =""
+      X: =0
+      Y: =0
+      Width: =0
+      Height: =0
+      OnSelect: |-
+        =// [PA 전용] 그 해 확정 방문을 한 번에 읽어 둠 (SharePoint 2000행 제한 회피) · 웹은 시트 전체를 읽음
+        With(
+            {s: DateAdd(Date(gGdYear, 1, 1), -7, TimeUnit.Days), e: DateAdd(Date(gGdYear + 1, 1, 1), 7, TimeUnit.Days)},
+            ClearCollect(colGdRaw, Filter(VisitRequests, VisitDate >= s && VisitDate < e && (Status = "승인" || Status = "완료")))
+        );
+        ClearCollect(
+            colGdVisits,
+            ForAll(
+                Filter(colGdRaw, Tour in ["lab", "combined", "all3", "other"]) As r,
+                With(
+                    {lf: Coalesce(LookUp(TourSlots, Tour = r.Tour && Slot = r.Slot, LFrom), If(IsBlank(r.Slot), -1, Value(Left(r.Slot, 2)) * 60 + Value(Mid(r.Slot, 4, 2))))},
+                    {
+                        ID: r.ID,
+                        ReqNo: r.Title,
+                        Key: r.DateKey,
+                        D: r.VisitDate,
+                        Tour: r.Tour,
+                        TourName: r.TourName,
+                        Slot: r.Slot,
+                        Sched: r.ScheduleText,
+                        Company: r.Company,
+                        Heads: If(r.AttendeeCount > 0, r.AttendeeCount, r.ExpectedHeadcount),
+                        Guides: Coalesce(r.Guides, ""),
+                        Start: lf,
+                        Half: If(lf < 0, "tbd", lf < 720, "am", "pm"),
+                        Time: If(lf < 0, "미정", Text(Time(RoundDown(lf / 60, 0), Mod(lf, 60), 0), "hh:mm")),
+                        Color: Coalesce(LookUp(Tours, Id = r.Tour, Color), cInk3)
+                    }
+                )
+            )
+        );
+        Clear(colGdRaw);
+        ClearCollect(
+            colGdWork,
+            ForAll(
+                Sequence(12) As k,
+                {
+                    M: k.Value,
+                    Days: CountRows(
+                        Filter(
+                            Sequence(Day(DateAdd(Date(gGdYear, k.Value + 1, 1), -1, TimeUnit.Days))) As d,
+                            Weekday(Date(gGdYear, k.Value, d.Value), StartOfWeek.Monday) <= 5 && !(Text(Date(gGdYear, k.Value, d.Value), "yyyy-mm-dd") in HolidayKeys.Value)
+                        )
+                    )
+                }
+            )
+        );
+        Select(btnGdParse)
+      Font: =fnt
+      Size: =9.75
+      Fill: =cSurface
+      Color: =cInk
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderColor: =cLine
+      BorderThickness: =1
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =false
+- btnGdParse:
+    Control: Classic/Button@2.2.0
+    Properties:
+      Text: =""
+      X: =0
+      Y: =0
+      Width: =0
+      Height: =0
+      OnSelect: |-
+        =// 가이드 칸(줄마다 한 명)을 사람별 역할로 풀어 둠. 규칙은 웹 guideRoster.ts parseGuides 와 같음
+        // (인솔자) · [인솔] · 인솔: · 예전 (메인) 표시는 인솔자, 표시 없는 줄은 운영 가능자면 운영 인원 · 아니면(팀장) 인솔자. 명단 밖 이름은 저장할 때 그대로 둠
+        ClearCollect(
+            colGdAssign,
+            Ungroup(
+                ForAll(
+                    colGdVisits As v,
+                    {
+                        Rows: ForAll(
+                            Filter(colRoster, Find(Title, v.Guides) > 0) As m,
+                            With(
+                                {ln: LookUp(Split(Substitute(v.Guides, ",", Char(10)), Char(10)), Find(m.Title, Value) > 0, Value)},
+                                {
+                                    VisitId: v.ID,
+                                    D: v.D,
+                                    Key: v.Key,
+                                    Half: v.Half,
+                                    Name: m.Title,
+                                    Sort: m.SortOrder,
+                                    Role: If(IsMatch(ln, "[\(\[]\s*(인솔자?|메인)\s*[\)\]]|(인솔자?|메인)\s*[:：]", MatchOptions.Contains) || m.CanOperate <> "Y", "인솔", "운영")
+                                }
+                            )
+                        )
+                    }
+                ),
+                "Rows"
+            )
+        );
+        // 사람 × 월 투입 (1건 = 반일 4시간, M/M = 투입 시간 ÷ (근무일 × 8시간))
+        ClearCollect(
+            colGdMM,
+            Ungroup(
+                ForAll(
+                    colRoster As m,
+                    {
+                        Rows: ForAll(
+                            colGdWork As w,
+                            With(
+                                {
+                                    lead: CountRows(Filter(colGdAssign, Name = m.Title && Role = "인솔" && Year(D) = gGdYear && Month(D) = w.M)),
+                                    op: CountRows(Filter(colGdAssign, Name = m.Title && Role = "운영" && Year(D) = gGdYear && Month(D) = w.M))
+                                },
+                                {
+                                    Name: m.Title,
+                                    Label: m.Title & " " & m.RankTitle,
+                                    Sort: m.SortOrder,
+                                    CanOp: m.CanOperate = "Y",
+                                    M: w.M,
+                                    Lead: lead,
+                                    Op: op,
+                                    Hours: (lead + op) * 4,
+                                    MM: If(w.Days > 0, (lead + op) * 4 / (w.Days * 8), 0)
+                                }
+                            )
+                        )
+                    }
+                ),
+                "Rows"
+            )
+        );
+        Set(gGdYearMax, Max(0.01, Max(colGdMM, MM)))
+      Font: =fnt
+      Size: =9.75
+      Fill: =cSurface
+      Color: =cInk
+      HoverFill: =cSoft
+      HoverColor: =cInk
+      PressedFill: =cSoft
+      PressedColor: =cInk
+      BorderColor: =cLine
+      BorderThickness: =1
+      RadiusTopLeft: =0
+      RadiusTopRight: =0
+      RadiusBottomLeft: =0
+      RadiusBottomRight: =0
+      Visible: =false

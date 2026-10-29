@@ -34,6 +34,10 @@ Set(gBlockTime, "종일");
 Set(gIndustry, "");
 Set(gPurpose, "");
 
+// 가이드 배정 화면: 달력 달 · 주간 배정표의 월요일
+Set(gGdMonth, Date(Year(Today()), Month(Today()), 1));
+Set(gGdWeek, DateAdd(Today(), 1 - Weekday(Today(), StartOfWeek.Monday), TimeUnit.Days));
+
 // 통계 화면: 연간 · 월별 · 기간 지정 · 전체 기간, 집계 기준(전체 / 승인 · 완료)
 Set(gStatPeriod, "year");
 Set(gStatYear, Year(Today()));
