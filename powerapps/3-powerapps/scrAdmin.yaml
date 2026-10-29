@@ -7,6 +7,7 @@
 #   · 관리자 구분: 키 입력 대신 회사 로그인 + TourAdmins 목록
 #   · conABody: 본문만 스크롤 · 폭은 창 폭에 맞춰 kx 배(최대 MaxStretch)로 늘어남
 #   · 승인 · 거절 · 일정 취소: 바로 처리하지 않고 conMail(신청자 메일 미리보기 + 사유 입력) 창을 먼저 연다 · 거절 · 취소는 사유 필수 · 오시는 길(약도)은 CenterGuides 목록을 읽어 센터별로 미리보기에 표시
+#   · hdrAAdmZone · hdrAAdmLabel: 관리자 메뉴(예약 관리 · 달력 · 통계 · 방명록 관리)를 오른쪽 묶음 + 관리자 표시로 구분 (관리자만 보임)
 # 1) 새 화면(빈 화면) → 이름 scrAdmin, 화면 Fill = cBg, Width = sw, Height = sh
 #    OnVisible =
 #      If(IsBlank(gAdminSite), Notify("관리자 권한이 없습니다.", NotificationType.Error); Navigate(scrBook),
@@ -1392,13 +1393,41 @@
       RadiusBottomLeft: =0
       RadiusBottomRight: =0
       Visible: =true
+- hdrAAdmZone:
+    Control: Rectangle@2.3.0
+    Properties:
+      X: =ox + 566
+      Y: =0
+      Width: =446
+      Height: =52
+      Fill: =RGBA(255, 255, 255, 0.07)
+      Visible: =!IsBlank(gAdminSite)  // [PA 전용] 관리자 메뉴를 오른쪽 묶음으로 구분 · 웹은 관리자 페이지가 따로 있음
+- hdrAAdmLabel:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="관리자"
+      X: =ox + 582
+      Y: =23
+      Width: =54
+      Height: =18
+      Font: =fnt
+      Size: =8.25
+      FontWeight: =FontWeight.Semibold
+      Color: =cSurface
+      Fill: =cBrand
+      Align: =Align.Center
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      Visible: =!IsBlank(gAdminSite)
 - hdrANavAdmin:
     Control: Classic/Button@2.2.0
     Properties:
-      Text: ="관리자"
-      X: =ox + 492
+      Text: ="예약 관리"
+      X: =ox + 652
       Y: =12
-      Width: =92
+      Width: =96
       Height: =40
       OnSelect: =Navigate(scrAdmin, ScreenTransition.None)
       Font: =fnt
@@ -1420,9 +1449,9 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="달력"
-      X: =ox + 586
+      X: =ox + 748
       Y: =12
-      Width: =92
+      Width: =72
       Height: =40
       OnSelect: =Navigate(scrCalendar, ScreenTransition.None)
       Font: =fnt
@@ -1444,9 +1473,9 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="통계"
-      X: =ox + 680
+      X: =ox + 820
       Y: =12
-      Width: =92
+      Width: =72
       Height: =40
       OnSelect: =Navigate(scrStats, ScreenTransition.None)
       Font: =fnt
@@ -1468,7 +1497,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="방명록 관리"
-      X: =ox + 774
+      X: =ox + 892
       Y: =12
       Width: =108
       Height: =40

@@ -1,6 +1,7 @@
 # scrCalendar — 예약 달력 (관리자만). 웹 관리자 대시보드의 달력과 같은 역할
 # ── [PA 전용] 웹앱에 없는 기능 · 수정하면 이 목록과 수식 속 '// [PA 전용]' 주석도 함께 고칠 것 (README 14) ──
 #   · conCBody: 본문만 스크롤 · 폭은 창 폭에 맞춰 kx 배(최대 MaxStretch)로 늘어남
+#   · hdrCAdmZone · hdrCAdmLabel: 관리자 메뉴(예약 관리 · 달력 · 통계 · 방명록 관리)를 오른쪽 묶음 + 관리자 표시로 구분 (관리자만 보임)
 # 날짜 칸마다 예약을 '시간 · 투어 · 업체' 칩으로 3건까지 보여주고, 더 있으면 '+n건 더보기'.
 # 칩 색 = 상태(대기 노랑 · 승인 초록 · 완료 파랑 · 거절/취소 회색 취소선), 왼쪽 띠 = 투어 색, 막힌 일정은 '막힘' 칩.
 # 칩을 누르면 관리자 화면에서 그 신청이 열리고, 칸을 누르면 오른쪽에 그날 전체 목록 · 일정 막기 · 해제.
@@ -1114,13 +1115,41 @@
       RadiusBottomLeft: =0
       RadiusBottomRight: =0
       Visible: =true
+- hdrCAdmZone:
+    Control: Rectangle@2.3.0
+    Properties:
+      X: =ox + 566
+      Y: =0
+      Width: =446
+      Height: =52
+      Fill: =RGBA(255, 255, 255, 0.07)
+      Visible: =!IsBlank(gAdminSite)  // [PA 전용] 관리자 메뉴를 오른쪽 묶음으로 구분 · 웹은 관리자 페이지가 따로 있음
+- hdrCAdmLabel:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="관리자"
+      X: =ox + 582
+      Y: =23
+      Width: =54
+      Height: =18
+      Font: =fnt
+      Size: =8.25
+      FontWeight: =FontWeight.Semibold
+      Color: =cSurface
+      Fill: =cBrand
+      Align: =Align.Center
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      Visible: =!IsBlank(gAdminSite)
 - hdrCNavAdmin:
     Control: Classic/Button@2.2.0
     Properties:
-      Text: ="관리자"
-      X: =ox + 492
+      Text: ="예약 관리"
+      X: =ox + 652
       Y: =12
-      Width: =92
+      Width: =96
       Height: =40
       OnSelect: =Navigate(scrAdmin, ScreenTransition.None)
       Font: =fnt
@@ -1142,9 +1171,9 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="달력"
-      X: =ox + 586
+      X: =ox + 748
       Y: =12
-      Width: =92
+      Width: =72
       Height: =40
       OnSelect: =Navigate(scrCalendar, ScreenTransition.None)
       Font: =fnt
@@ -1166,9 +1195,9 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="통계"
-      X: =ox + 680
+      X: =ox + 820
       Y: =12
-      Width: =92
+      Width: =72
       Height: =40
       OnSelect: =Navigate(scrStats, ScreenTransition.None)
       Font: =fnt
@@ -1190,7 +1219,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="방명록 관리"
-      X: =ox + 774
+      X: =ox + 892
       Y: =12
       Width: =108
       Height: =40

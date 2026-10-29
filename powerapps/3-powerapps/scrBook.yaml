@@ -5,6 +5,7 @@
 #   · 신청 담당자 칸: 회사 계정(Office 365)에서 자동 입력
 #   · 참석자 명단 대신 예상 인원 + Forms 링크 (참석자 본인이 입력 · 동의)
 #   · conBBody: 본문만 스크롤 · 폭은 창 폭에 맞춰 kx 배(최대 MaxStretch)로 늘어남 (머리말 · 바닥 버튼 고정)
+#   · hdrBAdmZone · hdrBAdmLabel: 관리자 메뉴(예약 관리 · 달력 · 통계 · 방명록 관리)를 오른쪽 묶음 + 관리자 표시로 구분 (관리자만 보임)
 # 1) 트리 뷰에서 새 화면(빈 화면)을 만들고 이름을 scrBook 으로 바꿉니다.
 # 2) 화면 속성: Fill = cBg, Width = sw, Height = sh
 #    OnVisible = If(gNeedReset, Reset(txtHostName); Reset(txtHostTitle); Reset(txtHostDivision); Reset(txtHostOrg); Reset(txtHostPhone); Reset(txtHostEmail); Reset(txtCompany); Reset(txtIndustryEtc); Reset(txtPurposeEtc); Reset(txtInterpLang); Reset(chkInterp); Reset(txtHeadcount); Reset(txtComment); Reset(txtAttendeeEmails); Reset(chkConsent); Set(gNeedReset, false))
@@ -2194,13 +2195,41 @@
       RadiusBottomLeft: =0
       RadiusBottomRight: =0
       Visible: =true
+- hdrBAdmZone:
+    Control: Rectangle@2.3.0
+    Properties:
+      X: =ox + 566
+      Y: =0
+      Width: =446
+      Height: =52
+      Fill: =RGBA(255, 255, 255, 0.07)
+      Visible: =!IsBlank(gAdminSite)  // [PA 전용] 관리자 메뉴를 오른쪽 묶음으로 구분 · 웹은 관리자 페이지가 따로 있음
+- hdrBAdmLabel:
+    Control: Label@2.5.1
+    Properties:
+      Text: ="관리자"
+      X: =ox + 582
+      Y: =23
+      Width: =54
+      Height: =18
+      Font: =fnt
+      Size: =8.25
+      FontWeight: =FontWeight.Semibold
+      Color: =cSurface
+      Fill: =cBrand
+      Align: =Align.Center
+      PaddingLeft: =0
+      PaddingRight: =0
+      PaddingTop: =0
+      PaddingBottom: =0
+      Visible: =!IsBlank(gAdminSite)
 - hdrBNavAdmin:
     Control: Classic/Button@2.2.0
     Properties:
-      Text: ="관리자"
-      X: =ox + 492
+      Text: ="예약 관리"
+      X: =ox + 652
       Y: =12
-      Width: =92
+      Width: =96
       Height: =40
       OnSelect: =Navigate(scrAdmin, ScreenTransition.None)
       Font: =fnt
@@ -2222,9 +2251,9 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="달력"
-      X: =ox + 586
+      X: =ox + 748
       Y: =12
-      Width: =92
+      Width: =72
       Height: =40
       OnSelect: =Navigate(scrCalendar, ScreenTransition.None)
       Font: =fnt
@@ -2246,9 +2275,9 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="통계"
-      X: =ox + 680
+      X: =ox + 820
       Y: =12
-      Width: =92
+      Width: =72
       Height: =40
       OnSelect: =Navigate(scrStats, ScreenTransition.None)
       Font: =fnt
@@ -2270,7 +2299,7 @@
     Control: Classic/Button@2.2.0
     Properties:
       Text: ="방명록 관리"
-      X: =ox + 774
+      X: =ox + 892
       Y: =12
       Width: =108
       Height: =40
