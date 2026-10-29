@@ -553,9 +553,10 @@ function deleteGuestbook_(id) {
 
 function addGuestbook_(payload) {
   var name = requireText_(payload.name, '이름', 40);
-  var company = requireText_(payload.company, '회사명', 60);
+  // 회사명 · 팀명 · 직책은 선택 입력이다. 쓰지 않으면 지어 내지 않고 비워서 저장한다.
+  var company = optionalText_(payload.company, 60);
   var team = optionalText_(payload.team, 60);
-  var role = requireText_(payload.role, '직책', 60);
+  var role = optionalText_(payload.role, 60);
   var message = requireText_(payload.message, '메시지', MESSAGE_LIMIT);
   var tour = guestbookTour_(payload.tour);
   if (!tour) throw new Error('참여하신 투어를 선택해 주세요.');
