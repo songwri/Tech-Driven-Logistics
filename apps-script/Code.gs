@@ -1131,6 +1131,13 @@ function optionalText_(value, max) {
   return String(value == null ? '' : value).trim().slice(0, max);
 }
 
+/** 선택 이메일: 비우면 '', 적었으면 형식 확인. 방문자 이메일에 쓴다. */
+function optionalEmail_(value, label) {
+  var text = optionalText_(value, 120);
+  if (text && !EMAIL_RE_.test(text)) throw new Error(label + ' 형식을 확인해 주세요.');
+  return text;
+}
+
 /** 예약 화면/관리자 수정 공통 검증. 깨끗한 요청 객체를 돌려준다. */
 function sanitizeVisit_(payload, requireConsent) {
   var tour = String(payload.tour || '');
@@ -1200,7 +1207,7 @@ function sanitizeVisit_(payload, requireConsent) {
         name: requireText_(v.name, label + '성함', 40),
         title: requireText_(v.title, label + '직책', 40),
         org: requireText_(v.org, label + '조직명', 60),
-        email: requireText_(v.email, label + '이메일', 120),
+        email: optionalEmail_(v.email, label + '이메일'),
         car: optionalText_(v.car, 20),
         jobs: (v.jobs || []).map(function (job) { return optionalText_(job, 30); }).slice(0, 12),
       };
