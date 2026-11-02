@@ -331,12 +331,12 @@ export function PrivacyConsent({
         <p className="mt-2 font-semibold text-warm-800">1. 수집 항목</p>
         <p>
           · 담당자: 성함, 직책, 조직명, 연락처, 이메일
-          <br />· 방문자: 성함, 직책, 조직명, 이메일(선택), 방문 차량번호(선택), 직무 구분(선택)
+          <br />· 방문자: 성함, 직책, 조직명, 이메일, 방문 차량번호(선택), 직무 구분(선택)
         </p>
         <p className="mt-2 font-semibold text-warm-800">2. 수집 · 이용 목적</p>
         <p>
           방문 예약 접수 및 일정 확정 안내, 출입 등록 및 주차 등록, 방문 현황 통계(개인 식별 불가 형태), 방문 종료 후 만족도 · 개선 의견 조사 안내
-          메일 발송(방문자 이메일을 적은 경우 1회)
+          메일 발송(방문자 이메일로 1회)
         </p>
         <p className="mt-2 font-semibold text-warm-800">3. 보유 및 이용 기간</p>
         <p>
@@ -777,7 +777,7 @@ export function VisitorsFields({
           조직명<span className="text-brand">*</span>
         </span>
         <span>
-          이메일 <span className="font-normal text-warm-600">선택</span>
+          이메일<span className="text-brand">*</span>
         </span>
         <span>
           차량번호 <span className="font-normal text-warm-600">선택</span>
@@ -839,9 +839,7 @@ export function VisitorsFields({
               />
             </label>
             <label className="col-span-2 md:col-span-1">
-              <span className={cellLabel}>
-                이메일 <span className="font-normal text-warm-600">선택</span>
-              </span>
+              <span className={cellLabel}>이메일 *</span>
               <Input
                 type="email"
                 inputMode="email"

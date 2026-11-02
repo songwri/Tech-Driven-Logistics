@@ -849,8 +849,6 @@ export const FORM_SECTIONS: { id: FormSection; label: string }[] = [
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const blank = (value: string) => !value.trim()
-/** 방문자 이메일은 선택: 비워 두면 통과, 적었으면 형식만 본다. */
-const badOptionalEmail = (value: string) => !blank(value) && !EMAIL.test(value.trim())
 
 /**
  * 검사 옵션. 관리자 수정은 당일 · 익일 방문도 고칠 수 있어야 하므로 leadDays 를 0 으로 주고,
@@ -908,13 +906,13 @@ export function sectionProblems(draft: VisitDraft, options: DraftCheckOptions = 
         : null
 
   const missingIndex = draft.visitors.findIndex(
-    (visitor) => blank(visitor.name) || blank(visitor.title) || blank(visitor.org) || badOptionalEmail(visitor.email),
+    (visitor) => blank(visitor.name) || blank(visitor.title) || blank(visitor.org) || !EMAIL.test(visitor.email.trim()),
   )
   const visitors =
     draft.visitors.length === 0
       ? '방문자를 한 명 이상 등록해 주세요.'
       : missingIndex >= 0
-        ? `방문자 ${missingIndex + 1}번의 성함 · 직책 · 조직명을 입력해 주세요. 이메일은 적었다면 형식을 확인해 주세요.`
+        ? `방문자 ${missingIndex + 1}번의 성함 · 직책 · 조직명 · 이메일을 확인해 주세요.`
         : null
 
   return {
@@ -968,7 +966,7 @@ export function missingFields(draft: VisitDraft): Set<string> {
     mark(`visitor.${index}.name`, blank(visitor.name))
     mark(`visitor.${index}.title`, blank(visitor.title))
     mark(`visitor.${index}.org`, blank(visitor.org))
-    mark(`visitor.${index}.email`, badOptionalEmail(visitor.email))
+    mark(`visitor.${index}.email`, !EMAIL.test(visitor.email.trim()))
   })
   mark('consent', !draft.consent)
   mark('visitorConsent', !draft.visitorConsent)
