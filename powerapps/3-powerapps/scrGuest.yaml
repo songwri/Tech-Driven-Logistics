@@ -1,7 +1,7 @@
 # scrGuest — 방명록 (모든 사용자 · 센터 현장 태블릿). 웹 /guestbook/ 과 같은 구성
 #   · 왼쪽: 제목 · 가명 처리 안내 · [방명록 남기기], 오른쪽: 공개 소감 평균 만족도 (웹의 로봇 그림 자리)
 #   · 가운데 띠: 별점 4점 이상 최근 10건이 소포처럼 왼쪽으로 흘러감 (웹 EntryConveyor, 초당 40px), [멈춤] 으로 정지
-#   · [방명록 남기기]: 투어 카드(종합 · TDL Lab · 메가와이즈) · 0.5점 단위 별점 · 소감 100자 · 이름 · 회사 · 팀(선택) · 직책 · 가명 미리보기 · 동의
+#   · [방명록 남기기]: 투어 카드(종합 · TDL Lab · 메가와이즈) · 0.5점 단위 별점 · 소감 100자 · 이름 · 회사(선택) · 팀(선택) · 직책(선택) · 가명 미리보기 · 동의
 # ── [PA 전용] 웹앱에 없는 기능 · 수정하면 이 목록과 수식 속 '// [PA 전용]' 주석도 함께 고칠 것 (README 14) ──
 #   · 공개 화면은 가명 값만 든 GuestbookPublic 목록을 읽음 (실명 원본 Guestbook 은 관리자만). 웹은 서버가 가명 값만 내려 줌
 #   · 등록은 흐름 TDLGuestbookAdd 로 원본 목록에 저장 (작성자에게 원본 목록 권한이 없어도 됨). 웹은 Apps Script
@@ -1399,7 +1399,7 @@
             - lblGbCompanyQ:
                 Control: Label@2.5.1
                 Properties:
-                  Text: ="회사명 *"
+                  Text: ="회사명 (선택)"
                   X: =436
                   Y: =168
                   Width: =380
@@ -1415,7 +1415,7 @@
                 Control: Classic/TextInput@2.3.2
                 Properties:
                   Default: =""
-                  HintText: ="LX판토스"
+                  HintText: ="선택 입력 · 쓰지 않으면 비워서 등록"
                   X: =436
                   Y: =188
                   Width: =380
@@ -1453,7 +1453,7 @@
                 Control: Classic/TextInput@2.3.2
                 Properties:
                   Default: =""
-                  HintText: ="물류혁신팀"
+                  HintText: ="선택 입력"
                   X: =436
                   Y: =250
                   Width: =186
@@ -1475,7 +1475,7 @@
             - lblGbRoleQ:
                 Control: Label@2.5.1
                 Properties:
-                  Text: ="직책 *"
+                  Text: ="직책 (선택)"
                   X: =630
                   Y: =230
                   Width: =186
@@ -1491,7 +1491,7 @@
                 Control: Classic/TextInput@2.3.2
                 Properties:
                   Default: =""
-                  HintText: ="책임"
+                  HintText: ="선택 입력"
                   X: =630
                   Y: =250
                   Width: =186
@@ -1554,7 +1554,7 @@
                       Control: Label@2.5.1
                       Properties:
                         Text: |-
-                          =If(IsBlank(Trim(txtGbName.Text)), "홍**", Concat(Filter(Split(Trim(txtGbName.Text), " "), !IsBlank(Value)), Left(Value, 1) & "**", " ")) & "   " & Concat(Filter(Table({v: If(IsBlank(Trim(txtGbCompany.Text)), "L**", If(IsBlank(Trim(txtGbCompany.Text)), "", Left(Trim(txtGbCompany.Text), 1) & "**"))}, {v: If(IsBlank(Trim(txtGbTeam.Text)), "", Left(Trim(txtGbTeam.Text), 1) & "**")}, {v: Trim(txtGbRole.Text)}), !IsBlank(v)), v, " · ")
+                          =If(IsBlank(Trim(txtGbName.Text)), "이름을 입력하면 표시됩니다", Concat(Filter(Split(Trim(txtGbName.Text), " "), !IsBlank(Value)), Left(Value, 1) & "**", " ")) & "   " & Concat(Filter(Table({v: If(IsBlank(Trim(txtGbCompany.Text)), "", Left(Trim(txtGbCompany.Text), 1) & "**")}, {v: If(IsBlank(Trim(txtGbTeam.Text)), "", Left(Trim(txtGbTeam.Text), 1) & "**")}, {v: Trim(txtGbRole.Text)}), !IsBlank(v)), v, " · ")
                         X: =14
                         Y: =34
                         Width: =340
@@ -1646,7 +1646,7 @@
                 Control: Label@2.5.1
                 Properties:
                   Text: |-
-                    ="· 항목: 이름, 회사명, 팀명(선택), 직책, 별점 · 소감 · 참여 투어" & Char(10) & "· 목적: 방명록 등록 · 게시(이름과 회사명은 가명 처리해 공개), 방문 서비스 개선" & Char(10) & "· 가명 처리: 공개 화면에는 가명(예: 홍**, L**)만 보이고, 실명 · 실제 회사명은 담당 관리자만 접근해 관리" & Char(10) & "· 보관: 등록일로부터 1년 후 파기, 삭제를 원하시면 담당자에게 요청" & Char(10) & "· 동의를 거부할 수 있으나, 거부하시면 방명록을 남기실 수 없습니다."
+                    ="· 항목: 이름, 회사명(선택), 팀명(선택), 직책(선택), 별점 · 소감 · 참여 투어" & Char(10) & "· 목적: 방명록 등록 · 게시(이름과 회사명은 가명 처리해 공개), 방문 서비스 개선" & Char(10) & "· 가명 처리: 공개 화면에는 가명(예: 홍**, L**)만 보이고, 실명 · 실제 회사명은 담당 관리자만 접근해 관리" & Char(10) & "· 보관: 등록일로부터 1년 후 파기, 삭제를 원하시면 담당자에게 요청" & Char(10) & "· 동의를 거부할 수 있으나, 거부하시면 방명록을 남기실 수 없습니다."
                   X: =24
                   Y: =516
                   Width: =792
@@ -1705,8 +1705,6 @@
                         gGbRating = 0, "별점을 선택해 주세요.",
                         IsBlank(Trim(txtGbMessage.Text)), "방문 소감을 한 줄 남겨 주세요.",
                         IsBlank(Trim(txtGbName.Text)), "이름을 입력해 주세요.",
-                        IsBlank(Trim(txtGbCompany.Text)), "회사명을 입력해 주세요.",
-                        IsBlank(Trim(txtGbRole.Text)), "직책을 입력해 주세요.",
                         !chkGbConsent.Value, "개인정보 수집 · 이용에 동의해 주세요.",
                         ""
                     )},
@@ -1716,7 +1714,7 @@
                             Set(gGbSending, true);
                             IfError(
                                 // 원본(실명)은 관리자만 볼 수 있는 Guestbook 목록에 흐름(흐름 소유자 권한)으로 저장. 공개용 가명 행은 흐름 G 가 만든다.
-                                TDLGuestbookAdd.Run(Trim(txtGbName.Text), Trim(txtGbCompany.Text), Coalesce(Trim(txtGbTeam.Text), "-"), Trim(txtGbRole.Text), gGbRating, gGbTour, Trim(txtGbMessage.Text));
+                                TDLGuestbookAdd.Run(Trim(txtGbName.Text), Coalesce(Trim(txtGbCompany.Text), "-"), Coalesce(Trim(txtGbTeam.Text), "-"), Coalesce(Trim(txtGbRole.Text), "-"), gGbRating, gGbTour, Trim(txtGbMessage.Text));
                                 // 공개 목록에 반영되기 전에도 컨베이어에 바로 보이게 (웹의 '방금 도착')
                                 With(
                                     {pid: "new-" & Text(Now(), "hhmmss")},

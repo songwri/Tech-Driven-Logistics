@@ -8,7 +8,7 @@
 #   · hdrBAdmZone · hdrBAdmLabel: 관리자 메뉴(예약 관리 · 달력 · 통계 · 가이드 배정 · 방명록 관리)를 오른쪽 묶음 + 관리자 표시로 구분 (관리자만 보임)
 # 1) 트리 뷰에서 새 화면(빈 화면)을 만들고 이름을 scrBook 으로 바꿉니다.
 # 2) 화면 속성: Fill = cBg, Width = sw, Height = sh
-#    OnVisible = If(gNeedReset, Reset(txtHostName); Reset(txtHostTitle); Reset(txtHostDivision); Reset(txtHostOrg); Reset(txtHostPhone); Reset(txtHostEmail); Reset(txtCompany); Reset(txtIndustryEtc); Reset(txtPurposeEtc); Reset(txtInterpLang); Reset(chkInterp); Reset(txtHeadcount); Reset(txtComment); Reset(txtAttendeeEmails); Reset(chkConsent); Set(gNeedReset, false))
+#    OnVisible = If(gNeedReset, Reset(txtHostName); Reset(txtHostTitle); Reset(txtHostDivision); Reset(txtHostOrg); Reset(txtHostPhone); Reset(txtHostEmail); Reset(txtCompany); Reset(txtPartner); Reset(txtPurposeEtc); Reset(txtInterpLang); Reset(chkInterp); Reset(txtHeadcount); Reset(txtComment); Reset(txtAttendeeEmails); Reset(chkConsent); Set(gNeedReset, false))
 # 3) 이 파일 내용을 전부 복사 → 트리 뷰에서 scrBook 을 오른쪽 클릭 → '붙여넣기'(Ctrl+V)
 - conBBody:
     Control: GroupContainer@1.3.0
@@ -52,6 +52,28 @@
                   PaddingTop: =0
                   PaddingBottom: =0
                   FontWeight: =FontWeight.Semibold
+            - lblMultiWarn:
+                Control: Label@2.5.1
+                Properties:
+                  Text: ="⚠ 방문일 미정 상태로 여러 날짜를 동시에 신청하지 마세요. 대기 중인 예약이 2건 이상이면 임의 반려될 수 있습니다."
+                  X: =150
+                  Y: =14
+                  Width: =pw - 520 - 150 - 20
+                  Height: =38
+                  Font: =fnt
+                  Size: =9
+                  FontWeight: =FontWeight.Semibold
+                  Color: =cOrange
+                  Fill: =ColorValue("#FFF4E6")
+                  BorderColor: =ColorValue("#FFD8A8")
+                  BorderThickness: =1
+                  PaddingLeft: =10
+                  PaddingRight: =10
+                  PaddingTop: =0
+                  PaddingBottom: =0
+                  VerticalAlign: =VerticalAlign.Middle
+                  Wrap: =true
+                  Visible: =gStep = 1
             - stp1Num:
                 Control: Classic/Button@2.2.0
                 Properties:
@@ -510,10 +532,10 @@
                               Height: =52
                               OnSelect: =Select(Parent)
                               Visible: =ThisItem.InMonth
-                              Fill: =If((!IsBlank(gDate) && ThisItem.Key = Text(gDate, "yyyy-mm-dd")), cPrimary, (ThisItem.Open && ThisItem.Free > 0), cSurface, ThisItem.Open, cSoft, Color.Transparent)
+                              Fill: =If((!IsBlank(gDate) && ThisItem.Key = Text(gDate, "yyyy-mm-dd")), cPrimary, (ThisItem.Open && ThisItem.Free > 0), cSel, ThisItem.Open, cSoft, Color.Transparent)
                               HoverFill: =If((!IsBlank(gDate) && ThisItem.Key = Text(gDate, "yyyy-mm-dd")), cPrimaryHover, (ThisItem.Open && ThisItem.Free > 0), cSoft, ThisItem.Open, cSoft, Color.Transparent)
                               PressedFill: =If((!IsBlank(gDate) && ThisItem.Key = Text(gDate, "yyyy-mm-dd")), cPrimaryHover, cSoft)
-                              BorderColor: =If((ThisItem.Open && ThisItem.Free > 0) && !(!IsBlank(gDate) && ThisItem.Key = Text(gDate, "yyyy-mm-dd")), cLine, Color.Transparent)
+                              BorderColor: =If((ThisItem.Open && ThisItem.Free > 0) && !(!IsBlank(gDate) && ThisItem.Key = Text(gDate, "yyyy-mm-dd")), RGBA(167, 43, 43, 0.45), Color.Transparent)  // 예약 가능한 날 강조 (웹 PR 88 tdl-day-available)
                               BorderThickness: =1
                               RadiusTopLeft: =0
                               RadiusTopRight: =0
@@ -578,7 +600,7 @@
                   - lblLegendOk:
                       Control: Label@2.5.1
                       Properties:
-                        Text: ="빈 시간 있음"
+                        Text: ="예약 가능"
                         X: =76
                         Y: =453
                         Width: =90
@@ -594,7 +616,7 @@
                       Control: Classic/Button@2.2.0
                       Properties:
                         Text: ="마감"
-                        X: =170
+                        X: =150
                         Y: =452
                         Width: =48
                         Height: =22
@@ -613,14 +635,32 @@
                   - lblLegendFull:
                       Control: Label@2.5.1
                       Properties:
-                        Text: ="모두 예약됨  ·  흐린 날짜는 운영 안 함"
-                        X: =224
+                        Text: ="모두 예약됨 · 흐린 날 운영 안 함"
+                        X: =204
                         Y: =453
-                        Width: =260 + 520 * (kx - 1)
+                        Width: =176
                         Height: =20
                         Font: =fnt
                         Size: =9
                         Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                  - lblMonthAvail:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: |-
+                          =With({n: CountRows(Filter(galCal.AllItems, InMonth && Open && Free > 0))}, Month(gMonth) & "월 " & If(n > 0, "예약 가능 " & n & "일", "가능한 날 없음"))
+                        X: =380
+                        Y: =453
+                        Width: =118 + 520 * (kx - 1)
+                        Height: =20
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Color: =If(CountRows(Filter(galCal.AllItems, InMonth && Open && Free > 0)) > 0, cBrand, cInk2)
+                        Align: =Align.Right
                         PaddingLeft: =0
                         PaddingRight: =0
                         PaddingTop: =0
@@ -1224,9 +1264,9 @@
                         Text: ="기존 고객사"
                         X: =336 + 652 * (kx - 1)
                         Y: =346
-                        Width: =140
+                        Width: =94
                         Height: =36
-                        OnSelect: =Set(gClientType, "existing")
+                        OnSelect: =Set(gClientType, "existing"); Reset(txtPartner)
                         Font: =fnt
                         Size: =10.5
                         Fill: =If(gClientType = "existing", cPrimary, cSurface)
@@ -1247,11 +1287,11 @@
                       Control: Classic/Button@2.2.0
                       Properties:
                         Text: ="신규 고객사"
-                        X: =484 + 652 * (kx - 1)
+                        X: =434 + 652 * (kx - 1)
                         Y: =346
-                        Width: =140
+                        Width: =94
                         Height: =36
-                        OnSelect: =Set(gClientType, "new")
+                        OnSelect: =Set(gClientType, "new"); Reset(txtPartner)
                         Font: =fnt
                         Size: =10.5
                         Fill: =If(gClientType = "new", cPrimary, cSurface)
@@ -1268,13 +1308,38 @@
                         RadiusBottomLeft: =0
                         RadiusBottomRight: =0
                         Visible: =gCategory = "external"
+                  - btnClientPartner:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: ="파트너사 소개"
+                        X: =532 + 652 * (kx - 1)
+                        Y: =346
+                        Width: =100
+                        Height: =36
+                        OnSelect: =Set(gClientType, "partner")
+                        Font: =fnt
+                        Size: =10.5
+                        Fill: =If(gClientType = "partner", cPrimary, cSurface)
+                        Color: =If(gClientType = "partner", cSurface, cInk)
+                        HoverFill: =If(gClientType = "partner", cPrimaryHover, cSoft)
+                        HoverColor: =If(gClientType = "partner", cSurface, cInk)
+                        PressedFill: =If(gClientType = "partner", cPrimaryHover, cSoft)
+                        PressedColor: =If(gClientType = "partner", cSurface, cInk)
+                        BorderColor: =If(gClientType = "partner", cPrimary, cLine)
+                        HoverBorderColor: =If(gClientType = "partner", cPrimary, cInk3)
+                        BorderThickness: =1
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        Visible: =gCategory = "external"
                   - lblCompany:
                       Control: Label@2.5.1
                       Properties:
                         Text: ="업체명 *"
                         X: =20
                         Y: =398
-                        Width: =300 + 652 * (kx - 1)
+                        Width: =300 + 326 * (kx - 1)
                         Height: =20
                         Font: =fnt
                         Size: =9
@@ -1288,10 +1353,10 @@
                       Control: Classic/TextInput@2.3.2
                       Properties:
                         Default: =""
-                        HintText: ="고객사 이름"
+                        HintText: ="방문하는 고객사 이름"
                         X: =20
                         Y: =420
-                        Width: =612 + 652 * (kx - 1)
+                        Width: =If(gClientType = "partner", 300 + 326 * (kx - 1), 612 + 652 * (kx - 1))
                         Height: =36
                         Font: =fnt
                         Size: =10.5
@@ -1308,6 +1373,47 @@
                         RadiusBottomLeft: =0
                         RadiusBottomRight: =0
                         Visible: =gCategory = "external"
+                  - lblPartner:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="파트너사명 *"
+                        X: =332 + 326 * (kx - 1)
+                        Y: =398
+                        Width: =300 + 326 * (kx - 1)
+                        Height: =20
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Visible: =gCategory = "external" && gClientType = "partner"
+                  - txtPartner:
+                      Control: Classic/TextInput@2.3.2
+                      Properties:
+                        Default: =""
+                        HintText: ="소개한 파트너사 이름"
+                        MaxLength: =40
+                        X: =332 + 326 * (kx - 1)
+                        Y: =420
+                        Width: =300 + 326 * (kx - 1)
+                        Height: =36
+                        Font: =fnt
+                        Size: =10.5
+                        Color: =cInk
+                        Fill: =cSurface
+                        BorderColor: =cLine
+                        HoverBorderColor: =cInk3
+                        FocusedBorderColor: =cInk
+                        BorderThickness: =1
+                        FocusedBorderThickness: =1
+                        PaddingLeft: =10
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        Visible: =gCategory = "external" && gClientType = "partner"
                   - lblInternalCompany:
                       Control: Label@2.5.1
                       Properties:
@@ -1415,7 +1521,7 @@
                   - lblIndustry:
                       Control: Label@2.5.1
                       Properties:
-                        Text: ="업종 * (주 업종 한 가지만 선택)"
+                        Text: ="업종 * (주 업종 한 가지만 선택 · 공공, 대학교 등은 기타)"
                         X: =20
                         Y: =52
                         Width: =400 + 652 * (kx - 1)
@@ -1469,30 +1575,6 @@
                               RadiusTopRight: =0
                               RadiusBottomLeft: =0
                               RadiusBottomRight: =0
-                  - txtIndustryEtc:
-                      Control: Classic/TextInput@2.3.2
-                      Properties:
-                        Default: =""
-                        HintText: ="기타 업종 직접 입력"
-                        X: =20
-                        Y: =188
-                        Width: =300 + 652 * (kx - 1)
-                        Height: =32
-                        Font: =fnt
-                        Size: =10.5
-                        Color: =cInk
-                        Fill: =cSurface
-                        BorderColor: =cLine
-                        HoverBorderColor: =cInk3
-                        FocusedBorderColor: =cInk
-                        BorderThickness: =1
-                        FocusedBorderThickness: =1
-                        PaddingLeft: =10
-                        RadiusTopLeft: =0
-                        RadiusTopRight: =0
-                        RadiusBottomLeft: =0
-                        RadiusBottomRight: =0
-                        Visible: =gCategory = "external" && gIndustry = "기타"
                   - lblPurpose:
                       Control: Label@2.5.1
                       Properties:
@@ -1751,9 +1833,9 @@
                               {K: "신청 담당자", V: txtHostName.Text & " " & txtHostTitle.Text},
                               {K: "소속", V: txtHostDivision.Text & " " & txtHostOrg.Text},
                               {K: "연락처", V: txtHostPhone.Text & " · " & txtHostEmail.Text},
-                              {K: "방문 유형", V: If(gCategory = "external", "고객 방문 · " & If(gClientType = "new", "신규 고객사", "기존 고객사"), "내부 방문")},
+                              {K: "방문 유형", V: If(gCategory = "external", "고객 방문 · " & LookUp(ClientTypes, Id = gClientType, Name) & If(gClientType = "partner", " (" & Trim(txtPartner.Text) & ")", ""), "내부 방문")},
                               {K: "방문 기관", V: If(gCategory = "external", Trim(txtCompany.Text), Trim(txtHostDivision.Text & " " & txtHostOrg.Text))},
-                              {K: "업종", V: If(gCategory = "external", If(gIndustry = "기타", "기타: " & Trim(txtIndustryEtc.Text), gIndustry), "-")},
+                              {K: "업종", V: If(gCategory = "external", gIndustry, "-")},
                               {K: "방문 목적", V: If(gPurpose = "기타", "기타: " & Trim(txtPurposeEtc.Text), gPurpose)},
                               {K: "진행 언어", V: LookUp(Languages, Id = gLang, Name) & If(chkInterp.Value, " · 통역 동반" & If(IsBlank(txtInterpLang.Text), "", "(" & txtInterpLang.Text & ")"), "")},
                               {K: "예상 인원", V: txtHeadcount.Text & "명"},
@@ -2439,10 +2521,10 @@
                     "신청 담당자의 성함 · 직책 · 담당(실) · 조직명을 입력해 주세요.",
                     IsBlank(txtHostPhone.Text), "신청 담당자 연락처를 입력해 주세요.",
                     !IsMatch(Trim(txtHostEmail.Text), Match.Email), "신청 담당자 이메일을 정확히 입력해 주세요.",
-                    gCategory = "external" && IsBlank(gClientType), "고객 유형(기존 / 신규)을 선택해 주세요.",
+                    gCategory = "external" && IsBlank(gClientType), "고객 유형(기존 / 신규 / 파트너사 소개)을 선택해 주세요.",
                     gCategory = "external" && IsBlank(txtCompany.Text), "업체명을 입력해 주세요.",
+                    gCategory = "external" && gClientType = "partner" && IsBlank(Trim(txtPartner.Text)), "소개한 파트너사명을 입력해 주세요.",
                     gCategory = "external" && IsBlank(gIndustry), "업종을 선택해 주세요.",
-                    gCategory = "external" && gIndustry = "기타" && IsBlank(Trim(txtIndustryEtc.Text)), "기타 업종을 입력해 주세요.",
                     IsBlank(gPurpose), "방문 목적을 선택해 주세요.",
                     gPurpose = "기타" && IsBlank(Trim(txtPurposeEtc.Text)), "기타 방문 목적을 입력해 주세요.",
                     Value(txtHeadcount.Text) < 1, "예상 방문 인원을 입력해 주세요.",
@@ -2507,9 +2589,10 @@
                                         ApproveMain: If(gTour.Main, "대기", ""),
                                         ApproveMtv: If(gTour.Mtv, "대기", ""),
                                         Category: If(gCategory = "external", "고객 방문", "내부 방문"),
-                                        ClientType: If(gCategory = "external", If(gClientType = "new", "신규 고객사", "기존 고객사"), ""),
+                                        ClientType: If(gCategory = "external", LookUp(ClientTypes, Id = gClientType, Name), ""),
+                                        PartnerName: If(gCategory = "external" && gClientType = "partner", Trim(txtPartner.Text), ""),
                                         Company: If(gCategory = "external", Trim(txtCompany.Text), Trim(txtHostDivision.Text & " " & txtHostOrg.Text)),
-                                        Industry: If(gCategory = "external", If(gIndustry = "기타", "기타: " & Trim(txtIndustryEtc.Text), gIndustry), ""),
+                                        Industry: If(gCategory = "external", gIndustry, ""),
                                         Purpose: If(gPurpose = "기타", "기타: " & Trim(txtPurposeEtc.Text), gPurpose),
                                         Language: LookUp(Languages, Id = gLang, Name),
                                         Interpreter: If(chkInterp.Value, "Y", "N"),

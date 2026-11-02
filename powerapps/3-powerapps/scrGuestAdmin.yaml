@@ -872,7 +872,7 @@
                             Control: Label@2.5.1
                             Properties:
                               Text: |-
-                                ="공개: " & Concat(Filter(Split(Trim(ThisItem.Title), " "), !IsBlank(Value)), Left(Value, 1) & "**", " ") & " · " & If(IsBlank(Trim(ThisItem.Company)), "", Left(Trim(ThisItem.Company), 1) & "**")
+                                ="공개: " & Concat(Filter(Split(Trim(ThisItem.Title), " "), !IsBlank(Value)), Left(Value, 1) & "**", " ") & If(IsBlank(Trim(ThisItem.Company)), "", " · " & Left(Trim(ThisItem.Company), 1) & "**")
                               X: =370
                               Y: =52
                               Width: =230

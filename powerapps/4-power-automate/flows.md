@@ -204,14 +204,14 @@
 **만들기**: 인스턴트 클라우드 흐름 → 이름 `TDLGuestbookAdd` → 트리거 **Power Apps (V2)**
 
 1. 입력 (모두 필수, **이 순서대로**): 텍스트 `Name`, 텍스트 `Company`, 텍스트 `Team`, 텍스트 `Role`, **숫자** `Rating`, 텍스트 `Tour`, 텍스트 `Message`
-   (앱은 팀명이 비면 `-` 를 보냅니다)
+   (회사명 · 팀명 · 직책은 선택 입력이라, 앱은 비면 `-` 를 보냅니다. 웹 PR #97 과 같이 쓰지 않은 값은 지어 내지 않고 빈 칸으로 저장)
 2. **SharePoint `항목 만들기`** — 목록 `Guestbook`
    | 열 | 값 |
    | --- | --- |
    | Title | `Name` |
-   | Company | `Company` |
+   | Company | `[식: if(equals(triggerBody()?['text_1'], '-'), '', triggerBody()?['text_1'])]` (식에서 `Company` 입력을 고름) |
    | Team | `[식: if(equals(triggerBody()?['text_2'], '-'), '', triggerBody()?['text_2'])]` (식에서 `Team` 입력을 고르면 이름이 맞게 들어갑니다) |
-   | Role | `Role` |
+   | Role | `[식: if(equals(triggerBody()?['text_3'], '-'), '', triggerBody()?['text_3'])]` (식에서 `Role` 입력을 고름) |
    | Rating | `Rating` |
    | Tour | `Tour` |
    | Message | `[식: substring(Message, 0, min(length(Message), 100))]` |

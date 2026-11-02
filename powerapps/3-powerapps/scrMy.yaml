@@ -513,7 +513,7 @@
                   - rowMyCatVal:
                       Control: Label@2.5.1
                       Properties:
-                        Text: =galMy.Selected.Category & If(IsBlank(galMy.Selected.ClientType), "", " · " & galMy.Selected.ClientType)
+                        Text: =galMy.Selected.Category & If(IsBlank(galMy.Selected.ClientType), "", " · " & galMy.Selected.ClientType) & If(IsBlank(galMy.Selected.PartnerName), "", " (" & galMy.Selected.PartnerName & ")")
                         X: =158
                         Y: =454
                         Width: =596 + 782 * (kx - 1)
