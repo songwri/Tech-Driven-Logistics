@@ -41,7 +41,7 @@ New-ListWithFields 'VisitRequests' (@(
     @('HostName','Text'),@('HostTitle','Text'),@('HostDivision','Text'),@('HostOrg','Text'),@('HostPhone','Text'),
     @('HostEmail','Text'),@('ApplicantEmail','Text'),@('HostComment','Note'),
     @('ExpectedHeadcount','Number'),@('AttendeeCount','Number'),@('FormsLink','Note'),@('AdminMemo','Note'),@('ConsentAt','DateTime'),
-    @('FeedbackMailAt','DateTime'),@('Guides','Note')
+    @('FeedbackMailAt','DateTime'),@('Guides','Note'),@('PartnerName','Text')
 ))
 
 New-ListWithFields 'VisitAttendees' @(

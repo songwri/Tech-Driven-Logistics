@@ -28,7 +28,9 @@
 #         ClearCollect(colStatAll, AddColumns(colStatRaw,
 #             DayNum, Value(Substitute(DateKey, "-", "")),
 #             Heads, If(AttendeeCount > 0, AttendeeCount, ExpectedHeadcount),
-#             Seg, If(Category = "내부 방문", "내부 방문", ClientType = "신규 고객사", "고객 · 신규", ClientType = "기존 고객사", "고객 · 기존", "고객 · 미분류"),
+#             Seg, If(Category = "내부 방문", "내부 방문", ClientType = "신규 고객사", "고객 · 신규", ClientType = "기존 고객사", "고객 · 기존", ClientType = "파트너사 소개 고객", "고객 · 파트너사", "고객 · 미분류"),
+#             Ind, With({t: Trim(Industry)}, If(IsBlank(t), "", t in Industries.Value, t, Coalesce(LookUp(IndustryLegacy, From = t, To), "기타"))),
+#             PKey, Lower(Substitute(Substitute(Substitute(Substitute(Coalesce(PartnerName, ""), " ", ""), "(주)", ""), "㈜", ""), "주식회사", "")),
 #             LangLabel, If(Language = "한국어", If(Interpreter = "Y", "한국어 · 통역 동반", "한국어"), Language),
 #             DivGroup, With({k0: Lower(Substitute(Substitute(Substitute(Substitute(Substitute(Substitute(HostDivision, " ", ""), "/", ""), "·", ""), "-", ""), ".", ""), "_", ""))},
 #                 With({k1: If(StartsWith(k0, "cl"), Mid(k0, 3), k0)},
@@ -58,7 +60,7 @@
           Variant: ManualLayout
           Properties:
             Width: =pw
-            Height: =1378
+            Height: =1820
             FillPortions: =0
             Fill: =Color.Transparent
             BorderThickness: =0
@@ -1051,7 +1053,7 @@
                           With(
                               {base: Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text))},
                               With(
-                              {rows: ForAll(["고객 · 기존", "고객 · 신규", "내부 방문", "고객 · 미분류"] As g, {Label: g.Value, N: CountRows(Filter(base, Seg = g.Value))})},
+                              {rows: ForAll(["고객 · 기존", "고객 · 신규", "고객 · 파트너사", "내부 방문", "고객 · 미분류"] As g, {Label: g.Value, N: CountRows(Filter(base, Seg = g.Value))})},
                               With({srt: SortByColumns(rows, "N", SortOrder.Descending)}, With({mx: Max(srt, N), tot: Sum(srt, N)}, AddColumns(srt, Mx, mx, Tot, tot)))
                           )
                           )
@@ -1295,7 +1297,7 @@
                           With(
                               {base: Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text))},
                               With(
-                              {rows: SortByColumns(Filter(ForAll(Industries As i, {Label: i.Value, N: CountRows(Filter(base, Category = "고객 방문" && (Industry = i.Value || (i.Value = "기타" && StartsWith(Industry, "기타")))))}), N > 0), "N", SortOrder.Descending)},
+                              {rows: SortByColumns(Filter(ForAll(Industries As i, {Label: i.Value, N: CountRows(Filter(base, Category = "고객 방문" && Ind = i.Value))}), N > 0), "N", SortOrder.Descending)},
                               With({mx: Max(rows, N), tot: Sum(rows, N)}, AddColumns(rows, Mx, mx, Tot, tot))
                           )
                           )
@@ -1729,6 +1731,393 @@
                               Align: =Align.Right
                               VerticalAlign: =VerticalAlign.Middle
                               FontWeight: =FontWeight.Semibold
+            - conStatPartner:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  X: =24
+                  Y: =1370
+                  Width: =1318 * kx
+                  Height: =430
+                  Fill: =cSurface
+                  BorderColor: =cLine
+                  BorderThickness: =1
+                  DropShadow: =DropShadow.None
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                Children:
+                  - lblStatPtTitle:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="파트너사별 실적"
+                        X: =20
+                        Y: =16
+                        Width: =400
+                        Height: =24
+                        Font: =fnt
+                        Size: =11.5
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblStatPtSub:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="파트너사가 소개해 함께 온 고객 방문 · 건수 많은 순 · 이름의 띄어쓰기 · (주)는 같은 곳으로 묶음"
+                        X: =20
+                        Y: =42
+                        Width: =1318 * kx - 40
+                        Height: =20
+                        Font: =fnt
+                        Size: =9
+                        Color: =cInk3
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblStatPtH1:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="순위"
+                        X: =20
+                        Y: =70
+                        Width: =40
+                        Height: =28
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Center
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblStatPtH2:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="파트너사 · 소개 방문 건수"
+                        X: =70
+                        Y: =70
+                        Width: =1318 * kx - 450
+                        Height: =28
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblStatPtH3:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="방문 인원"
+                        X: =1318 * kx - 370
+                        Y: =70
+                        Width: =90
+                        Height: =28
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Right
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblStatPtH4:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="소개 고객사"
+                        X: =1318 * kx - 270
+                        Y: =70
+                        Width: =100
+                        Height: =28
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Right
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - lblStatPtH5:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="최근 방문"
+                        X: =1318 * kx - 150
+                        Y: =70
+                        Width: =120
+                        Height: =28
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Color: =cInk2
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Right
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                  - rctStatPtHLine:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        X: =20
+                        Y: =98
+                        Width: =1318 * kx - 40
+                        Height: =2
+                        Fill: =cInk
+                  - galStatPartner:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        Items: |-
+                          =// 파트너사별 실적 (웹 PartnerPerformance): 이름은 띄어쓰기 · (주) · ㈜ · 주식회사를 빼고 같은 곳으로 묶음, 건수 많은 순
+                          With(
+                              {pb: Filter(Filter(colStatAll, If(gStatBasis = "approved", Status = "승인" || Status = "완료", Status <> "거절" && Status <> "취소")), DayNum >= Value(lblStatS.Text) && DayNum <= Value(lblStatE.Text) && Category = "고객 방문" && ClientType = "파트너사 소개 고객")},
+                              With(
+                                  {rows: ForAll(
+                                      Distinct(pb, PKey) As k,
+                                      With(
+                                          {g: Filter(pb, PKey = k.Value)},
+                                          {
+                                              Name: If(IsBlank(k.Value), "(파트너사명 없음)", First(g).PartnerName),
+                                              N: CountRows(g),
+                                              People: Sum(g, Heads),
+                                              Companies: CountRows(Distinct(g, Lower(Substitute(Company, " ", "")))),
+                                              Last: Max(g, VisitDate)
+                                          }
+                                      )
+                                  )},
+                                  With(
+                                      {srt: SortByColumns(rows, "N", SortOrder.Descending)},
+                                      With({mx: Max(srt, N), tot: Sum(srt, N), top: FirstN(srt, If(gStatPartnerAll, 1000, 10))}, ForAll(Sequence(CountRows(top)) As i, Patch(Index(top, i.Value), {Rank: i.Value, Mx: mx, Tot: tot})))
+                                  )
+                              )
+                          )
+                        X: =20
+                        Y: =100
+                        Width: =1318 * kx - 40
+                        Height: =280
+                        TemplateSize: =40
+                        TemplatePadding: =0
+                        ShowScrollbar: =true
+                        BorderThickness: =0
+                        Fill: =Color.Transparent
+                      Children:
+                        - lblStatPtRank:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =ThisItem.Rank
+                              X: =0
+                              Y: =0
+                              Width: =40
+                              Height: =40
+                              Font: =fnt
+                              Size: =10
+                              FontWeight: =FontWeight.Semibold
+                              Color: =cInk
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Align: =Align.Center
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - lblStatPtName:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =ThisItem.Name
+                              X: =50
+                              Y: =4
+                              Width: =1318 * kx - 450 - 110
+                              Height: =20
+                              Font: =fnt
+                              Size: =10
+                              FontWeight: =FontWeight.Semibold
+                              Color: =If(StartsWith(ThisItem.Name, "("), cInk3, cInk)
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - lblStatPtN:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =ThisItem.N & "건"
+                              X: =1318 * kx - 40 - 380 - 100
+                              Y: =4
+                              Width: =60
+                              Height: =20
+                              Font: =fnt
+                              Size: =10.5
+                              FontWeight: =FontWeight.Semibold
+                              Color: =cInk
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Align: =Align.Right
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - lblStatPtPct:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =Round(ThisItem.N / ThisItem.Tot * 100, 0) & "%"
+                              X: =1318 * kx - 40 - 380 - 38
+                              Y: =4
+                              Width: =36
+                              Height: =20
+                              Font: =fnt
+                              Size: =8.25
+                              Color: =cInk2
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Align: =Align.Right
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - rctStatPtTrack:
+                            Control: Rectangle@2.3.0
+                            Properties:
+                              X: =50
+                              Y: =27
+                              Width: =1318 * kx - 450 - 50
+                              Height: =8
+                              Fill: =cSoft
+                        - rctStatPtBar:
+                            Control: Rectangle@2.3.0
+                            Properties:
+                              X: =50
+                              Y: =27
+                              Width: =Max(3, (1318 * kx - 450 - 50) * ThisItem.N / ThisItem.Mx)
+                              Height: =8
+                              Fill: =ColorValue("#3F8F8A")
+                        - lblStatPtPeople:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =ThisItem.People & "명"
+                              X: =1318 * kx - 40 - 350
+                              Y: =0
+                              Width: =90
+                              Height: =40
+                              Font: =fnt
+                              Size: =10
+                              Color: =cInk
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Align: =Align.Right
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - lblStatPtComp:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =ThisItem.Companies & "곳"
+                              X: =1318 * kx - 40 - 250
+                              Y: =0
+                              Width: =100
+                              Height: =40
+                              Font: =fnt
+                              Size: =10
+                              Color: =cInk
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Align: =Align.Right
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - lblStatPtLast:
+                            Control: Label@2.5.1
+                            Properties:
+                              Text: =Text(ThisItem.Last, "yyyy.mm.dd")
+                              X: =1318 * kx - 40 - 130
+                              Y: =0
+                              Width: =120
+                              Height: =40
+                              Font: =fnt
+                              Size: =9
+                              Color: =cInk2
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PaddingBottom: =0
+                              Align: =Align.Right
+                              VerticalAlign: =VerticalAlign.Middle
+                              Wrap: =false
+                        - rctStatPtLine:
+                            Control: Rectangle@2.3.0
+                            Properties:
+                              X: =0
+                              Y: =39
+                              Width: =1318 * kx - 40
+                              Height: =1
+                              Fill: =cLine
+                  - lblStatPtEmpty:
+                      Control: Label@2.5.1
+                      Properties:
+                        Text: ="해당 기간에 파트너사가 소개한 방문이 없습니다."
+                        X: =20
+                        Y: =170
+                        Width: =1318 * kx - 40
+                        Height: =40
+                        Font: =fnt
+                        Size: =10
+                        Color: =cInk3
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        PaddingBottom: =0
+                        Align: =Align.Center
+                        VerticalAlign: =VerticalAlign.Middle
+                        Wrap: =false
+                        Visible: =CountRows(galStatPartner.AllItems) = 0
+                  - btnStatPtAll:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        Text: =If(gStatPartnerAll, "상위 10곳만 보기", "전체 보기")
+                        X: =20
+                        Y: =386
+                        Width: =130
+                        Height: =30
+                        OnSelect: =Set(gStatPartnerAll, !gStatPartnerAll)
+                        Font: =fnt
+                        Size: =9
+                        FontWeight: =FontWeight.Semibold
+                        Fill: =cSurface
+                        Color: =cInk2
+                        HoverFill: =cSoft
+                        HoverColor: =cInk
+                        PressedFill: =cSoft
+                        PressedColor: =cInk
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
 - hdrSBar:
     Control: Rectangle@2.3.0
     Properties:

@@ -30,6 +30,22 @@ Set(gSel, Blank());
 Set(gBlockTarget, "메가와이즈");
 Set(gBlockTime, "종일");
 
+// 관리자 정보 수정 · 수기 등록 창, 고객 구분 빠른 변경 창
+Set(gShowEdit, false);
+Set(gShowClient, false);
+Set(gEditMode, "");
+Set(gEdTour, "");
+Set(gEdSlot, "");
+Set(gEdCat, "고객 방문");
+Set(gEdClient, "");
+Set(gEdInd, "");
+Set(gEdPurpose, "");
+Set(gEdLang, "한국어");
+Set(gEdStatus, "승인");
+Set(gEdPartnerDefault, "");
+Set(gCtChoice, "");
+Set(gCtPartnerDefault, "");
+
 // 업종 · 방문 목적: 통계를 위해 하나씩만 고른다
 Set(gIndustry, "");
 Set(gPurpose, "");
@@ -43,6 +59,7 @@ Set(gStatPeriod, "year");
 Set(gStatYear, Year(Today()));
 Set(gStatMonth, Month(Today()));
 Set(gStatBasis, "all");
+Set(gStatPartnerAll, false);
 
 // 관리자 예약 달력
 Set(gCalMonth, Date(Year(Today()), Month(Today()), 1));
