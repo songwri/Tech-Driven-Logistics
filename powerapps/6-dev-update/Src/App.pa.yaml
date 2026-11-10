@@ -1,0 +1,361 @@
+# ************************************************************************************************
+# Warning: YAML source code for Canvas Apps should only be used to review changes made within Power Apps Studio and for minor edits (Preview).
+# Use the maker portal to create and edit your Power Apps.
+# 
+# The schema file for Canvas Apps is available at https://go.microsoft.com/fwlink/?linkid=2304907
+# 
+# For more information, visit https://go.microsoft.com/fwlink/?linkid=2292623
+# ************************************************************************************************
+App:
+  Properties:
+    Formulas: |-
+      =FormsPrefillUrl = "https://forms.office.com/Pages/ResponsePage.aspx?id=여기에_폼ID&r여기에_질문ID=REQNO";   // 공개 저장소용 자리표시: 개발자 앱의 실제 값을 그대로 두세요
+      // 시화MTV 예약을 열지 여부 (웹 버전 MTV_ENABLED 와 같은 스위치)
+      MtvEnabled = false;
+
+      // ---------- 1-1. 데이터 관리 화면을 쓸 수 있는 계정 ----------
+      // 메뉴 표시 · 화면 접근 · 저장 · 삭제가 모두 이 값을 쓴다. 수식을 고치지 않고 TourAdmins 목록에 Site = data 인 행(Title = 메일 소문자)을 넣거나 빼면 된다.
+      // [PA 전용] 데이터 관리 화면 · 웹에는 없음 (웹은 시트를 직접 편집)
+      varIsDataAdmin = !IsBlank(LookUp(TourAdmins, Title = Lower(User().Email) && Site = "data"));
+
+      // ---------- 1-2. 화면 크기 (본문 스크롤) ----------
+      // 설정 > 표시 에서 '화면에 맞게 크기 조정' 을 끄고 쓴다. 본문은 1366 폭 그대로, 창이 낮으면 본문만 스크롤 (글자가 작아지지 않음)
+      sw = Max(App.Width, 1366);        // [PA 전용] 화면 폭 · 웹은 브라우저 폭
+      sh = Max(App.Height, 480);        // 화면 높이 = 실제 창 높이 (너무 낮은 창만 최소 480)
+      ox = Max(0, (sw - 1366) / 2);     // 머리말 · 창(대화 상자)을 가운데 두기 위한 왼쪽 여백
+
+      // ---------- 2. 디자인 토큰 (운영 웹앱 src/index.css · 관리자 화면과 같은 색) ----------
+      cBg = ColorValue("#F7F6F5");          // 화면 바탕
+      cSurface = ColorValue("#FFFFFF");     // 카드
+      cWhite = ColorValue("#FFFFFF");
+      cSoft = ColorValue("#F3F2F1");        // 옅은 바탕 · 마우스 올림
+      cSel = ColorValue("#FBF4F4");         // 선택된 카드 · 예약 가능한 날 바탕 (웹 brand/5)
+      cLine = ColorValue("#DDDAD9");        // 1px 테두리 · 구분선
+      cInk = ColorValue("#534A47");         // 본문 글자
+      cInk2 = ColorValue("#736662");        // 보조 글자
+      cInk3 = ColorValue("#ACA8A7");        // 흐린 글자
+      cPrimary = ColorValue("#A72B2B");     // 주 버튼 · 선택 = 브랜드 빨강 (C-4, 예전 검정)
+      cPrimaryHover = ColorValue("#8F2323");
+      cBrand = ColorValue("#A72B2B");
+      cHeader = ColorValue("#1E2229");      // 위 머리말 (C-1, 웹 관리자 머리말)
+      cRed = ColorValue("#A72B2B");         // 오류 · 마감 글자
+      cRedBg = ColorValue("#FBF4F4");
+      cGreen = ColorValue("#2B8A3E");       // 승인 버튼 · 가능 (A-1)
+      cGreenHover = ColorValue("#237032");
+      cGreenBg = ColorValue("#D3F9D8");
+      cYellow = ColorValue("#C2410C");      // 대기
+      cYellowBg = ColorValue("#FFF4E6");
+      cBlue = ColorValue("#1864AB");        // 완료
+      cBlueBg = ColorValue("#D0EBFF");
+      cGray = ColorValue("#6C757D");        // 거절 · 취소
+      cGrayBg = ColorValue("#E9ECEF");
+      cBarDim = ColorValue("#C9C4C2");      // 통계 막대 (가장 큰 값만 브랜드색, 나머지 이 색)
+      cMM = ColorValue("#30405F");          // 가이드 배정 M/M 막대 · 인솔자 칩 (웹 GuideAssignView)
+      cScrim = RGBA(83, 74, 71, 0.45);      // 창 뒤 어둡게
+
+      // 상태 배지 색 (C-7, 웹 statusTone.ts): 대기 주황 · 승인 초록 · 완료 파랑 · 거절/취소 회색
+      StatusStyle = Table(
+          {S: "대기", Bg: ColorValue("#FFF4E6"), Fg: ColorValue("#C2410C")},
+          {S: "승인", Bg: ColorValue("#D3F9D8"), Fg: ColorValue("#1E6B2E")},
+          {S: "완료", Bg: ColorValue("#D0EBFF"), Fg: ColorValue("#1864AB")},
+          {S: "거절", Bg: ColorValue("#E9ECEF"), Fg: ColorValue("#6C757D")},
+          {S: "취소", Bg: ColorValue("#E9ECEF"), Fg: ColorValue("#6C757D")},
+          {S: "막힘", Bg: ColorValue("#F3F2F1"), Fg: ColorValue("#736662")}
+      );
+
+      // 이름 표시 (C-3 · C-8): 회사 계정 이름의 괄호 영문명 · /부서 뒷부분을 떼는 규칙은 OnStart 의 gMeShort 와 각 화면 수식에 같은 식으로 씀
+      // 예) 김대현(Daehyun Kim)/테크이노베이션팀/책임 → 김대현
+
+      // ---------- 3. 투어 ----------
+      // Main = 메가와이즈 · TDL Lab 관리자 승인 필요, Mtv = 시화MTV 관리자 승인 필요
+      Tours = Table(
+          {Id: "lab", Name: "TDL Lab 투어", Desc: "TDL Lab만 · 약 1시간", Hours: "약 1시간", Short: "Lab", Multi: false, Main: true, Mtv: false, Color: ColorValue("#7C5CC4")},
+          {Id: "center", Name: "메가와이즈 센터 투어", Desc: "메가와이즈 물류센터만 · 약 1시간", Hours: "약 1시간", Short: "센터", Multi: false, Main: true, Mtv: false, Color: ColorValue("#1A8FA0")},
+          {Id: "mtv", Name: "시화MTV 투어", Desc: "시화MTV 센터만 · 약 1시간 · 3영업일 전까지", Hours: "약 1시간", Short: "시화", Multi: false, Main: false, Mtv: true, Color: ColorValue("#3D5A80")},
+          {Id: "combined", Name: "메가와이즈 + TDL Lab", Desc: "메가와이즈 센터 → TDL Lab · 약 2시간", Hours: "약 2시간", Short: "센터+Lab", Multi: true, Main: true, Mtv: false, Color: ColorValue("#DC2626")},
+          {Id: "center_mtv", Name: "메가와이즈 + 시화MTV", Desc: "오전 · 오후로 나눠 두 센터 방문", Hours: "오전 · 오후", Short: "센터+시화", Multi: true, Main: true, Mtv: true, Color: ColorValue("#9C6644")},
+          {Id: "all3", Name: "3개 센터 전체", Desc: "메가와이즈 + TDL Lab + 시화MTV", Hours: "하루", Short: "3곳", Multi: true, Main: true, Mtv: true, Color: ColorValue("#343A40")}
+      );
+      OpenTours = Filter(Tours, MtvEnabled || !Mtv);
+
+      // ---------- 4. 투어별 시간대와 공간 점유 ----------
+      // 시간은 '자정부터 몇 분' (600 = 10:00). -1 = 그 공간을 쓰지 않음. C = 메가와이즈 센터, L = TDL Lab, M = 시화MTV
+      TourSlots = Table(
+          {Tour: "lab", Slot: "10:30-11:30", Show: "10:30 – 11:30", Detail: "TDL Lab", CFrom: -1, CTo: -1, LFrom: 630, LTo: 690, MFrom: -1, MTo: -1},
+          {Tour: "lab", Slot: "14:00-15:00", Show: "14:00 – 15:00", Detail: "TDL Lab", CFrom: -1, CTo: -1, LFrom: 840, LTo: 900, MFrom: -1, MTo: -1},
+          {Tour: "center", Slot: "10:00-11:00", Show: "10:00 – 11:00", Detail: "메가와이즈 센터", CFrom: 600, CTo: 660, LFrom: -1, LTo: -1, MFrom: -1, MTo: -1},
+          {Tour: "center", Slot: "13:00-14:00", Show: "13:00 – 14:00", Detail: "메가와이즈 센터", CFrom: 780, CTo: 840, LFrom: -1, LTo: -1, MFrom: -1, MTo: -1},
+          {Tour: "center", Slot: "15:00-16:00", Show: "15:00 – 16:00", Detail: "메가와이즈 센터", CFrom: 900, CTo: 960, LFrom: -1, LTo: -1, MFrom: -1, MTo: -1},
+          {Tour: "mtv", Slot: "10:00-11:00", Show: "10:00 – 11:00", Detail: "시화MTV", CFrom: -1, CTo: -1, LFrom: -1, LTo: -1, MFrom: 600, MTo: 660},
+          {Tour: "mtv", Slot: "14:00-15:00", Show: "14:00 – 15:00", Detail: "시화MTV", CFrom: -1, CTo: -1, LFrom: -1, LTo: -1, MFrom: 840, MTo: 900},
+          {Tour: "combined", Slot: "09:30-11:30", Show: "09:30 – 11:30", Detail: "09:30 메가와이즈 → 10:30 TDL Lab", CFrom: 570, CTo: 630, LFrom: 570, LTo: 690, MFrom: -1, MTo: -1},
+          {Tour: "combined", Slot: "13:00-15:00", Show: "13:00 – 15:00", Detail: "13:00 메가와이즈 → 14:00 TDL Lab", CFrom: 780, CTo: 840, LFrom: 780, LTo: 900, MFrom: -1, MTo: -1},
+          {Tour: "center_mtv", Slot: "10:00-15:00", Show: "오전 메가와이즈 → 오후 시화MTV", Detail: "10:00 – 11:00 메가와이즈 · 14:00 – 15:00 시화MTV", CFrom: 600, CTo: 660, LFrom: -1, LTo: -1, MFrom: 840, MTo: 900},
+          {Tour: "center_mtv", Slot: "10:00-14:00", Show: "오전 시화MTV → 오후 메가와이즈", Detail: "10:00 – 11:00 시화MTV · 13:00 – 14:00 메가와이즈", CFrom: 780, CTo: 840, LFrom: -1, LTo: -1, MFrom: 600, MTo: 660},
+          {Tour: "all3", Slot: "09:30-15:00", Show: "오전 메가와이즈+Lab → 오후 시화MTV", Detail: "09:30 – 11:30 메가와이즈+Lab · 14:00 – 15:00 시화MTV", CFrom: 570, CTo: 630, LFrom: 570, LTo: 690, MFrom: 840, MTo: 900},
+          {Tour: "all3", Slot: "10:00-15:00", Show: "오전 시화MTV → 오후 메가와이즈+Lab", Detail: "10:00 – 11:00 시화MTV · 13:00 – 15:00 메가와이즈+Lab", CFrom: 780, CTo: 840, LFrom: 780, LTo: 900, MFrom: 600, MTo: 660}
+      );
+
+      // ---------- 5. 선택지 ----------
+      // 업종: 주 업종 하나 · 9종 + 기타 (F-01, 웹 INDUSTRIES 와 같은 순서). 기타는 직접 입력 없음 (공공 · 대학교 등)
+      Industries = ["리테일", "화학", "헬스케어", "패션&뷰티", "전자", "식품용품", "오토(Auto)", "기계&금속", "건자재", "기타"];
+      // 예전 업종(14가지) → 현재 분류. 표에 없는 예전 값(물류 · 기타: 공공 등)은 '기타'. 통계 · 관리자 수정 창이 예전 기록도 이 표로 읽음 (웹 LEGACY_INDUSTRY)
+      IndustryLegacy = Table(
+          {From: "가전", To: "전자"}, {From: "자동차", To: "오토(Auto)"}, {From: "오토", To: "오토(Auto)"}, {From: "식품", To: "식품용품"},
+          {From: "화장품", To: "패션&뷰티"}, {From: "의류", To: "패션&뷰티"}, {From: "제약/헬스케어", To: "헬스케어"}, {From: "유통", To: "리테일"},
+          {From: "이커머스", To: "리테일"}, {From: "CVS/편의점", To: "리테일"}, {From: "제조", To: "기계&금속"}, {From: "가구/인테리어", To: "건자재"}
+      );
+      // 고객 유형 (F-02, 웹 CLIENT_TYPE_LABEL). 파트너사 소개 고객은 파트너사명(PartnerName) 필수
+      ClientTypes = ["기존 고객사", "신규 고객사", "파트너사 소개 고객"];
+      Purposes = ["기존 고객사 Lock-in", "신규 영업", "교육", "투어", "기타"];
+      JobOptions = ["경영진", "영업", "기획", "마케팅", "구매", "운영", "물류", "품질관리", "IT/개발", "R&D/연구개발"];
+      // 신청 화면 담당(실) 콤보박스 목록 (맨 앞 "선택하세요" 는 안내용 · 저장 불가). "기타" 를 고르면 이름을 직접 입력
+      DivisionChoices = Table(
+          {Value: "선택하세요"}, {Value: "CL전자담당"}, {Value: "CL LG/LX담당"}, {Value: "CL영업담당"}, {Value: "CL운영담당"},
+          {Value: "CL컨설팅담당"}, {Value: "EC사업담당"}, {Value: "CL사업기획실"}, {Value: "기타"}
+      );
+      // 통계용: 안내 항목을 뺀 목록 (주요 7개 + 기타)
+      DivisionGroups = Filter(DivisionChoices, Value <> "선택하세요");
+      Languages = Table({Id: "ko", Name: "한국어"}, {Id: "en", Name: "영어"}, {Id: "zh", Name: "중국어"});
+
+      // ---------- 5-1. 방명록 (N-1 · N-2) ----------
+      // 방명록에서 고르는 투어 카드 (웹 GuestbookDialog 와 같은 순서 · 문구). P1 · P2 = 다녀온 곳 배지, C1 · C2 = 배지 색
+      GuestTours = Filter(
+          Table(
+              {Id: "combined", Title: "종합 투어", Hint: "센터와 Lab을 함께 둘러봤어요", P1: "TDL Lab", C1: ColorValue("#7C5CC4"), P2: "메가와이즈", C2: ColorValue("#1A8FA0")},
+              {Id: "lab", Title: "TDL Lab 투어", Hint: "TDL Lab만 둘러봤어요", P1: "TDL Lab", C1: ColorValue("#7C5CC4"), P2: "", C2: Color.Transparent},
+              {Id: "center", Title: "메가와이즈 센터 투어", Hint: "메가와이즈 센터만 둘러봤어요", P1: "메가와이즈", C1: ColorValue("#1A8FA0"), P2: "", C2: Color.Transparent},
+              {Id: "center_mtv", Title: "메가와이즈 + 시화MTV", Hint: "오전 · 오후로 나눠 두 센터 방문", P1: "메가와이즈", C1: ColorValue("#1A8FA0"), P2: "시화MTV", C2: ColorValue("#3D5A80")},
+              {Id: "mtv", Title: "시화MTV 투어", Hint: "시화MTV 센터만", P1: "시화MTV", C1: ColorValue("#3D5A80"), P2: "", C2: Color.Transparent},
+              {Id: "all3", Title: "3개 센터 전체", Hint: "메가와이즈 + TDL Lab + 시화MTV", P1: "TDL Lab", C1: ColorValue("#7C5CC4"), P2: "센터 2곳", C2: ColorValue("#1A8FA0")}
+          ),
+          MtvEnabled || !(Id in ["center_mtv", "mtv", "all3"])
+      );
+      // 방명록 관리의 '엑셀 (목록)' 버튼이 여는 SharePoint 목록 주소 (목록에서 '내보내기 → CSV')
+      GuestbookListUrl = "https://회사.sharepoint.com/sites/사이트/Lists/Guestbook";
+
+      // ---------- 6. 공휴일 (해마다 추가: 'YYYY-MM-DD') ----------
+      HolidayKeys = [
+          "2026-01-01", "2026-02-16", "2026-02-17", "2026-02-18", "2026-03-01", "2026-03-02", "2026-05-05", "2026-05-24", "2026-05-25",
+          "2026-06-03", "2026-06-06", "2026-08-15", "2026-08-17", "2026-09-24", "2026-09-25", "2026-09-26", "2026-10-03", "2026-10-05",
+          "2026-10-09", "2026-12-25",
+          "2027-01-01", "2027-02-06", "2027-02-07", "2027-02-08", "2027-02-09", "2027-03-01", "2027-05-05", "2027-05-13", "2027-06-06",
+          "2027-08-15", "2027-08-16", "2027-09-14", "2027-09-15", "2027-09-16", "2027-10-03", "2027-10-04", "2027-10-09", "2027-10-11",
+          "2027-12-25", "2027-12-27"
+      ];
+
+      // ---------- 7. 신청 가능한 가장 이른 날 ----------
+      // 기본: 당일 · 익일 불가 (오늘 +2일부터)
+      EarliestBase = DateAdd(Today(), 2, TimeUnit.Days);
+      // 시화MTV 가 들어간 투어: 3영업일 뒤(주말 · 공휴일 제외)와 기본 중 더 늦은 날
+      EarliestMtv = With(
+          {d: Last(FirstN(Filter(ForAll(Sequence(20), {D: DateAdd(Today(), Value, TimeUnit.Days)}), Weekday(D, StartOfWeek.Monday) <= 5 && !(Text(D, "yyyy-mm-dd") in HolidayKeys.Value)), 3)).D},
+          If(d > EarliestBase, d, EarliestBase)
+      );
+
+      // ---------- 8. 신청 화면 달력 (42칸) · 시간대 ----------
+      // 칸 상태: Open = 신청 가능한 날, Full = 그 날 모든 시간이 마감
+      CalDays = ForAll(
+          Sequence(42),
+          With(
+              {D: DateAdd(gMonth, Value - Weekday(gMonth, StartOfWeek.Sunday), TimeUnit.Days)},
+              With(
+                  {K: Text(D, "yyyy-mm-dd")},
+                  With(
+                      {Base: Month(D) = Month(gMonth) && Weekday(D, StartOfWeek.Monday) in [1, 3, 5] && D >= If(gTour.Mtv, EarliestMtv, EarliestBase) && !(K in HolidayKeys.Value)},
+                      With(
+                          {
+                              // 막힌 일정(Kind = 막힘)만으로 모든 시간대가 사라지는 날 = 운영 안 함 (흐린 날짜)
+                              Off: Base && CountRows(
+                                  Filter(
+                                      TourSlots As s,
+                                      s.Tour = gTour.Id && CountRows(
+                                          Filter(colBusy As b, b.DateKey = K && b.Kind = "막힘" && ((s.CFrom < b.CTo && b.CFrom < s.CTo) || (s.LFrom < b.LTo && b.LFrom < s.LTo) || (s.MFrom < b.MTo && b.MFrom < s.MTo)))
+                                      ) = 0
+                                  )
+                              ) = 0
+                          },
+                          With(
+                              {Open: Base && !Off},
+                              {
+                                  D: D,
+                                  Key: K,
+                                  InMonth: Month(D) = Month(gMonth),
+                                  Open: Open,
+                                  Full: Open && CountRows(
+                                      Filter(
+                                          TourSlots As s,
+                                          s.Tour = gTour.Id && CountRows(
+                                              Filter(colBusy As b, b.DateKey = K && ((s.CFrom < b.CTo && b.CFrom < s.CTo) || (s.LFrom < b.LTo && b.LFrom < s.LTo) || (s.MFrom < b.MTo && b.MFrom < s.MTo)))
+                                          ) = 0
+                                      )
+                                  ) = 0
+                              }
+                          )
+                      )
+                  )
+              )
+          )
+      );
+      // 고른 투어 · 날짜의 시간대. Busy = 이미 승인된 예약 · 막힌 일정과 겹침
+      // 선택한 시간이 없을 때의 값 (SlotRows 한 줄과 같은 열 구성 · 형식). gSlot 의 형식을 Studio 가 확실히 알도록 Blank() 대신 사용
+      NoSlot = {Slot: "", Show: "", Detail: "", CFrom: 0, CTo: 0, LFrom: 0, LTo: 0, MFrom: 0, MTo: 0, Busy: false, Why: ""};
+      // Why = 마감인 이유 (어떤 예약 · 막기가 어느 공간을 쓰고 있는지). 복합 투어는 메가와이즈 + Lab 을 함께 쓰므로 한쪽만 예약돼도 겹침
+      SlotRows = ForAll(
+          Filter(TourSlots, Tour = gTour.Id && !IsBlank(gDate)) As s,
+          {
+              Slot: s.Slot, Show: s.Show, Detail: s.Detail, CFrom: s.CFrom, CTo: s.CTo, LFrom: s.LFrom, LTo: s.LTo, MFrom: s.MFrom, MTo: s.MTo,
+              Busy: CountRows(Filter(colBusy As b, b.DateKey = gDateKey && ((s.CFrom < b.CTo && b.CFrom < s.CTo) || (s.LFrom < b.LTo && b.LFrom < s.LTo) || (s.MFrom < b.MTo && b.MFrom < s.MTo)))) > 0,
+              Why: With(
+                  {o: First(Filter(colBusy As b, b.DateKey = gDateKey && ((s.CFrom < b.CTo && b.CFrom < s.CTo) || (s.LFrom < b.LTo && b.LFrom < s.LTo) || (s.MFrom < b.MTo && b.MFrom < s.MTo))))},
+                  If(
+                      IsBlank(o),
+                      "",
+                      If(
+                          o.Kind = "막힘",
+                          "일정 막힘" & If(IsBlank(o.Reason) || o.Reason = "-", "", " · " & If(Len(o.Reason) > 14, Left(o.Reason, 14) & "…", o.Reason)),
+                          "다른 예약과 겹침 · " & Concat(Filter(Table({n: "메가와이즈", hit: s.CFrom < o.CTo && o.CFrom < s.CTo}, {n: "Lab", hit: s.LFrom < o.LTo && o.LFrom < s.LTo}, {n: "MTV", hit: s.MFrom < o.MTo && o.MFrom < s.MTo}), hit), n, "+")
+                      )
+                  )
+              )
+          }
+      );
+
+      // ---------- 8-1. 일정 막기 창: 작은 달력 (gBlockMonth 달의 42칸) · 오늘 이후 월 · 수 · 금만 선택 가능 ----------
+      BlockDays = ForAll(
+          Sequence(42),
+          With(
+              {D: DateAdd(gBlockMonth, Value - Weekday(gBlockMonth, StartOfWeek.Sunday), TimeUnit.Days)},
+              {D: D, InMonth: Month(D) = Month(gBlockMonth), Ok: D >= Today() && Weekday(D, StartOfWeek.Monday) in [1, 3, 5]}
+          )
+      );
+      // 오늘 다음의 첫 운영일 (월 · 수 · 금, 공휴일 제외) = 일정 막기 창의 기본 날짜
+      NextOpDay = First(Filter(ForAll(Sequence(21), {D: DateAdd(Today(), Value, TimeUnit.Days)}), Weekday(D, StartOfWeek.Monday) in [1, 3, 5] && !(Text(D, "yyyy-mm-dd") in HolidayKeys.Value))).D;
+
+      // ---------- 8-2. 내 신청 목록 (최근 순) ----------
+      MyReqs = Sort(Filter(VisitRequests, ApplicantEmail = Lower(User().Email)), '만든 날짜', SortOrder.Descending);
+
+      // ---------- 9. 관리자: 내가 볼 수 있는 신청 (최근 180일 이후 방문일) ----------
+      SiteReqs = Filter(FirstN(Filter(VisitRequests, VisitDate >= DateAdd(Today(), -180, TimeUnit.Days)), 2000), gAdminSite = "hq" || (gAdminSite = "main" && ForMain = "Y") || (gAdminSite = "mtv" && ForMtv = "Y"));
+      PendingCount = CountRows(Filter(SiteReqs, Status = "대기"));
+
+      // ---------- 10. 통계 ----------
+      StatBase = Filter(colStat, Status <> "거절" && Status <> "취소" && (gStatBasis = "all" || Status = "승인" || Status = "완료"));
+      StatBasePrev = Filter(colStatPrev, Status <> "거절" && Status <> "취소" && (gStatBasis = "all" || Status = "승인" || Status = "완료"));
+      StatYearBase = Filter(colStatYear, Status <> "거절" && Status <> "취소" && (gStatBasis = "all" || Status = "승인" || Status = "완료"));
+      StatYear = If(gStatPeriod = "range", Year(gTo), If(gStatPeriod = "all", Year(Today()), gStatYear));
+      KpiCur0 = CountRows(StatBase);
+      KpiPrev0 = CountRows(StatBasePrev);
+      KpiCur1 = CountIf(colStat, Status = "승인" || Status = "완료");
+      KpiPrev1 = CountIf(colStatPrev, Status = "승인" || Status = "완료");
+      KpiCur2 = If(CountIf(colStat, Status = "승인" || Status = "완료" || Status = "거절") = 0, 0, KpiCur1 / Max(1, CountIf(colStat, Status = "승인" || Status = "완료" || Status = "거절")) * 100);
+      KpiPrev2 = If(CountIf(colStatPrev, Status = "승인" || Status = "완료" || Status = "거절") = 0, 0, KpiPrev1 / Max(1, CountIf(colStatPrev, Status = "승인" || Status = "완료" || Status = "거절")) * 100);
+      // Sum 은 행이 없으면 빈 값(Blank)을 돌려주고, 빈 값은 '= 0' 비교에 걸리지 않아 증감이 ▲2100% 로 계산됨 → Coalesce 로 0 으로
+      KpiCur3 = Coalesce(Sum(StatBase, ExpectedHeadcount), 0);
+      KpiPrev3 = Coalesce(Sum(StatBasePrev, ExpectedHeadcount), 0);
+      KpiCur4 = If(KpiCur0 = 0, 0, KpiCur3 / Max(1, KpiCur0));
+      KpiPrev4 = If(KpiPrev0 = 0, 0, KpiPrev3 / Max(1, KpiPrev0));
+      TrendRows = ForAll(
+          Sequence(12),
+          With(
+              {mm: Value},
+              {m: mm, v: CountIf(StatYearBase, Month(VisitDate) = mm), dim: !(Date(StatYear, mm + 1, 0) >= gFrom && Date(StatYear, mm, 1) <= gTo)}
+          )
+      );
+      TrendMax = Max(1, Max(TrendRows, v));
+    OnStart: |-
+      =Set(gMe, Office365사용자.MyProfileV2());
+
+      // 관리자 여부: TourAdmins 목록에 있으면 "main" · "mtv" · "hq", 없으면 빈 값
+      // 시화MTV 를 닫아 두면(MtvEnabled = false) 시화MTV · 통합 관제 관리자는 아직 들어올 수 없다
+      // Site = data 행은 데이터 관리 권한용이라 관리자 구분에서 뺀다 (varIsDataAdmin)
+      Set(gAdminSite, With({site: LookUp(TourAdmins, Title = Lower(User().Email) && Site <> "data", Site)}, If(MtvEnabled || site = "main", site, Blank())));
+      // 머리말 · 신청 담당자 칸에 쓰는 이름 (C-3 · C-8): 괄호 영문명 · /부서 뒷부분을 떼고, 머리말은 '이름 · 부서' 한 줄
+      Set(gMeName, With({n: First(Split(Coalesce(gMe.displayName, ""), "/")).Value}, Trim(If(Find("(", n) > 0, Left(n, Find("(", n) - 1), n))));
+      Set(gMeShort, With({t: gMeName & If(IsBlank(gMe.department), "", " · " & gMe.department)}, If(Len(t) > 24, Left(t, 23) & "…", t)));
+
+      // 신청 화면 상태
+      Set(gStep, 1);
+      Set(gTour, First(OpenTours));
+      Set(gMonth, Date(Year(EarliestBase), Month(EarliestBase), 1));
+      Set(gDate, Blank()); Set(gDateKey, "");
+      Set(gSlot, NoSlot);
+      Set(gCategory, "external");
+      Set(gClientType, "신규 고객사");
+      Set(gIndustry, "");
+      Set(gPurpose, "");
+      Set(gIndustryTxt, "");
+      Set(gPurposeTxt, "");
+      Set(gLang, "ko");
+      Set(gNeedReset, false);
+      Set(gSaving, false);
+      Set(gSaveErr, false);
+      Set(gNo, "");
+      Set(gDoneLink, "");
+      Set(gDoneInfo, "");
+
+      // 관리자 화면
+      Set(gAdminFilter, "대기");
+      Set(gSel, Blank());
+      Set(gDeepDone, false);
+      Set(gShowBlock, false);
+      Set(gShowBlockCal, false);
+      Set(gBlockTarget, "메가와이즈");
+      Set(gBlockTime, "종일");
+      Set(gBlockDate, NextOpDay);
+      Set(gBlockMonth, Date(Year(NextOpDay), Month(NextOpDay), 1));
+      Set(gBlockErr, "");
+      Set(gMyPick, "");
+      Set(gMyDef, Blank());
+      Set(gAttCntOk, false);
+
+      // 새로고침 버튼: 처리 중 표시 · 마지막 갱신 시각
+      Set(gRefAdm, false); Set(gRefCal, false);
+      Set(gAdmRefAt, Blank()); Set(gCalRefAt, Blank());
+      Set(gUnblockId, "");
+
+      // 데이터 관리 화면 (varIsDataAdmin 계정만 사용)
+      Set(gDaTab, 1); Set(gDaPage, 1); Set(gDaEdit, false); Set(gDaOrphanView, false); Set(gDaDelAsk, false); Set(gDaWorking, false);
+      Set(gDaQ, ""); Set(gDaMsg, ""); Set(gDaFoundAt, Blank());
+      Set(gDaLinkAsk, false); Set(gDaLinkStep, 1);
+      Set(gDaDelList, ""); Set(gDaDelId, 0); Set(gDaDelKey, ""); Set(gDaDelInfo, ""); Set(gDaDelNAtt, 0); Set(gDaDelNBusy, 0);
+
+      // 관리자: 메일 미리보기 창 (A-2) · 정보 수정 · 수기 등록 창 (F-04) · 고객 구분 빠른 변경 창 (F-03)
+      Set(gMailMode, "");
+      Set(gShowEdit, false); Set(gEditMode, ""); Set(gEdTour, ""); Set(gEdSlot, ""); Set(gEdCat, "고객 방문"); Set(gEdClient, "");
+      Set(gEdInd, ""); Set(gEdPurpose, ""); Set(gEdLang, "한국어"); Set(gEdStatus, "승인"); Set(gEdPartnerDefault, ""); Set(gEdBusy, false);
+      Set(gShowClient, false); Set(gCtChoice, ""); Set(gCtPartnerDefault, "");
+
+      // 방명록 (N-1 · N-2): 흐르는 띠 · 작성 창 · 관리 화면
+      // (방명록 화면 변수는 scrGuest · scrGuestAdmin 의 OnVisible 과 버튼에서 정함)
+
+      // 가이드 배정 (F-05): 달력 달 · 주간 배정표의 월요일
+      Set(gGdMonth, Date(Year(Today()), Month(Today()), 1));
+      Set(gGdWeek, DateAdd(Today(), 1 - Weekday(Today(), StartOfWeek.Monday), TimeUnit.Days));
+      Set(gGdYear, Year(Today())); Set(gGdSel, Blank()); Set(gGdBusy, false); Set(gGdYearMax, 0.01);
+
+      // 통계 화면: 연간 · 월별 · 기간 지정 · 전체 기간, 집계 기준(전체 / 승인 · 완료)
+      Set(gStatPeriod, "year");
+      Set(gStatYear, Year(Today()));
+      Set(gStatMonth, Month(Today()));
+      Set(gStatBasis, "all");
+      Set(gStatPartnerAll, false);
+      Set(gFrom, Date(Year(Today()), 1, 1));
+      Set(gTo, Date(Year(Today()), 12, 31));
+      ClearCollect(colStat, FirstN(VisitRequests, 0));
+      ClearCollect(colStatPrev, FirstN(VisitRequests, 0));
+      ClearCollect(colStatYear, FirstN(VisitRequests, 0));
+      ClearCollect(colStatJobs, FirstN(VisitAttendees, 0));
+
+      // 관리자 예약 달력
+      Set(gCalMonth, Date(Year(Today()), Month(Today()), 1));
+      Set(gCalDay, Text(Today(), "yyyy-mm-dd"));
+      Set(gCalTour, "");
+      ClearCollect(colCalEv, {Key: "", Time: "", Tour: "", Co: "", St: "", Flag: "", Id: "", Who: ""});
+      Clear(colCalEv);
+
+      // 이번 달 예약 점유 · 막힌 일정 (개인정보 없음)
+      ClearCollect(colBusy, Filter(TourBusy, MonthKey = Text(gMonth, "yyyy-mm")))
+    StartScreen: |-
+      =If(!IsBlank(Param("requestNo")) && With({site: LookUp(TourAdmins, Title = Lower(User().Email), Site)}, !IsBlank(site) && (MtvEnabled || site = "main")), scrAdmin, scrBook)
+    Theme: =PowerAppsTheme
