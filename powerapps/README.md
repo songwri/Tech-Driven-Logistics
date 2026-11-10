@@ -34,6 +34,7 @@ powerapps/
 ├─ README.md                  ← 지금 이 가이드
 ├─ mockup/index.html          ← 1366×768 화면 설계 (브라우저로 열어 보기)
 ├─ mockup/screens.html        ← 화면 12장 한눈에 보기 (이미지는 mockup/screens/*.png)
+├─ 6-dev-update/              ← 개발자 버전(TDL_VISITOR 1.0.0.1, 10/18)에 수정 요청서를 반영한 화면 YAML · 적용 안내 (README.md)
 ├─ 1-sharepoint/
 │  ├─ VisitRequests.csv       ← 목록 만들기용 (CSV 로 목록 만들기)
 │  ├─ VisitAttendees.csv
@@ -509,3 +510,4 @@ YAML 구조 · 컨트롤 이름 중복 · 수식 괄호는 스크립트로 검�
 | 방명록 화면 오른쪽 평균 만족도 카드 · [멈춤] 버튼 | `scrGuest` conGbSummary · btnGbPlay | 로봇 · 컨베이어 그림, 마우스를 올리면 멈춤 |
 | 방명록 엑셀은 SharePoint 목록 내보내기로 | `scrGuestAdmin` btnGbAdmExcel, `App.Formulas` `GuestbookListUrl` | 화면에서 바로 엑셀 파일 |
 | 공휴일 목록이 끝난 해 뒤 날짜 닫기 · 관리자 알림 | `App.Formulas` `HolidayLastYear`, `scrBook` galCal, `scrAdmin` OnVisible | 공휴일 자동 계산 |
+| (개발자 버전) 데이터 관리 화면 · 변경 기록 · 접근 계정은 `TourAdmins` 의 Site = data | `6-dev-update/Src/scrData.pa.yaml`, `DataAdminLog` 목록, App `varIsDataAdmin` | 시트를 직접 편집 |

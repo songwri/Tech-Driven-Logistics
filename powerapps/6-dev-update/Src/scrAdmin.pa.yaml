@@ -1,0 +1,4291 @@
+# ************************************************************************************************
+# Warning: YAML source code for Canvas Apps should only be used to review changes made within Power Apps Studio and for minor edits (Preview).
+# Use the maker portal to create and edit your Power Apps.
+#
+# The schema file for Canvas Apps is available at https://go.microsoft.com/fwlink/?linkid=2304907
+#
+# For more information, visit https://go.microsoft.com/fwlink/?linkid=2292623
+# ************************************************************************************************
+# scrAdmin — 관리자 (예약 관리). 개발자 10/18 버전 기준으로 수정 요청서 반영
+# 바뀐 곳: 머리말 · 본문 스크롤(conBodyAd) · 각진 모서리 · 색 토큰
+#   A-1 승인 초록 · A-2 승인 · 거절 · 일정 취소 · 방문 완료는 conMail(메일 미리보기 + 사유) 창에서 [보내기] (거절 · 취소 사유 필수)
+#   A-3 목록 둘째 줄 한 줄(lblAdmSub) · A-4 참석자 표 머리글 선명하게, 구분 → 비고(추가 인원 표시)
+#   C-8 신청자 이름 괄호 영문명 · /부서 뗌(ar3V) · F-02 방문 유형에 파트너사명(ar5V)
+#   F-03 [변경] → conClient 고객 구분 빠른 변경 · F-04 [정보 수정] · [수기 등록] → conEdit
+#   F-06 [방문 완료] → 상태 완료 저장, 흐름 TDLVisitDecision 사례 완료 가 방명록 요청 메일 (흐름 안내 문서)
+#   최적화: 상세 영역 표시 조건을 컨테이너 conAdmDetail 하나로 (컨트롤 약 40개가 각자 계산하던 것)
+#   메일은 개발자 흐름 그대로 상태 변경을 보고 흐름이 보냄. 앱은 상태 · 사유만 저장
+# ── [PA 전용] ──
+#   · conMail: 승인 · 거절 · 일정 취소 · 방문 완료 전 메일 미리보기 + 사유 입력 (웹에는 없음)
+#   · conBodyAd: 본문만 스크롤 · btnEdSave 저장 중 잠금
+Screens:
+  scrAdmin:
+    Properties:
+      Fill: =cBg
+      OnVisible: |-
+        =If(
+            IsBlank(gAdmRefAt) || DateDiff(gAdmRefAt, Now(), TimeUnit.Seconds) > 60,
+            Refresh(VisitRequests);
+            Refresh(VisitAttendees);
+            IfError(ClearCollect(colAttCnt, ForAll(Filter(FirstN(VisitAttendees, 2000), Coalesce(Status, "") <> "미매칭"), {No: RequestNo})); Set(gAttCntOk, true), Set(gAttCntOk, false));
+            Refresh(TourBusy);
+            Set(gAdmRefAt, Now())
+        );
+        If(
+            !IsBlank(Param("requestNo")) && !gDeepDone,
+            Set(gSel, LookUp(VisitRequests, Title = Param("requestNo")));
+            Set(gAdminFilter, "전체");
+            Set(gDeepDone, true)
+        );
+        ClearCollect(colBusy, Filter(TourBusy, MonthKey = Text(gMonth, "yyyy-mm")))
+    Children:
+      - conBodyAd:
+          Control: GroupContainer@1.3.0
+          Variant: AutoLayout
+          Properties:
+            BorderThickness: =0
+            DropShadow: =DropShadow.None
+            Fill: =Color.Transparent
+            Height: =sh
+            LayoutAlignItems: =LayoutAlignItems.Center
+            LayoutDirection: =LayoutDirection.Vertical
+            LayoutOverflowY: =LayoutOverflow.Scroll  // [PA 전용] 본문만 스크롤 · 웹은 페이지 스크롤
+            Width: =sw
+            X: =0
+            Y: =0
+          Children:
+            - conPageAd:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  BorderThickness: =0
+                  DropShadow: =DropShadow.None
+                  Fill: =Color.Transparent
+                  FillPortions: =0
+                  Height: =768
+                  LayoutMinHeight: =0
+                  LayoutMinWidth: =0
+                  Width: =1366
+                Children:
+                  - hdrAdmZoneAd:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =Color.Transparent
+                        Fill: =RGBA(255, 255, 255, 0.07)
+                        Height: =52
+                        Visible: =!IsBlank(gAdminSite) || varIsDataAdmin  // [PA 전용] 관리자 메뉴 묶음 · 웹은 관리자 페이지가 따로 있음
+                        Width: =600
+                        X: =ox + 476
+                        Y: =0
+                  - hdrAdmLabelAd:
+                      Control: Label@2.5.1
+                      Properties:
+                        Align: =Align.Center
+                        Color: =cWhite
+                        Fill: =cBrand
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Semibold
+                        Height: =18
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =10
+                        Text: ="관리자"
+                        Visible: =!IsBlank(gAdminSite) || varIsDataAdmin
+                        Width: =54
+                        X: =ox + 484
+                        Y: =22
+                  - navGuestAd:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =Color.Transparent
+                        BorderThickness: =0
+                        Color: =RGBA(255, 255, 255, 0.72)
+                        DisabledColor: =cInk3
+                        DisabledFill: =cSoft
+                        Fill: =Color.Transparent
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Normal
+                        Height: =40
+                        HoverColor: =cWhite
+                        HoverFill: =RGBA(255, 255, 255, 0.08)
+                        OnSelect: =Navigate(scrGuest, ScreenTransition.None)
+                        PaddingBottom: =0
+                        PaddingLeft: =4
+                        PaddingRight: =4
+                        PaddingTop: =0
+                        PressedColor: =cWhite
+                        PressedFill: =RGBA(255, 255, 255, 0.08)
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =13
+                        Text: ="방명록"
+                        Width: =80
+                        X: =ox + 384
+                        Y: =12
+                  - navGuidesAd:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =Color.Transparent
+                        BorderThickness: =0
+                        Color: =RGBA(255, 255, 255, 0.72)
+                        DisabledColor: =cInk3
+                        DisabledFill: =cSoft
+                        Fill: =Color.Transparent
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Normal
+                        Height: =40
+                        HoverColor: =cWhite
+                        HoverFill: =RGBA(255, 255, 255, 0.08)
+                        OnSelect: =Navigate(scrGuides, ScreenTransition.None)
+                        PaddingBottom: =0
+                        PaddingLeft: =4
+                        PaddingRight: =4
+                        PaddingTop: =0
+                        PressedColor: =cWhite
+                        PressedFill: =RGBA(255, 255, 255, 0.08)
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =13
+                        Text: ="가이드 배정"
+                        Visible: =gAdminSite = "main"
+                        Width: =96
+                        X: =ox + 764
+                        Y: =12
+                  - navGbAdmAd:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =Color.Transparent
+                        BorderThickness: =0
+                        Color: =RGBA(255, 255, 255, 0.72)
+                        DisabledColor: =cInk3
+                        DisabledFill: =cSoft
+                        Fill: =Color.Transparent
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Normal
+                        Height: =40
+                        HoverColor: =cWhite
+                        HoverFill: =RGBA(255, 255, 255, 0.08)
+                        OnSelect: =Navigate(scrGuestAdmin, ScreenTransition.None)
+                        PaddingBottom: =0
+                        PaddingLeft: =4
+                        PaddingRight: =4
+                        PaddingTop: =0
+                        PressedColor: =cWhite
+                        PressedFill: =RGBA(255, 255, 255, 0.08)
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =13
+                        Text: ="방명록 관리"
+                        Visible: =!IsBlank(gAdminSite)
+                        Width: =100
+                        X: =ox + 864
+                        Y: =12
+                  - cardAdmList:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Fill: =cSurface
+                        Height: =680
+                        Width: =440
+                        X: =24
+                        Y: =72
+                  - lblAdmH:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Semibold
+                        Height: =24
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =15
+                        Text: ="예약 요청"
+                        Width: =84
+                        X: =44
+                        Y: =88
+                  - lblAdmSite:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk3
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =11
+                        Text: =Switch(gAdminSite, "main", "메가와이즈 · TDL Lab", "mtv", "시화MTV", "hq", "통합 관제 (보기 전용)", "")
+                        Width: =134
+                        X: =132
+                        Y: =90
+                  - btnBlockOpen:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        DisabledColor: =cInk3
+                        DisabledFill: =cSoft
+                        Fill: =cSurface
+                        Font: =Font.'Segoe UI'
+                        Height: =32
+                        HoverColor: =cInk
+                        HoverFill: =cSoft
+                        OnSelect: =Set(gBlockDate, NextOpDay); Set(gBlockMonth, Date(Year(gBlockDate), Month(gBlockDate), 1)); Set(gBlockTarget, "메가와이즈"); Set(gBlockTime, "종일"); Set(gBlockErr, ""); Reset(txtBlkReason); Set(gShowBlock, true)
+                        PaddingBottom: =0
+                        PaddingLeft: =4
+                        PaddingRight: =4
+                        PaddingTop: =0
+                        PressedColor: =cInk
+                        PressedFill: =cLine
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =13
+                        Text: ="일정 막기"
+                        Visible: =gAdminSite <> "hq"
+                        Width: =84
+                        X: =270
+                        Y: =82
+                  - btnAdmRefresh:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        DisabledColor: =cInk3
+                        DisabledFill: =cSoft
+                        DisplayMode: =If(gRefAdm, DisplayMode.Disabled, DisplayMode.Edit)
+                        Fill: =cSurface
+                        Font: =Font.'Segoe UI'
+                        Height: =32
+                        HoverColor: =cInk
+                        HoverFill: =cSoft
+                        OnSelect: |-
+                          =Set(gRefAdm, true);
+                          Refresh(VisitRequests);
+                          Refresh(VisitAttendees);
+                          IfError(ClearCollect(colAttCnt, ForAll(Filter(FirstN(VisitAttendees, 2000), Coalesce(Status, "") <> "미매칭"), {No: RequestNo})); Set(gAttCntOk, true), Set(gAttCntOk, false));
+                          Refresh(TourBusy);
+                          ClearCollect(colBusy, Filter(TourBusy, MonthKey = Text(gMonth, "yyyy-mm")));
+                          Set(
+                              gSel,
+                              If(
+                                  IsBlank(gSel),
+                                  Blank(),
+                                  With(
+                                      {
+                                          fresh: LookUp(VisitRequests, Title = gSel.Title),
+                                          dirty: Trim(txtMemo.Text) <> If(gSel.AdminMemo = "-", "", Trim(gSel.AdminMemo))
+                                      },
+                                      If(IsBlank(fresh), Blank(), If(dirty, Patch(fresh, {AdminMemo: gSel.AdminMemo}), fresh))
+                                  )
+                              )
+                          );
+                          Set(gAdmRefAt, Now());
+                          Set(gRefAdm, false)
+                        PaddingBottom: =0
+                        PaddingLeft: =4
+                        PaddingRight: =4
+                        PaddingTop: =0
+                        PressedColor: =cInk
+                        PressedFill: =cLine
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =12
+                        Text: =If(gRefAdm, "불러오는 중…", "↻ 새로고침")
+                        Width: =90
+                        X: =358
+                        Y: =82
+                  - lblAdmRefAt:
+                      Control: Label@2.5.1
+                      Properties:
+                        Align: =Align.Right
+                        Color: =cInk3
+                        Font: =Font.'Segoe UI'
+                        Height: =14
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =10
+                        Text: =If(IsBlank(gAdmRefAt), "", "마지막 갱신 " & Text(If(IsBlank(gAdmRefAt), Blank(), DateAdd(DateAdd(gAdmRefAt, TimeZoneOffset(gAdmRefAt), TimeUnit.Minutes), 9, TimeUnit.Hours)), "hh:mm"))
+                        Width: =192
+                        X: =256
+                        Y: =114
+                  - btnFltWait:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =If(gAdminFilter = "대기", cPrimary, cLine)
+                        BorderThickness: =1
+                        Color: =If(gAdminFilter = "대기", cWhite, cInk)
+                        DisabledColor: =If(gAdminFilter = "대기", cWhite, cInk3)
+                        DisabledFill: =If(gAdminFilter = "대기", cInk3, cSoft)
+                        Fill: =If(gAdminFilter = "대기", cPrimary, cSurface)
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Normal
+                        Height: =32
+                        HoverColor: =If(gAdminFilter = "대기", cWhite, cInk)
+                        HoverFill: =If(gAdminFilter = "대기", cPrimaryHover, cSoft)
+                        OnSelect: =Set(gAdminFilter, "대기"); Set(gSel, Blank())
+                        PaddingBottom: =0
+                        PaddingLeft: =4
+                        PaddingRight: =4
+                        PaddingTop: =0
+                        PressedColor: =If(gAdminFilter = "대기", cWhite, cInk)
+                        PressedFill: =If(gAdminFilter = "대기", cInk, cLine)
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =13
+                        Text: ="대기 " & PendingCount
+                        Width: =96
+                        X: =44
+                        Y: =134
+                  - btnFltOk:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =If(gAdminFilter = "승인", cPrimary, cLine)
+                        BorderThickness: =1
+                        Color: =If(gAdminFilter = "승인", cWhite, cInk)
+                        DisabledColor: =If(gAdminFilter = "승인", cWhite, cInk3)
+                        DisabledFill: =If(gAdminFilter = "승인", cInk3, cSoft)
+                        Fill: =If(gAdminFilter = "승인", cPrimary, cSurface)
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Normal
+                        Height: =32
+                        HoverColor: =If(gAdminFilter = "승인", cWhite, cInk)
+                        HoverFill: =If(gAdminFilter = "승인", cPrimaryHover, cSoft)
+                        OnSelect: =Set(gAdminFilter, "승인"); Set(gSel, Blank())
+                        PaddingBottom: =0
+                        PaddingLeft: =4
+                        PaddingRight: =4
+                        PaddingTop: =0
+                        PressedColor: =If(gAdminFilter = "승인", cWhite, cInk)
+                        PressedFill: =If(gAdminFilter = "승인", cInk, cLine)
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =13
+                        Text: ="승인"
+                        Width: =96
+                        X: =146
+                        Y: =134
+                  - btnFltAll:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =If(gAdminFilter = "전체", cPrimary, cLine)
+                        BorderThickness: =1
+                        Color: =If(gAdminFilter = "전체", cWhite, cInk)
+                        DisabledColor: =If(gAdminFilter = "전체", cWhite, cInk3)
+                        DisabledFill: =If(gAdminFilter = "전체", cInk3, cSoft)
+                        Fill: =If(gAdminFilter = "전체", cPrimary, cSurface)
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Normal
+                        Height: =32
+                        HoverColor: =If(gAdminFilter = "전체", cWhite, cInk)
+                        HoverFill: =If(gAdminFilter = "전체", cPrimaryHover, cSoft)
+                        OnSelect: =Set(gAdminFilter, "전체"); Set(gSel, Blank())
+                        PaddingBottom: =0
+                        PaddingLeft: =4
+                        PaddingRight: =4
+                        PaddingTop: =0
+                        PressedColor: =If(gAdminFilter = "전체", cWhite, cInk)
+                        PressedFill: =If(gAdminFilter = "전체", cInk, cLine)
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =13
+                        Text: ="전체"
+                        Width: =96
+                        X: =248
+                        Y: =134
+                  - btnOpenManual:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        DisabledColor: =cInk3
+                        DisabledFill: =cSoft
+                        Fill: =cSurface
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Semibold
+                        Height: =32
+                        HoverColor: =cInk
+                        HoverFill: =cSoft
+                        OnSelect: |-
+                          =Set(gEditMode, "new");
+                          Set(gEdTour, ""); Set(gEdSlot, ""); Set(gEdCat, "고객 방문"); Set(gEdClient, ""); Set(gEdInd, ""); Set(gEdPurpose, "");
+                          Set(gEdLang, "한국어"); Set(gEdStatus, "승인"); Set(gEdPartnerDefault, "");
+                          Reset(dpEdit); Reset(txtEdTime); Reset(txtEdCompany); Reset(txtEdPartner); Reset(txtEdHostName); Reset(txtEdHostTitle);
+                          Reset(txtEdDiv); Reset(txtEdOrg); Reset(txtEdPhone); Reset(txtEdEmail); Reset(txtEdHeads);
+                          Set(gShowEdit, true)
+                        PaddingBottom: =0
+                        PaddingLeft: =4
+                        PaddingRight: =4
+                        PaddingTop: =0
+                        PressedColor: =cInk
+                        PressedFill: =cSoft
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =13
+                        Text: ="수기 등록"
+                        Visible: =gAdminSite <> "hq"
+                        Width: =94
+                        X: =350
+                        Y: =134
+                  - txtAdmSearch:
+                      Control: Classic/TextInput@2.3.2
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =If(IsBlank(Self.Text), cInk3, cInk)
+                        Default: =""
+                        Fill: =cSurface
+                        FocusedBorderColor: =cInk
+                        Font: =Font.'Segoe UI'
+                        Height: =36
+                        HintText: ="업체명 · 신청자 · 신청번호 일부 검색"
+                        HoverBorderColor: =cInk3
+                        PaddingLeft: =10
+                        PaddingRight: =10
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Width: =400
+                        X: =44
+                        Y: =176
+                  - galAdm:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        Fill: =Color.Transparent
+                        Height: =512
+                        Items: |-
+                          =With(
+                              {base: FirstN(SiteReqs, 2000)},
+                              Sort(
+                                  Filter(
+                                      If(gAdminFilter = "전체", base, Filter(base, Status = gAdminFilter)),
+                                      IsBlank(txtAdmSearch.Text) || txtAdmSearch.Text in Company || txtAdmSearch.Text in Title || txtAdmSearch.Text in HostName
+                                  ),
+                                  VisitDate,
+                                  SortOrder.Ascending
+                              )
+                          )
+                        OnSelect: =Set(gSel, ThisItem)
+                        ShowScrollbar: =false
+                        TemplateFill: =Color.Transparent
+                        TemplatePadding: =0
+                        TemplateSize: =122
+                        Width: =400
+                        X: =44
+                        Y: =224
+                      Children:
+                        - recAdm:
+                            Control: Rectangle@2.3.0
+                            Properties:
+                              BorderColor: =If(ThisItem.Title = gSel.Title, cInk, cLine)
+                              BorderThickness: =1
+                              Fill: =If(ThisItem.Title = gSel.Title, cSoft, cSurface)
+                              Height: =114
+                              OnSelect: =Select(Parent)
+                              Width: =400
+                        - lblAdmCo:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk
+                              Font: =Font.'Segoe UI'
+                              FontWeight: =FontWeight.Semibold
+                              Height: =30
+                              OnSelect: =Select(Parent)
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =15
+                              Text: =If(Len(ThisItem.Company) > 20, Left(ThisItem.Company, 19) & "…", ThisItem.Company)
+                              Width: =300
+                              Wrap: =false
+                              X: =16
+                              Y: =10
+                        - lblAdmWhen:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk2
+                              Font: =Font.'Segoe UI'
+                              Height: =24
+                              OnSelect: =Select(Parent)
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Text: =Text(ThisItem.VisitDate, "mm/dd") & " (" & Mid("일월화수목금토", Max(1, Weekday(ThisItem.VisitDate, StartOfWeek.Sunday)), 1) & ") " & Left(ThisItem.Slot, 5) & " · " & ThisItem.TourName
+                              Width: =370
+                              X: =16
+                              Y: =42
+                        - lblAdmSub:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk3
+                              Font: =Font.'Segoe UI'
+                              Height: =22
+                              OnSelect: =Select(Parent)
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =12
+                              Text: |-
+                                =With({t: With({n: First(Split(Coalesce(ThisItem.HostName, ""), "/")).Value}, Trim(If(Find("(", n) > 0, Left(n, Find("(", n) - 1), n))) & " " & ThisItem.HostTitle & " · 참석자 " & Coalesce(If(gAttCntOk, CountRows(Filter(colAttCnt, No = ThisItem.Title)), Coalesce(ThisItem.AttendeeCount, 0)), 0) & "/" & Coalesce(ThisItem.ExpectedHeadcount, 0)}, If(Len(t) > 34, Left(t, 33) & "…", t))  // A-3 한 줄 + 말줄임, 참석자 제출/예상
+                              VerticalAlign: =VerticalAlign.Top
+                              Width: =370
+                              Wrap: =false
+                              X: =16
+                              Y: =70
+                        - tagAdm:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =Color.Transparent
+                              BorderThickness: =0
+                              Color: =LookUp(StatusStyle, S = ThisItem.Status).Fg
+                              DisabledColor: =LookUp(StatusStyle, S = ThisItem.Status).Fg
+                              DisabledFill: =LookUp(StatusStyle, S = ThisItem.Status).Bg
+                              DisplayMode: =DisplayMode.View
+                              Fill: =LookUp(StatusStyle, S = ThisItem.Status).Bg
+                              Font: =Font.'Segoe UI'
+                              Height: =22
+                              HoverColor: =LookUp(StatusStyle, S = ThisItem.Status).Fg
+                              HoverFill: =LookUp(StatusStyle, S = ThisItem.Status).Bg
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PressedColor: =LookUp(StatusStyle, S = ThisItem.Status).Fg
+                              PressedFill: =LookUp(StatusStyle, S = ThisItem.Status).Bg
+                              RadiusBottomLeft: =2
+                              RadiusBottomRight: =2
+                              RadiusTopLeft: =2
+                              RadiusTopRight: =2
+                              Size: =11
+                              Text: =ThisItem.Status
+                              Width: =56
+                              X: =328
+                              Y: =12
+                  - cardAdmDetail:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Fill: =cSurface
+                        Height: =680
+                        Width: =862
+                        X: =480
+                        Y: =72
+                  - conAdmDetail:
+                      Control: GroupContainer@1.3.0
+                      Variant: ManualLayout
+                      Properties:
+                        BorderThickness: =0
+                        DropShadow: =DropShadow.None
+                        Fill: =Color.Transparent
+                        Height: =680
+                        Visible: =(!IsBlank(gSel) && CountRows(Filter(galAdm.AllItems, Title = gSel.Title)) > 0)  // 상세 영역 표시 조건을 한 번만 계산 (예전엔 컨트롤마다 계산)
+                        Width: =862
+                        X: =480
+                        Y: =72
+                      Children:
+                        - tagAdmDetail:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =Color.Transparent
+                              BorderThickness: =0
+                              Color: =LookUp(StatusStyle, S = gSel.Status).Fg
+                              DisabledColor: =LookUp(StatusStyle, S = gSel.Status).Fg
+                              DisabledFill: =LookUp(StatusStyle, S = gSel.Status).Bg
+                              DisplayMode: =DisplayMode.View
+                              Fill: =LookUp(StatusStyle, S = gSel.Status).Bg
+                              Font: =Font.'Segoe UI'
+                              Height: =22
+                              HoverColor: =LookUp(StatusStyle, S = gSel.Status).Fg
+                              HoverFill: =LookUp(StatusStyle, S = gSel.Status).Bg
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              PressedColor: =LookUp(StatusStyle, S = gSel.Status).Fg
+                              PressedFill: =LookUp(StatusStyle, S = gSel.Status).Bg
+                              RadiusBottomLeft: =2
+                              RadiusBottomRight: =2
+                              RadiusTopLeft: =2
+                              RadiusTopRight: =2
+                              Size: =11
+                              Text: =gSel.Status
+                              Width: =56
+                              X: =28
+                              Y: =22
+                        - lblAdmNo:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk2
+                              Font: =Font.'Segoe UI'
+                              Height: =22
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =12
+                              Text: =gSel.Title & " · " & Text(If(IsBlank(gSel.'만든 날짜'), Blank(), DateAdd(DateAdd(gSel.'만든 날짜', TimeZoneOffset(gSel.'만든 날짜'), TimeUnit.Minutes), 9, TimeUnit.Hours)), "yyyy.mm.dd") & " 신청"
+                              Width: =400
+                              X: =94
+                              Y: =22
+                        - btnOpenEdit:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =cLine
+                              BorderThickness: =1
+                              Color: =cInk2
+                              DisabledColor: =cInk3
+                              DisabledFill: =cSoft
+                              Fill: =cSurface
+                              Font: =Font.'Segoe UI'
+                              FontWeight: =FontWeight.Semibold
+                              Height: =26
+                              HoverColor: =cInk2
+                              HoverFill: =cSoft
+                              OnSelect: |-
+                                =Set(gEditMode, "edit");
+                                Set(gEdTour, gSel.Tour); Set(gEdSlot, gSel.Slot);
+                                Set(gEdCat, Coalesce(gSel.Category, "고객 방문"));
+                                Set(gEdClient, If(gSel.ClientType = "-", "", gSel.ClientType));
+                                Set(gEdInd, With({t: Trim(gSel.Industry)}, If(IsBlank(t) || t = "-", "", t in Industries.Value, t, Coalesce(LookUp(IndustryLegacy, From = t, To), "기타"))));
+                                Set(gEdPurpose, gSel.Purpose); Set(gEdLang, Coalesce(gSel.Language, "한국어"));
+                                Set(gEdPartnerDefault, If(gSel.PartnerName = "-", "", gSel.PartnerName));
+                                Reset(dpEdit); Reset(txtEdTime); Reset(txtEdCompany); Reset(txtEdPartner); Reset(txtEdHostName); Reset(txtEdHostTitle);
+                                Reset(txtEdDiv); Reset(txtEdOrg); Reset(txtEdPhone); Reset(txtEdEmail); Reset(txtEdHeads);
+                                Set(gShowEdit, true)
+                              PaddingBottom: =0
+                              PaddingLeft: =4
+                              PaddingRight: =4
+                              PaddingTop: =0
+                              PressedColor: =cInk2
+                              PressedFill: =cSoft
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =12
+                              Text: ="정보 수정"
+                              Visible: =gAdminSite <> "hq"
+                              Width: =84
+                              X: =500
+                              Y: =20
+                        - lblAdmCoBig:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk
+                              Font: =Font.'Segoe UI'
+                              FontWeight: =FontWeight.Semibold
+                              Height: =32
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =22
+                              Text: =gSel.Company
+                              Width: =540
+                              X: =28
+                              Y: =50
+                        - btnReject:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =cLine
+                              BorderThickness: =1
+                              Color: =cRed
+                              DisabledColor: =cInk3
+                              DisabledFill: =cSoft
+                              Fill: =cSurface
+                              Font: =Font.'Segoe UI'
+                              HoverColor: =cRed
+                              HoverFill: =cSoft
+                              OnSelect: |-
+                                =// [PA 전용] A-2 사유 입력 + 메일 미리보기 창 (거절 사유 필수) · 웹에는 없음
+                                Set(gMailMode, "거절"); Reset(txtMailMsg)
+                              PaddingBottom: =0
+                              PaddingLeft: =4
+                              PaddingRight: =4
+                              PaddingTop: =0
+                              PressedColor: =cRed
+                              PressedFill: =cLine
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =14
+                              Text: ="거절"
+                              Visible: =(gAdminSite <> "hq" && gSel.Status = "대기" && ((gAdminSite = "main" && gSel.ApproveMain = "대기") || (gAdminSite = "mtv" && gSel.ApproveMtv = "대기")))
+                              Width: =110
+                              X: =598
+                              Y: =28
+                        - btnApprove:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =Color.Transparent
+                              BorderThickness: =0
+                              Color: =cWhite
+                              DisabledColor: =cWhite
+                              DisabledFill: =cInk3
+                              Fill: =cGreen
+                              Font: =Font.'Segoe UI'
+                              HoverColor: =cWhite
+                              HoverFill: =cGreenHover
+                              OnSelect: |-
+                                =// [PA 전용] A-2 메일 미리보기 창을 먼저 연다 (저장 · 메일은 창의 [보내기]) · 웹에는 없음
+                                Set(gMailMode, "승인"); Reset(txtMailMsg)
+                              PaddingBottom: =0
+                              PaddingLeft: =4
+                              PaddingRight: =4
+                              PaddingTop: =0
+                              PressedColor: =cWhite
+                              PressedFill: =cGreenHover
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =14
+                              Text: ="승인"
+                              Visible: =(gAdminSite <> "hq" && gSel.Status = "대기" && ((gAdminSite = "main" && gSel.ApproveMain = "대기") || (gAdminSite = "mtv" && gSel.ApproveMtv = "대기")))
+                              Width: =110
+                              X: =720
+                              Y: =28
+                        - btnCancelVisit:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =cLine
+                              BorderThickness: =1
+                              Color: =cRed
+                              DisabledColor: =cInk3
+                              DisabledFill: =cSoft
+                              Fill: =cSurface
+                              Font: =Font.'Segoe UI'
+                              HoverColor: =cRed
+                              HoverFill: =cSoft
+                              OnSelect: =Set(gMailMode, "취소"); Reset(txtMailMsg)
+                              PaddingBottom: =0
+                              PaddingLeft: =4
+                              PaddingRight: =4
+                              PaddingTop: =0
+                              PressedColor: =cRed
+                              PressedFill: =cLine
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =14
+                              Text: ="일정 취소"
+                              Visible: =gAdminSite <> "hq" && gSel.Status = "승인"
+                              Width: =110
+                              X: =598
+                              Y: =28
+                        - btnComplete:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =Color.Transparent
+                              BorderThickness: =0
+                              Color: =cWhite
+                              DisabledColor: =cWhite
+                              DisabledFill: =cInk3
+                              Fill: =cPrimary
+                              Font: =Font.'Segoe UI'
+                              HoverColor: =cWhite
+                              HoverFill: =cPrimaryHover
+                              OnSelect: =Set(gMailMode, "완료"); Reset(txtMailMsg)
+                              PaddingBottom: =0
+                              PaddingLeft: =4
+                              PaddingRight: =4
+                              PaddingTop: =0
+                              PressedColor: =cWhite
+                              PressedFill: =cPrimaryHover
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =14
+                              Text: ="방문 완료"
+                              Visible: =gAdminSite <> "hq" && gSel.Status = "승인" && gSel.VisitDate <= Today()
+                              Width: =110
+                              X: =720
+                              Y: =28
+                        - ar1K:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk2
+                              Font: =Font.'Segoe UI'
+                              Height: =28
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Text: ="일정"
+                              Width: =90
+                              X: =28
+                              Y: =96
+                        - ar1V:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk
+                              Font: =Font.'Segoe UI'
+                              Height: =28
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =14
+                              Text: =Text(gSel.VisitDate, "mm/dd") & " (" & Mid("일월화수목금토", Max(1, Weekday(gSel.VisitDate, StartOfWeek.Sunday)), 1) & ") " & gSel.ScheduleText
+                              Width: =306
+                              X: =118
+                              Y: =96
+                        - ar2K:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk2
+                              Font: =Font.'Segoe UI'
+                              Height: =28
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Text: ="투어"
+                              Width: =90
+                              X: =434
+                              Y: =96
+                        - ar2V:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk
+                              Font: =Font.'Segoe UI'
+                              Height: =28
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =14
+                              Text: =gSel.TourName
+                              Width: =306
+                              X: =524
+                              Y: =96
+                        - ar3K:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk2
+                              Font: =Font.'Segoe UI'
+                              Height: =28
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Text: ="신청자"
+                              Width: =90
+                              X: =28
+                              Y: =130
+                        - ar3V:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk
+                              Font: =Font.'Segoe UI'
+                              Height: =28
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =14
+                              Text: |-
+                                =With({n: First(Split(Coalesce(gSel.HostName, ""), "/")).Value}, Trim(If(Find("(", n) > 0, Left(n, Find("(", n) - 1), n))) & " " & gSel.HostTitle & " · " & gSel.HostPhone  // C-8 괄호 영문명 · /부서 뗌
+                              Width: =712
+                              Wrap: =false
+                              X: =118
+                              Y: =130
+                        - ar5K:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk2
+                              Font: =Font.'Segoe UI'
+                              Height: =28
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Text: ="방문 유형"
+                              Width: =90
+                              X: =28
+                              Y: =164
+                        - ar5V:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk
+                              Font: =Font.'Segoe UI'
+                              Height: =28
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =14
+                              Text: =gSel.Category & If(gSel.ClientType = "-" || IsBlank(gSel.ClientType), "", " · " & gSel.ClientType) & If(IsBlank(gSel.PartnerName) || gSel.PartnerName = "-", "", " (" & gSel.PartnerName & ")")
+                              Width: =254
+                              X: =118
+                              Y: =164
+                        - btnOpenClient:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =cLine
+                              BorderThickness: =1
+                              Color: =cInk2
+                              DisabledColor: =cInk3
+                              DisabledFill: =cSoft
+                              Fill: =cSurface
+                              Font: =Font.'Segoe UI'
+                              FontWeight: =FontWeight.Semibold
+                              Height: =24
+                              HoverColor: =cInk2
+                              HoverFill: =cSoft
+                              OnSelect: =Set(gCtChoice, If(gSel.ClientType = "-", "", gSel.ClientType)); Set(gCtPartnerDefault, If(gSel.PartnerName = "-", "", gSel.PartnerName)); Reset(txtCtPartner); Set(gShowClient, true)
+                              PaddingBottom: =0
+                              PaddingLeft: =4
+                              PaddingRight: =4
+                              PaddingTop: =0
+                              PressedColor: =cInk2
+                              PressedFill: =cSoft
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =11
+                              Text: ="변경"
+                              Visible: =gSel.Category = "고객 방문" && gAdminSite <> "hq"
+                              Width: =48
+                              X: =376
+                              Y: =166
+                        - ar6K:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk2
+                              Font: =Font.'Segoe UI'
+                              Height: =28
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Text: ="언어"
+                              Width: =90
+                              X: =434
+                              Y: =164
+                        - ar6V:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk
+                              Font: =Font.'Segoe UI'
+                              Height: =28
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =14
+                              Text: =gSel.Language & If(gSel.Interpreter = "Y", " · 통역 동반(" & gSel.InterpreterLanguage & ")", "")
+                              Width: =306
+                              X: =524
+                              Y: =164
+                        - ar7K:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk2
+                              Font: =Font.'Segoe UI'
+                              Height: =28
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Text: ="업종 · 목적"
+                              Width: =90
+                              X: =28
+                              Y: =198
+                        - ar7V:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk
+                              Font: =Font.'Segoe UI'
+                              Height: =28
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =14
+                              Text: =If(gSel.Industry = "-", "", gSel.Industry & " · ") & gSel.Purpose
+                              Width: =306
+                              X: =118
+                              Y: =198
+                        - ar8K:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk2
+                              Font: =Font.'Segoe UI'
+                              Height: =28
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Text: ="센터별 승인"
+                              Width: =90
+                              X: =434
+                              Y: =198
+                        - ar8V:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk
+                              Font: =Font.'Segoe UI'
+                              Height: =28
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =14
+                              Text: =If(gSel.ForMain = "Y", Switch(gSel.Tour, "lab", "TDL Lab ", "center", "메가와이즈 ", "center_mtv", "메가와이즈 ", "메가와이즈 · Lab ") & gSel.ApproveMain, "") & If(gSel.ForMtv = "Y", If(gSel.ForMain = "Y", " · ", "") & "시화MTV " & gSel.ApproveMtv, "")
+                              Width: =306
+                              X: =524
+                              Y: =198
+                        - arK9:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk2
+                              Font: =Font.'Segoe UI'
+                              Height: =28
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Text: ="의견"
+                              VerticalAlign: =VerticalAlign.Top
+                              Width: =90
+                              X: =28
+                              Y: =232
+                        - arV9:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk
+                              Font: =Font.'Segoe UI'
+                              Height: =44
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =14
+                              Text: =gSel.HostComment
+                              VerticalAlign: =VerticalAlign.Top
+                              Width: =712
+                              X: =118
+                              Y: =232
+                        - lblAttAdmH:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk
+                              Font: =Font.'Segoe UI'
+                              FontWeight: =FontWeight.Semibold
+                              Height: =24
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =15
+                              Text: ="참석자"
+                              Width: =60
+                              X: =28
+                              Y: =292
+                        - lblAttAdmSub:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =If(CountRows(galAtt.AllItems) > gSel.ExpectedHeadcount, cBlue, cInk2)
+                              Font: =Font.'Segoe UI'
+                              Height: =20
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Text: |-
+                                =With({n: CountRows(galAtt.AllItems)}, "제출 " & Coalesce(n, 0) & "명 (신청 시 예상 " & Coalesce(gSel.ExpectedHeadcount, 0) & "명)" & If(Coalesce(n, 0) > Coalesce(gSel.ExpectedHeadcount, 0), " · 추가 인원 +" & (Coalesce(n, 0) - Coalesce(gSel.ExpectedHeadcount, 0)), "") & " · Forms")
+                              Width: =700
+                              X: =92
+                              Y: =294
+                        - recThBg:
+                            Control: Rectangle@2.3.0
+                            Properties:
+                              BorderColor: =Color.Transparent
+                              Fill: =cBg
+                              Height: =32
+                              Width: =802
+                              X: =28
+                              Y: =324
+                        - th0:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk2
+                              Font: =Font.'Segoe UI'
+                              FontWeight: =FontWeight.Semibold
+                              Height: =20
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =12
+                              Text: ="성함"
+                              Width: =118
+                              X: =40
+                              Y: =330
+                        - th1:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk2
+                              Font: =Font.'Segoe UI'
+                              FontWeight: =FontWeight.Semibold
+                              Height: =20
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =12
+                              Text: ="직책"
+                              Width: =82
+                              X: =144
+                              Y: =330
+                        - th2:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk2
+                              Font: =Font.'Segoe UI'
+                              FontWeight: =FontWeight.Semibold
+                              Height: =20
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =12
+                              Text: ="소속"
+                              Width: =168
+                              X: =212
+                              Y: =330
+                        - th3:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk2
+                              Font: =Font.'Segoe UI'
+                              FontWeight: =FontWeight.Semibold
+                              Height: =20
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =12
+                              Text: ="이메일"
+                              Width: =214
+                              X: =366
+                              Y: =330
+                        - th4:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk2
+                              Font: =Font.'Segoe UI'
+                              FontWeight: =FontWeight.Semibold
+                              Height: =20
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =12
+                              Text: ="차량번호"
+                              Width: =104
+                              X: =566
+                              Y: =330
+                        - th5:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk2
+                              Font: =Font.'Segoe UI'
+                              FontWeight: =FontWeight.Semibold
+                              Height: =20
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =12
+                              Text: ="제출 시각"
+                              Width: =140
+                              X: =656
+                              Y: =330
+                        - th6:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk2
+                              Font: =Font.'Segoe UI'
+                              FontWeight: =FontWeight.Semibold
+                              Height: =20
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =12
+                              Text: ="비고"
+                              Width: =64
+                              X: =782
+                              Y: =330
+                        - lblMemo:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk2
+                              Font: =Font.'Segoe UI'
+                              Height: =18
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =12
+                              Text: ="관리자 메모 (거절 시 사유는 신청자 메일에 들어갑니다)"
+                              Width: =600
+                              X: =28
+                              Y: =548
+                        - txtMemo:
+                            Control: Classic/TextInput@2.3.2
+                            Properties:
+                              BorderColor: =cLine
+                              BorderThickness: =1
+                              Color: =If(IsBlank(Self.Text), cInk3, cInk)
+                              Default: =If(gSel.AdminMemo = "-", "", gSel.AdminMemo)
+                              Fill: =cSurface
+                              FocusedBorderColor: =cInk
+                              Font: =Font.'Segoe UI'
+                              Height: =72
+                              HintText: ="안내 가이드 · 특이사항"
+                              HoverBorderColor: =cInk3
+                              Mode: =TextMode.MultiLine
+                              PaddingLeft: =10
+                              PaddingRight: =10
+                              PaddingTop: =8
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =14
+                              Width: =690
+                              X: =28
+                              Y: =570
+                        - btnMemoSave:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =cLine
+                              BorderThickness: =1
+                              Color: =cInk
+                              DisabledColor: =cInk3
+                              DisabledFill: =cSoft
+                              Fill: =cSurface
+                              Font: =Font.'Segoe UI'
+                              HoverColor: =cInk
+                              HoverFill: =cSoft
+                              OnSelect: |-
+                                =Patch(VisitRequests, gSel, {AdminMemo: If(IsBlank(Trim(txtMemo.Text)), "-", Trim(txtMemo.Text))}); If(IsEmpty(Errors(VisitRequests)), Notify("메모를 저장했습니다.", NotificationType.Success), Notify("저장하지 못했습니다.", NotificationType.Error))
+                              PaddingBottom: =0
+                              PaddingLeft: =4
+                              PaddingRight: =4
+                              PaddingTop: =0
+                              PressedColor: =cInk
+                              PressedFill: =cLine
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =14
+                              Text: ="메모 저장"
+                              Visible: =gAdminSite <> "hq"
+                              Width: =100
+                              X: =730
+                              Y: =570
+                        - lblAdmFoot:
+                            Control: Label@2.5.1
+                            Properties:
+                              Color: =cInk3
+                              Font: =Font.'Segoe UI'
+                              Height: =20
+                              PaddingBottom: =0
+                              PaddingLeft: =0
+                              PaddingRight: =0
+                              PaddingTop: =0
+                              Size: =12
+                              Text: ="승인하면 해당 시간이 예약 달력에서 마감 처리되고, 신청자에게 확정 메일이 갑니다."
+                              Width: =802
+                              X: =28
+                              Y: =652
+                        - galAtt:
+                            Control: Gallery@2.15.0
+                            Variant: Vertical
+                            Properties:
+                              Fill: =Color.Transparent
+                              Height: =176
+                              Items: |-
+                                =With(
+                                    {rows: Sort(Filter(VisitAttendees, RequestNo = gSel.Title, Status <> "미매칭"), ID, SortOrder.Ascending)},
+                                    ForAll(
+                                        Sequence(CountRows(rows)),
+                                        With(
+                                            {r: Index(rows, Value)},
+                                            {Title: r.Title, JobTitle: r.JobTitle, Org: r.Org, Email: r.Email, CarNo: r.CarNo, ConsentAt: r.ConsentAt, Over: Value > gSel.ExpectedHeadcount}
+                                        )
+                                    )
+                                )
+                              ShowScrollbar: =false
+                              TemplateFill: =Color.Transparent
+                              TemplatePadding: =0
+                              TemplateSize: =44
+                              Width: =802
+                              X: =28
+                              Y: =360
+                            Children:
+                              - recAttOver:
+                                  Control: Rectangle@2.3.0
+                                  Properties:
+                                    BorderColor: =Color.Transparent
+                                    Fill: =If(ThisItem.Over, cSoft, Color.Transparent)
+                                    Height: =43
+                                    OnSelect: =Select(Parent)
+                                    Width: =802
+                              - lblAtta:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Color: =cInk
+                                    Font: =Font.'Segoe UI'
+                                    Height: =38
+                                    OnSelect: =Select(Parent)
+                                    PaddingBottom: =0
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    Size: =12
+                                    Text: =ThisItem.Title
+                                    VerticalAlign: =VerticalAlign.Top
+                                    Width: =98
+                                    X: =12
+                                    Y: =3
+                              - lblAttb:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Color: =cInk
+                                    Font: =Font.'Segoe UI'
+                                    Height: =38
+                                    OnSelect: =Select(Parent)
+                                    PaddingBottom: =0
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    Size: =12
+                                    Text: =ThisItem.JobTitle
+                                    VerticalAlign: =VerticalAlign.Top
+                                    Width: =62
+                                    X: =116
+                                    Y: =3
+                              - lblAttc:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Color: =cInk
+                                    Font: =Font.'Segoe UI'
+                                    Height: =38
+                                    OnSelect: =Select(Parent)
+                                    PaddingBottom: =0
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    Size: =12
+                                    Text: =ThisItem.Org
+                                    VerticalAlign: =VerticalAlign.Top
+                                    Width: =148
+                                    X: =184
+                                    Y: =3
+                              - lblAttd:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Color: =cInk
+                                    Font: =Font.'Segoe UI'
+                                    Height: =38
+                                    OnSelect: =Select(Parent)
+                                    PaddingBottom: =0
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    Size: =12
+                                    Text: =ThisItem.Email
+                                    VerticalAlign: =VerticalAlign.Top
+                                    Width: =194
+                                    X: =338
+                                    Y: =3
+                              - lblAtte:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Color: =cInk
+                                    Font: =Font.'Segoe UI'
+                                    Height: =38
+                                    OnSelect: =Select(Parent)
+                                    PaddingBottom: =0
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    Size: =12
+                                    Text: =ThisItem.CarNo
+                                    VerticalAlign: =VerticalAlign.Top
+                                    Width: =84
+                                    X: =538
+                                    Y: =3
+                              - lblAttf:
+                                  Control: Label@2.5.1
+                                  Properties:
+                                    Color: =cInk2
+                                    Font: =Font.'Segoe UI'
+                                    Height: =38
+                                    OnSelect: =Select(Parent)
+                                    PaddingBottom: =0
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    Size: =11
+                                    Text: =If(IsBlank(ThisItem.ConsentAt), "", Text(If(IsBlank(ThisItem.ConsentAt), Blank(), DateAdd(DateAdd(ThisItem.ConsentAt, TimeZoneOffset(ThisItem.ConsentAt), TimeUnit.Minutes), 9, TimeUnit.Hours)), "yyyy-mm-dd hh:mm"))
+                                    VerticalAlign: =VerticalAlign.Top
+                                    Width: =120
+                                    X: =628
+                                    Y: =3
+                              - lineAtt:
+                                  Control: Rectangle@2.3.0
+                                  Properties:
+                                    BorderColor: =Color.Transparent
+                                    Fill: =cLine
+                                    Height: =1
+                                    OnSelect: =Select(Parent)
+                                    Width: =802
+                                    Y: =43
+                              - tagAttOver:
+                                  Control: Classic/Button@2.2.0
+                                  Properties:
+                                    BorderColor: =Color.Transparent
+                                    BorderThickness: =0
+                                    Color: =cBlue
+                                    DisabledColor: =cBlue
+                                    DisabledFill: =cBlueBg
+                                    DisplayMode: =DisplayMode.View
+                                    Fill: =cBlueBg
+                                    Font: =Font.'Segoe UI'
+                                    Height: =20
+                                    HoverColor: =cBlue
+                                    HoverFill: =cBlueBg
+                                    PaddingBottom: =0
+                                    PaddingLeft: =0
+                                    PaddingRight: =0
+                                    PaddingTop: =0
+                                    PressedColor: =cBlue
+                                    PressedFill: =cBlueBg
+                                    Size: =10
+                                    Text: ="추가"
+                                    Visible: =ThisItem.Over
+                                    Width: =44
+                                    X: =754
+                                    Y: =10
+                  - lblAdmNone:
+                      Control: Label@2.5.1
+                      Properties:
+                        Align: =Align.Center
+                        Color: =cInk3
+                        Font: =Font.'Segoe UI'
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =14
+                        Text: ="왼쪽에서 신청 건을 선택해 주세요"
+                        Visible: =!conAdmDetail.Visible
+                        Width: =862
+                        X: =480
+                        Y: =372
+                  - lblVer_scrAdmin:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk3
+                        Font: =Font.'Segoe UI'
+                        Height: =12
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =8
+                        Text: ="v20261110"
+                        Width: =260
+                        X: =6
+                        Y: =754
+      - hdrBarAd:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =Color.Transparent
+            Fill: =cHeader
+            Height: =52
+            Width: =sw
+            X: =0
+            Y: =0
+      - hdrLineAd:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =Color.Transparent
+            Fill: =cBrand
+            Height: =4
+            Width: =sw
+            X: =0
+            Y: =52
+      - hdrMarkAd:
+          Control: Label@2.5.1
+          Properties:
+            Color: =cWhite
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Bold
+            Height: =30
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =20
+            Text: ="TDL"
+            Width: =48
+            X: =ox + 24
+            Y: =12
+      - hdrMarkLabAd:
+          Control: Label@2.5.1
+          Properties:
+            Color: =cWhite
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Bold
+            Height: =14
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =8
+            Text: ="LAB"
+            Width: =28
+            X: =ox + 72
+            Y: =24
+      - hdrTitleAd:
+          Control: Label@2.5.1
+          Properties:
+            Color: =RGBA(255, 255, 255, 0.85)
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Semibold
+            Height: =24
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =14
+            Text: ="방문 예약"
+            Width: =90
+            X: =ox + 106
+            Y: =16
+      - navBookAd:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
+            Color: =RGBA(255, 255, 255, 0.72)
+            DisabledColor: =cInk3
+            DisabledFill: =cSoft
+            Fill: =Color.Transparent
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Normal
+            Height: =40
+            HoverColor: =cWhite
+            HoverFill: =RGBA(255, 255, 255, 0.08)
+            OnSelect: =Navigate(scrBook, ScreenTransition.None)
+            PaddingBottom: =0
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =0
+            PressedColor: =cWhite
+            PressedFill: =RGBA(255, 255, 255, 0.08)
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
+            Size: =13
+            Text: ="방문 신청"
+            Width: =92
+            X: =ox + 200
+            Y: =12
+      - navMyAd:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
+            Color: =RGBA(255, 255, 255, 0.72)
+            DisabledColor: =cInk3
+            DisabledFill: =cSoft
+            Fill: =Color.Transparent
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Normal
+            Height: =40
+            HoverColor: =cWhite
+            HoverFill: =RGBA(255, 255, 255, 0.08)
+            OnSelect: =Set(gMyPick, ""); Navigate(scrMy, ScreenTransition.None)
+            PaddingBottom: =0
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =0
+            PressedColor: =cWhite
+            PressedFill: =RGBA(255, 255, 255, 0.08)
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
+            Size: =13
+            Text: ="내 신청"
+            Width: =84
+            X: =ox + 296
+            Y: =12
+      - navAdminAd:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
+            Color: =cInk
+            DisabledColor: =cInk3
+            DisabledFill: =cSoft
+            Fill: =cBg
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Semibold
+            Height: =40
+            HoverColor: =cInk
+            HoverFill: =cBg
+            OnSelect: =Navigate(scrAdmin, ScreenTransition.None)
+            PaddingBottom: =0
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =0
+            PressedColor: =cInk
+            PressedFill: =cBg
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
+            Size: =13
+            Text: ="예약 관리"
+            Visible: =!IsBlank(gAdminSite)
+            Width: =88
+            X: =ox + 544
+            Y: =12
+      - navCalAd:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
+            Color: =RGBA(255, 255, 255, 0.72)
+            DisabledColor: =cInk3
+            DisabledFill: =cSoft
+            Fill: =Color.Transparent
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Normal
+            Height: =40
+            HoverColor: =cWhite
+            HoverFill: =RGBA(255, 255, 255, 0.08)
+            OnSelect: =Navigate(scrCalendar, ScreenTransition.None)
+            PaddingBottom: =0
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =0
+            PressedColor: =cWhite
+            PressedFill: =RGBA(255, 255, 255, 0.08)
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
+            Size: =13
+            Text: ="달력"
+            Visible: =!IsBlank(gAdminSite)
+            Width: =60
+            X: =ox + 636
+            Y: =12
+      - navStatsAd:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
+            Color: =RGBA(255, 255, 255, 0.72)
+            DisabledColor: =cInk3
+            DisabledFill: =cSoft
+            Fill: =Color.Transparent
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Normal
+            Height: =40
+            HoverColor: =cWhite
+            HoverFill: =RGBA(255, 255, 255, 0.08)
+            OnSelect: =Navigate(scrStats, ScreenTransition.None)
+            PaddingBottom: =0
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =0
+            PressedColor: =cWhite
+            PressedFill: =RGBA(255, 255, 255, 0.08)
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
+            Size: =13
+            Text: ="통계"
+            Visible: =!IsBlank(gAdminSite)
+            Width: =60
+            X: =ox + 700
+            Y: =12
+      - navDataAd:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
+            Color: =RGBA(255, 255, 255, 0.72)
+            DisabledColor: =cInk3
+            DisabledFill: =cSoft
+            Fill: =Color.Transparent
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Normal
+            Height: =40
+            HoverColor: =cWhite
+            HoverFill: =RGBA(255, 255, 255, 0.08)
+            OnSelect: =Navigate(scrData, ScreenTransition.None)
+            PaddingBottom: =0
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =0
+            PressedColor: =cWhite
+            PressedFill: =RGBA(255, 255, 255, 0.08)
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
+            Size: =13
+            Text: ="데이터 관리"
+            Visible: =varIsDataAdmin
+            Width: =96
+            X: =ox + 968
+            Y: =12
+      - hdrUserAd:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Right
+            Color: =RGBA(255, 255, 255, 0.7)
+            Font: =Font.'Segoe UI'
+            Height: =20
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =12
+            Text: =gMeShort  // C-3 이름 · 부서 한 줄 (OnStart 의 gMeShort)
+            Width: =252
+            Wrap: =false
+            X: =ox + 1090
+            Y: =18
+      - scrim:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =Color.Transparent
+            Fill: =cScrim
+            Height: =sh
+            Visible: =gShowBlock
+            Width: =sw
+      - cardBlock:
+          Control: Rectangle@2.3.0
+          Properties:
+            BorderColor: =cLine
+            BorderThickness: =1
+            Fill: =cSurface
+            Height: =480
+            Visible: =gShowBlock
+            Width: =800
+            X: =ox + 283
+            Y: =114
+      - lblBlkH:
+          Control: Label@2.5.1
+          Properties:
+            Color: =cInk
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Semibold
+            Height: =24
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =15
+            Text: ="일정 막기"
+            Visible: =gShowBlock
+            Width: =200
+            X: =ox + 307
+            Y: =134
+      - lblBlkHint:
+          Control: Label@2.5.1
+          Properties:
+            Color: =cInk3
+            Font: =Font.'Segoe UI'
+            Height: =20
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =12
+            Text: ="휴무 · 행사 등으로 투어를 받을 수 없는 시간을 막습니다."
+            Visible: =gShowBlock
+            Width: =752
+            X: =ox + 307
+            Y: =160
+      - lblBlkMonth:
+          Control: Label@2.5.1
+          Properties:
+            Color: =cInk
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Semibold
+            Height: =28
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =15
+            Text: =Year(gBlockMonth) & "년 " & Month(gBlockMonth) & "월"
+            Visible: =gShowBlock
+            Width: =200
+            X: =ox + 307
+            Y: =198
+      - btnBlkPrev:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =cLine
+            BorderThickness: =1
+            Color: =cInk
+            DisabledColor: =cInk3
+            DisabledFill: =cSoft
+            DisplayMode: =If(gBlockMonth > Date(Year(Today()), Month(Today()), 1), DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =cSurface
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Normal
+            Height: =30
+            HoverColor: =cInk
+            HoverFill: =cSoft
+            OnSelect: =Set(gBlockMonth, DateAdd(gBlockMonth, -1, TimeUnit.Months))
+            PaddingBottom: =0
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =0
+            PressedColor: =cInk
+            PressedFill: =cLine
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
+            Size: =16
+            Text: ="‹"
+            Visible: =gShowBlock
+            Width: =36
+            X: =ox + 535
+            Y: =196
+      - btnBlkNext:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =cLine
+            BorderThickness: =1
+            Color: =cInk
+            DisabledColor: =cInk3
+            DisabledFill: =cSoft
+            DisplayMode: =If(gBlockMonth < DateAdd(Date(Year(Today()), Month(Today()), 1), 11, TimeUnit.Months), DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =cSurface
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Normal
+            Height: =30
+            HoverColor: =cInk
+            HoverFill: =cSoft
+            OnSelect: =Set(gBlockMonth, DateAdd(gBlockMonth, 1, TimeUnit.Months))
+            PaddingBottom: =0
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =0
+            PressedColor: =cInk
+            PressedFill: =cLine
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
+            Size: =16
+            Text: ="›"
+            Visible: =gShowBlock
+            Width: =36
+            X: =ox + 579
+            Y: =196
+      - lblBlkWd0:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =cRed
+            Font: =Font.'Segoe UI'
+            Height: =18
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =12
+            Text: ="일"
+            Visible: =gShowBlock
+            Width: =44
+            X: =ox + 307
+            Y: =236
+      - lblBlkWd1:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =cInk2
+            Font: =Font.'Segoe UI'
+            Height: =18
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =12
+            Text: ="월"
+            Visible: =gShowBlock
+            Width: =44
+            X: =ox + 351
+            Y: =236
+      - lblBlkWd2:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =cInk2
+            Font: =Font.'Segoe UI'
+            Height: =18
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =12
+            Text: ="화"
+            Visible: =gShowBlock
+            Width: =44
+            X: =ox + 395
+            Y: =236
+      - lblBlkWd3:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =cInk2
+            Font: =Font.'Segoe UI'
+            Height: =18
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =12
+            Text: ="수"
+            Visible: =gShowBlock
+            Width: =44
+            X: =ox + 439
+            Y: =236
+      - lblBlkWd4:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =cInk2
+            Font: =Font.'Segoe UI'
+            Height: =18
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =12
+            Text: ="목"
+            Visible: =gShowBlock
+            Width: =44
+            X: =ox + 483
+            Y: =236
+      - lblBlkWd5:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =cInk2
+            Font: =Font.'Segoe UI'
+            Height: =18
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =12
+            Text: ="금"
+            Visible: =gShowBlock
+            Width: =44
+            X: =ox + 527
+            Y: =236
+      - lblBlkWd6:
+          Control: Label@2.5.1
+          Properties:
+            Align: =Align.Center
+            Color: =cInk2
+            Font: =Font.'Segoe UI'
+            Height: =18
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =12
+            Text: ="토"
+            Visible: =gShowBlock
+            Width: =44
+            X: =ox + 571
+            Y: =236
+      - lblBlkPicked:
+          Control: Label@2.5.1
+          Properties:
+            Color: =cInk
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Semibold
+            Height: =22
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Text: ="선택한 날짜  " & Text(gBlockDate, "mm/dd") & " (" & Mid("일월화수목금토", Max(1, Weekday(gBlockDate, StartOfWeek.Sunday)), 1) & ")"
+            Visible: =gShowBlock
+            Width: =308
+            X: =ox + 307
+            Y: =498
+      - lblBlkRule:
+          Control: Label@2.5.1
+          Properties:
+            Color: =cInk3
+            Font: =Font.'Segoe UI'
+            Height: =34
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =11
+            Text: ="월 · 수 · 금 운영일만, 오늘 이후 날짜만 고를 수 있습니다."
+            Visible: =gShowBlock
+            Width: =308
+            X: =ox + 307
+            Y: =524
+      - lblBlkTarget:
+          Control: Label@2.5.1
+          Properties:
+            Color: =cInk2
+            Font: =Font.'Segoe UI'
+            Height: =18
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =12
+            Text: ="공간"
+            Visible: =gShowBlock
+            Width: =200
+            X: =ox + 655
+            Y: =198
+      - btnBlkMain:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =If(gBlockTarget = "메가와이즈", cPrimary, cLine)
+            BorderThickness: =1
+            Color: =If(gBlockTarget = "메가와이즈", cWhite, cInk)
+            DisabledColor: =If(gBlockTarget = "메가와이즈", cWhite, cInk3)
+            DisabledFill: =If(gBlockTarget = "메가와이즈", cInk3, cSoft)
+            Fill: =If(gBlockTarget = "메가와이즈", cPrimary, cSurface)
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Normal
+            Height: =36
+            HoverColor: =If(gBlockTarget = "메가와이즈", cWhite, cInk)
+            HoverFill: =If(gBlockTarget = "메가와이즈", cPrimaryHover, cSoft)
+            OnSelect: =Set(gBlockTarget, "메가와이즈")
+            PaddingBottom: =0
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =0
+            PressedColor: =If(gBlockTarget = "메가와이즈", cWhite, cInk)
+            PressedFill: =If(gBlockTarget = "메가와이즈", cInk, cLine)
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
+            Size: =13
+            Text: ="메가와이즈"
+            Visible: =gShowBlock
+            Width: =96
+            X: =ox + 655
+            Y: =218
+      - btnBlkLab:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =If(gBlockTarget = "TDL Lab", cPrimary, cLine)
+            BorderThickness: =1
+            Color: =If(gBlockTarget = "TDL Lab", cWhite, cInk)
+            DisabledColor: =If(gBlockTarget = "TDL Lab", cWhite, cInk3)
+            DisabledFill: =If(gBlockTarget = "TDL Lab", cInk3, cSoft)
+            Fill: =If(gBlockTarget = "TDL Lab", cPrimary, cSurface)
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Normal
+            Height: =36
+            HoverColor: =If(gBlockTarget = "TDL Lab", cWhite, cInk)
+            HoverFill: =If(gBlockTarget = "TDL Lab", cPrimaryHover, cSoft)
+            OnSelect: =Set(gBlockTarget, "TDL Lab")
+            PaddingBottom: =0
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =0
+            PressedColor: =If(gBlockTarget = "TDL Lab", cWhite, cInk)
+            PressedFill: =If(gBlockTarget = "TDL Lab", cInk, cLine)
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
+            Size: =13
+            Text: ="TDL Lab"
+            Visible: =gShowBlock
+            Width: =96
+            X: =ox + 755
+            Y: =218
+      - btnBlkBoth:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =If(gBlockTarget = "센터 · Lab", cPrimary, cLine)
+            BorderThickness: =1
+            Color: =If(gBlockTarget = "센터 · Lab", cWhite, cInk)
+            DisabledColor: =If(gBlockTarget = "센터 · Lab", cWhite, cInk3)
+            DisabledFill: =If(gBlockTarget = "센터 · Lab", cInk3, cSoft)
+            Fill: =If(gBlockTarget = "센터 · Lab", cPrimary, cSurface)
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Normal
+            Height: =36
+            HoverColor: =If(gBlockTarget = "센터 · Lab", cWhite, cInk)
+            HoverFill: =If(gBlockTarget = "센터 · Lab", cPrimaryHover, cSoft)
+            OnSelect: =Set(gBlockTarget, "센터 · Lab")
+            PaddingBottom: =0
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =0
+            PressedColor: =If(gBlockTarget = "센터 · Lab", cWhite, cInk)
+            PressedFill: =If(gBlockTarget = "센터 · Lab", cInk, cLine)
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
+            Size: =13
+            Text: ="센터 · Lab"
+            Visible: =gShowBlock
+            Width: =96
+            X: =ox + 855
+            Y: =218
+      - btnBlkMtv:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =If(gBlockTarget = "시화MTV", cPrimary, cLine)
+            BorderThickness: =1
+            Color: =If(gBlockTarget = "시화MTV", cWhite, cInk)
+            DisabledColor: =If(gBlockTarget = "시화MTV", cWhite, cInk3)
+            DisabledFill: =If(gBlockTarget = "시화MTV", cInk3, cSoft)
+            DisplayMode: =If(MtvEnabled, DisplayMode.Edit, DisplayMode.Disabled)
+            Fill: =If(gBlockTarget = "시화MTV", cPrimary, cSurface)
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Normal
+            Height: =36
+            HoverColor: =If(gBlockTarget = "시화MTV", cWhite, cInk)
+            HoverFill: =If(gBlockTarget = "시화MTV", cPrimaryHover, cSoft)
+            OnSelect: =Set(gBlockTarget, "시화MTV")
+            PaddingBottom: =0
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =0
+            PressedColor: =If(gBlockTarget = "시화MTV", cWhite, cInk)
+            PressedFill: =If(gBlockTarget = "시화MTV", cInk, cLine)
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
+            Size: =13
+            Text: ="시화MTV"
+            Visible: =gShowBlock
+            Width: =96
+            X: =ox + 955
+            Y: =218
+      - lblBlkTime:
+          Control: Label@2.5.1
+          Properties:
+            Color: =cInk2
+            Font: =Font.'Segoe UI'
+            Height: =18
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =12
+            Text: ="시간"
+            Visible: =gShowBlock
+            Width: =200
+            X: =ox + 655
+            Y: =270
+      - btnBlkAll:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =If(gBlockTime = "종일", cPrimary, cLine)
+            BorderThickness: =1
+            Color: =If(gBlockTime = "종일", cWhite, cInk)
+            DisabledColor: =If(gBlockTime = "종일", cWhite, cInk3)
+            DisabledFill: =If(gBlockTime = "종일", cInk3, cSoft)
+            Fill: =If(gBlockTime = "종일", cPrimary, cSurface)
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Normal
+            Height: =36
+            HoverColor: =If(gBlockTime = "종일", cWhite, cInk)
+            HoverFill: =If(gBlockTime = "종일", cPrimaryHover, cSoft)
+            OnSelect: =Set(gBlockTime, "종일")
+            PaddingBottom: =0
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =0
+            PressedColor: =If(gBlockTime = "종일", cWhite, cInk)
+            PressedFill: =If(gBlockTime = "종일", cInk, cLine)
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
+            Size: =13
+            Text: ="종일"
+            Visible: =gShowBlock
+            Width: =130
+            X: =ox + 655
+            Y: =290
+      - btnBlkAm:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =If(gBlockTime = "오전", cPrimary, cLine)
+            BorderThickness: =1
+            Color: =If(gBlockTime = "오전", cWhite, cInk)
+            DisabledColor: =If(gBlockTime = "오전", cWhite, cInk3)
+            DisabledFill: =If(gBlockTime = "오전", cInk3, cSoft)
+            Fill: =If(gBlockTime = "오전", cPrimary, cSurface)
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Normal
+            Height: =36
+            HoverColor: =If(gBlockTime = "오전", cWhite, cInk)
+            HoverFill: =If(gBlockTime = "오전", cPrimaryHover, cSoft)
+            OnSelect: =Set(gBlockTime, "오전")
+            PaddingBottom: =0
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =0
+            PressedColor: =If(gBlockTime = "오전", cWhite, cInk)
+            PressedFill: =If(gBlockTime = "오전", cInk, cLine)
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
+            Size: =13
+            Text: ="오전"
+            Visible: =gShowBlock
+            Width: =130
+            X: =ox + 791
+            Y: =290
+      - btnBlkPm:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =If(gBlockTime = "오후", cPrimary, cLine)
+            BorderThickness: =1
+            Color: =If(gBlockTime = "오후", cWhite, cInk)
+            DisabledColor: =If(gBlockTime = "오후", cWhite, cInk3)
+            DisabledFill: =If(gBlockTime = "오후", cInk3, cSoft)
+            Fill: =If(gBlockTime = "오후", cPrimary, cSurface)
+            Font: =Font.'Segoe UI'
+            FontWeight: =FontWeight.Normal
+            Height: =36
+            HoverColor: =If(gBlockTime = "오후", cWhite, cInk)
+            HoverFill: =If(gBlockTime = "오후", cPrimaryHover, cSoft)
+            OnSelect: =Set(gBlockTime, "오후")
+            PaddingBottom: =0
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =0
+            PressedColor: =If(gBlockTime = "오후", cWhite, cInk)
+            PressedFill: =If(gBlockTime = "오후", cInk, cLine)
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
+            Size: =13
+            Text: ="오후"
+            Visible: =gShowBlock
+            Width: =124
+            X: =ox + 927
+            Y: =290
+      - lblBlkReason:
+          Control: Label@2.5.1
+          Properties:
+            Color: =cInk2
+            Font: =Font.'Segoe UI'
+            Height: =18
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =12
+            Text: ="사유"
+            Visible: =gShowBlock
+            Width: =200
+            X: =ox + 655
+            Y: =342
+      - txtBlkReason:
+          Control: Classic/TextInput@2.3.2
+          Properties:
+            BorderColor: =cLine
+            BorderThickness: =1
+            Color: =If(IsBlank(Self.Text), cInk3, cInk)
+            Default: =""
+            Fill: =cSurface
+            FocusedBorderColor: =cInk
+            Font: =Font.'Segoe UI'
+            Height: =36
+            HintText: |-
+              ="예: 센터 정기 점검"
+            HoverBorderColor: =cInk3
+            PaddingLeft: =10
+            PaddingRight: =10
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
+            Size: =14
+            Visible: =gShowBlock
+            Width: =396
+            X: =ox + 655
+            Y: =362
+      - lblBlkErr:
+          Control: Label@2.5.1
+          Properties:
+            Color: =cRed
+            Font: =Font.'Segoe UI'
+            Height: =36
+            PaddingBottom: =0
+            PaddingLeft: =0
+            PaddingRight: =0
+            PaddingTop: =0
+            Size: =12
+            Text: =gBlockErr
+            VerticalAlign: =VerticalAlign.Top
+            Visible: =gShowBlock && (!IsBlank(gBlockErr))
+            Width: =396
+            X: =ox + 655
+            Y: =410
+      - btnBlkClose:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =cLine
+            BorderThickness: =1
+            Color: =cInk
+            DisabledColor: =cInk3
+            DisabledFill: =cSoft
+            Fill: =cSurface
+            Font: =Font.'Segoe UI'
+            HoverColor: =cInk
+            HoverFill: =cSoft
+            OnSelect: =Set(gShowBlock, false)
+            PaddingBottom: =0
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =0
+            PressedColor: =cInk
+            PressedFill: =cLine
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
+            Size: =14
+            Text: ="닫기"
+            Visible: =gShowBlock
+            Width: =104
+            X: =ox + 839
+            Y: =534
+      - btnBlkSave:
+          Control: Classic/Button@2.2.0
+          Properties:
+            BorderColor: =Color.Transparent
+            BorderThickness: =0
+            Color: =cWhite
+            DisabledColor: =cWhite
+            DisabledFill: =cInk3
+            Fill: =cPrimary
+            Font: =Font.'Segoe UI'
+            HoverColor: =cWhite
+            HoverFill: =cPrimaryHover
+            OnSelect: |-
+              =If(
+                  gBlockDate < Today() || !(Weekday(gBlockDate, StartOfWeek.Monday) in [1, 3, 5]),
+                  Set(gBlockErr, "지난 날짜이거나 운영일(월 · 수 · 금)이 아니어서 막을 수 없습니다."),
+                  With(
+                      {
+                          k: Text(gBlockDate, "yyyy-mm-dd"),
+                          f: Switch(gBlockTime, "오전", 0, "오후", 720, 0),
+                          t: Switch(gBlockTime, "오전", 720, 1440),
+                          c: gBlockTarget = "메가와이즈" || gBlockTarget = "센터 · Lab",
+                          l: gBlockTarget = "TDL Lab" || gBlockTarget = "센터 · Lab",
+                          m: gBlockTarget = "시화MTV"
+                      },
+                      If(
+                          CountRows(Filter(Filter(TourBusy, DateKey = k, Kind = "예약"), (c && CFrom < t && f < CTo) || (l && LFrom < t && f < LTo) || (m && MFrom < t && f < MTo))) > 0,
+                          Set(gBlockErr, "이미 승인된 예약과 겹치는 시간입니다. 예약을 먼저 처리해 주세요."),
+                          Patch(
+                              TourBusy,
+                              Defaults(TourBusy),
+                              {
+                                  Title: "BLK-" & Text(Now(), "yymmddhhmmss"),
+                                  DateKey: k,
+                                  MonthKey: Left(k, 7),
+                                  CFrom: If(c, f, -1), CTo: If(c, t, -1),
+                                  LFrom: If(l, f, -1), LTo: If(l, t, -1),
+                                  MFrom: If(m, f, -1), MTo: If(m, t, -1),
+                                  Kind: "막힘",
+                                  Reason: If(IsBlank(Trim(txtBlkReason.Text)), "-", Trim(txtBlkReason.Text))
+                              }
+                          );
+                          If(
+                              IsEmpty(Errors(TourBusy)),
+                              Set(gShowBlock, false);
+                              Set(gBlockErr, "");
+                              ClearCollect(colBusy, Filter(TourBusy, MonthKey = Text(gMonth, "yyyy-mm")));
+                              Notify("일정을 막았습니다.", NotificationType.Success),
+                              Set(gBlockErr, "저장하지 못했습니다. TourBusy 목록 편집 권한을 확인해 주세요.")
+                          )
+                      )
+                  )
+              )
+            PaddingBottom: =0
+            PaddingLeft: =4
+            PaddingRight: =4
+            PaddingTop: =0
+            PressedColor: =cWhite
+            PressedFill: =cInk
+            RadiusBottomLeft: =0
+            RadiusBottomRight: =0
+            RadiusTopLeft: =0
+            RadiusTopRight: =0
+            Size: =14
+            Text: ="막기"
+            Visible: =gShowBlock
+            Width: =100
+            X: =ox + 951
+            Y: =534
+      - galBlkCal:
+          Control: Gallery@2.15.0
+          Variant: Vertical
+          Properties:
+            Fill: =Color.Transparent
+            Height: =228
+            Items: =BlockDays
+            OnSelect: =If(ThisItem.Ok, Set(gBlockDate, ThisItem.D); Set(gBlockErr, ""))
+            ShowScrollbar: =false
+            TemplateFill: =Color.Transparent
+            TemplatePadding: =0
+            TemplateSize: =38
+            Visible: =gShowBlock
+            Width: =308
+            WrapCount: =7
+            X: =ox + 307
+            Y: =258
+          Children:
+            - recBlkCell:
+                Control: Rectangle@2.3.0
+                Properties:
+                  BorderColor: =If(ThisItem.D = gBlockDate, cPrimary, If(ThisItem.Ok, cLine, Color.Transparent))
+                  BorderThickness: =1
+                  Fill: =If(ThisItem.D = gBlockDate, cPrimary, If(ThisItem.Ok, cSurface, Color.Transparent))
+                  Height: =34
+                  OnSelect: =Select(Parent)
+                  Width: =40
+                  X: =2
+                  Y: =2
+            - lblBlkCellDay:
+                Control: Label@2.5.1
+                Properties:
+                  Align: =Align.Center
+                  Color: =If(ThisItem.D = gBlockDate, cWhite, If(ThisItem.Ok, cInk, If(ThisItem.InMonth, cInk3, cBarDim)))
+                  Font: =Font.'Segoe UI'
+                  FontWeight: =If(ThisItem.D = gBlockDate, FontWeight.Semibold, FontWeight.Normal)
+                  Height: =22
+                  OnSelect: =Select(Parent)
+                  PaddingBottom: =0
+                  PaddingLeft: =0
+                  PaddingRight: =0
+                  PaddingTop: =0
+                  Text: =Day(ThisItem.D)
+                  Width: =40
+                  X: =2
+                  Y: =8
+      - conMail:
+          Control: GroupContainer@1.3.0
+          Variant: ManualLayout
+          Properties:
+            BorderThickness: =0
+            DropShadow: =DropShadow.None
+            Fill: =cScrim
+            Height: =sh
+            Visible: =gMailMode <> ""
+            Width: =sw
+            X: =0
+            Y: =0
+          Children:
+            - conMailCard:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  BorderColor: =cLine
+                  BorderThickness: =1
+                  DropShadow: =DropShadow.None
+                  Fill: =cSurface
+                  Height: =520
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  Width: =860
+                  X: =(Parent.Width - 860) / 2
+                  Y: =Max(16, (Parent.Height - 520) / 2)
+                Children:
+                  - lblMailH:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Semibold
+                        Height: =28
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =16
+                        Text: =Switch(gMailMode, "승인", "승인 · 확정 메일 미리보기", "거절", "거절 · 결과 메일 미리보기", "취소", "일정 취소 · 메일 미리보기", "완료", "방문 완료 · 방명록 요청 메일", "")
+                        Width: =600
+                        X: =24
+                        Y: =18
+                  - lblMailSub:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="실제 메일은 흐름 TDLVisitDecision 이 보냅니다. [보내기] 를 눌러야 저장 · 발송됩니다."
+                        Width: =640
+                        X: =24
+                        Y: =48
+                  - rctMailLine:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =Color.Transparent
+                        Fill: =cLine
+                        Height: =1
+                        Width: =860
+                        X: =0
+                        Y: =78
+                  - lblMailMsgCap:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =If((gMailMode in ["거절", "취소"]) && IsBlank(Trim(txtMailMsg.Text)), cRed, cInk2)
+                        Font: =Font.'Segoe UI'
+                        Height: =40
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: =Switch(gMailMode, "승인", "담당자 안내 (선택) · 확정 메일에 들어갑니다", "거절", "거절 사유 (필수) · 신청자 메일에 들어갑니다", "취소", "취소 사유 (필수) · 신청자 메일에 들어갑니다", "")
+                        Visible: =gMailMode <> "완료"
+                        Width: =320
+                        Wrap: =true
+                        X: =24
+                        Y: =92
+                  - txtMailMsg:
+                      Control: Classic/TextInput@2.3.2
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        Default: =If(gMailMode = "승인" && !IsBlank(gSel.AdminMemo) && gSel.AdminMemo <> "-", gSel.AdminMemo, "")
+                        Fill: =cSurface
+                        FocusedBorderColor: =cInk
+                        Font: =Font.'Segoe UI'
+                        Height: =300
+                        HintText: =""
+                        HoverBorderColor: =cInk3
+                        Mode: =TextMode.MultiLine
+                        PaddingLeft: =10
+                        PaddingRight: =10
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Visible: =gMailMode <> "완료"
+                        Width: =320
+                        X: =24
+                        Y: =136
+                  - lblMailTo:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="받는 사람  " & gSel.HostEmail & If(gMailMode = "완료", " 이 아닌 참석자 이메일", "")
+                        Width: =468
+                        Wrap: =false
+                        X: =368
+                        Y: =92
+                  - lblMailSubject:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Semibold
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: =Switch(gMailMode, "승인", "[방문 확정] ", "거절", "[방문 요청 결과] ", "취소", "[방문 일정 취소] ", "완료", "[TDL Lab] ", "") & gSel.Company & " · " & gSel.DateKey
+                        Width: =468
+                        Wrap: =false
+                        X: =368
+                        Y: =116
+                  - lblMailPreview:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk
+                        Fill: =cSoft
+                        Font: =Font.'Segoe UI'
+                        Height: =296
+                        PaddingBottom: =0
+                        PaddingLeft: =14
+                        PaddingRight: =14
+                        PaddingTop: =12
+                        Size: =13
+                        Text: |-
+                          =With(
+                              {d: Text(gSel.VisitDate, "yyyy-mm-dd") & " " & gSel.ScheduleText, m: Trim(txtMailMsg.Text)},
+                              Switch(
+                                  gMailMode,
+                                  "승인", "방문이 확정되었습니다." & Char(10) & "신청번호 " & gSel.Title & Char(10) & "일정 " & gSel.TourName & " · " & d & Char(10) & "참석자 제출 " & Coalesce(gSel.AttendeeCount, 0) & "명 (신청 시 예상 " & Coalesce(gSel.ExpectedHeadcount, 0) & "명)" & If(IsBlank(m), "", Char(10) & "담당자 안내 " & m) & Char(10) & "오시는 길 · 주차는 담당자에게 문의",
+                                  "거절", "요청하신 일정으로는 방문이 어렵습니다" & Char(10) & "신청번호 " & gSel.Title & Char(10) & gSel.Company & " · " & gSel.TourName & " · " & d & Char(10) & "사유 " & If(IsBlank(m), "(사유를 입력해 주세요)", m) & Char(10) & "다른 날짜로 다시 신청해 주시거나, 이 메일에 회신해 문의해 주세요.",
+                                  "취소", "방문 일정이 취소되었습니다" & Char(10) & "신청번호 " & gSel.Title & Char(10) & gSel.Company & " · " & gSel.TourName & " · " & d & Char(10) & "사유 " & If(IsBlank(m), "(사유를 입력해 주세요)", m) & Char(10) & "다시 방문을 원하시면 앱에서 새로 신청해 주세요.",
+                                  "완료", "참석자(Forms 로 정보를 낸 분)에게 방명록 요청 메일이 1회 갑니다." & Char(10) & "제목 방문해 주셔서 감사합니다 · 만족도와 개선 의견을 남겨 주세요" & Char(10) & "외국어 투어는 영문을 위에, 한국어를 아래에 씁니다." & Char(10) & "이미 보낸 예약 · 동의 문구 변경 전 신청 · 아직 지나지 않은 방문은 보내지 않습니다.",
+                                  ""
+                              )
+                          )
+                        VerticalAlign: =VerticalAlign.Top
+                        Width: =468
+                        Wrap: =true
+                        X: =368
+                        Y: =140
+                  - rctMailFoot:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =Color.Transparent
+                        Fill: =cLine
+                        Height: =1
+                        Width: =860
+                        X: =0
+                        Y: =452
+                  - btnMailCancel:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        DisabledColor: =cInk3
+                        DisabledFill: =cSoft
+                        Fill: =cSurface
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Semibold
+                        Height: =40
+                        HoverColor: =cInk
+                        HoverFill: =cSoft
+                        OnSelect: =Set(gMailMode, "")
+                        PaddingBottom: =0
+                        PaddingLeft: =4
+                        PaddingRight: =4
+                        PaddingTop: =0
+                        PressedColor: =cInk
+                        PressedFill: =cSoft
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Text: ="돌아가기"
+                        Width: =104
+                        X: =600
+                        Y: =464
+                  - btnMailSend:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =Color.Transparent
+                        BorderThickness: =1
+                        Color: =cWhite
+                        DisabledColor: =cWhite
+                        DisabledFill: =cInk3
+                        DisplayMode: =If((gMailMode in ["거절", "취소"]) && IsBlank(Trim(txtMailMsg.Text)), DisplayMode.Disabled, DisplayMode.Edit)
+                        Fill: =If(gMailMode = "승인", cGreen, cPrimary)
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Semibold
+                        Height: =40
+                        HoverColor: =cWhite
+                        HoverFill: =If(gMailMode = "승인", cGreenHover, cPrimaryHover)
+                        OnSelect: |-
+                          =Switch(
+                              gMailMode,
+                              "승인",
+                          With(
+                              {
+                                  m: If(gAdminSite = "main", "승인", gSel.ApproveMain),
+                                  v: If(gAdminSite = "mtv", "승인", gSel.ApproveMtv)
+                              },
+                              With(
+                                  {done: (gSel.ForMain = "N" || m = "승인") && (gSel.ForMtv = "N" || v = "승인")},
+                                  If(
+                                      done && CountRows(Filter(Filter(TourBusy, DateKey = gSel.DateKey), (gSel.CFrom < CTo && CFrom < gSel.CTo) || (gSel.LFrom < LTo && LFrom < gSel.LTo) || (gSel.MFrom < MTo && MFrom < gSel.MTo))) > 0,
+                                      Notify("이미 같은 시간에 승인된 예약이나 막힌 일정이 있어 승인할 수 없습니다.", NotificationType.Error),
+                                      Patch(VisitRequests, gSel, {ApproveMain: m, ApproveMtv: v, Status: If(done, "승인", "대기"), AdminMemo: If(IsBlank(Trim(txtMailMsg.Text)), "-", Trim(txtMailMsg.Text))});
+                                      If(
+                                          IsEmpty(Errors(VisitRequests)),
+                                          If(
+                                              done,
+                                              Patch(
+                                                  TourBusy,
+                                                  Defaults(TourBusy),
+                                                  {Title: gSel.Title, DateKey: gSel.DateKey, MonthKey: Left(gSel.DateKey, 7), CFrom: gSel.CFrom, CTo: gSel.CTo, LFrom: gSel.LFrom, LTo: gSel.LTo, MFrom: gSel.MFrom, MTo: gSel.MTo, Kind: "예약", Reason: "-"}
+                                              )
+                                          );
+                                          Set(gSel, LookUp(VisitRequests, Title = gSel.Title));
+                                          Notify(If(done, "승인했습니다. 확정 메일이 발송됩니다.", "내 센터 승인을 마쳤습니다. 다른 센터 승인을 기다립니다."), NotificationType.Success),
+                                          Notify("저장하지 못했습니다. 권한을 확인해 주세요.", NotificationType.Error)
+                                      )
+                                  )
+                              )
+                          ),
+                              "거절",
+                          If(
+                              IsBlank(Trim(txtMailMsg.Text)),
+                              Notify("거절 사유를 입력해 주세요. 사유는 신청자 메일에 들어갑니다.", NotificationType.Warning),
+                              Patch(
+                                  VisitRequests,
+                                  gSel,
+                                  {
+                                      ApproveMain: If(gAdminSite = "main", "거절", gSel.ApproveMain),
+                                      ApproveMtv: If(gAdminSite = "mtv", "거절", gSel.ApproveMtv),
+                                      Status: "거절",
+                                      AdminMemo: Trim(txtMailMsg.Text)
+                                  }
+                              );
+                              If(
+                                  IsEmpty(Errors(VisitRequests)),
+                                  Set(gSel, LookUp(VisitRequests, Title = gSel.Title));
+                                  Notify("거절했습니다. 거절 메일이 발송됩니다.", NotificationType.Success),
+                                  Notify("저장하지 못했습니다. 권한을 확인해 주세요.", NotificationType.Error)
+                              )
+                          ),
+                              "취소",
+                          If(
+                              IsBlank(Trim(txtMailMsg.Text)),
+                              Notify("취소 사유를 입력해 주세요. 사유는 신청자 메일에 들어갑니다.", NotificationType.Warning),
+                              // 흐름 TDLVisitDecision 이 상태 '취소' 를 보고 메일을 보내고 TourBusy 자리를 지운다 (개발자 흐름 그대로)
+                              Patch(VisitRequests, gSel, {Status: "취소", CancelReason: Trim(txtMailMsg.Text)});
+                              If(
+                                  IsEmpty(Errors(VisitRequests)),
+                                  Set(gSel, LookUp(VisitRequests, Title = gSel.Title));
+                                  Notify("일정을 취소했습니다. 신청자에게 취소 메일이 발송됩니다.", NotificationType.Success),
+                                  Notify("저장하지 못했습니다. 권한을 확인해 주세요.", NotificationType.Error)
+                              )
+                          ),
+                              "완료",
+                          // F-06 방문 완료: 흐름 TDLVisitDecision 의 사례 '완료' 가 참석자에게 후기(방명록) 요청 메일을 1회 보낸다
+                          Patch(VisitRequests, gSel, {Status: "완료"});
+                          If(
+                              IsEmpty(Errors(VisitRequests)),
+                              Set(gSel, LookUp(VisitRequests, Title = gSel.Title));
+                              Notify("방문 완료로 바꿨습니다. 참석자에게 방명록 요청 메일이 1회 발송됩니다.", NotificationType.Success),
+                              Notify("저장하지 못했습니다. 권한을 확인해 주세요.", NotificationType.Error)
+                          )
+                          );
+                          If(IsEmpty(Errors(VisitRequests)) && !(gMailMode in ["거절", "취소"] && IsBlank(Trim(txtMailMsg.Text))), Set(gMailMode, ""))
+                        PaddingBottom: =0
+                        PaddingLeft: =4
+                        PaddingRight: =4
+                        PaddingTop: =0
+                        PressedColor: =cWhite
+                        PressedFill: =If(gMailMode = "승인", cGreenHover, cPrimaryHover)
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Text: ="보내기"
+                        Width: =124
+                        X: =712
+                        Y: =464
+      - conClient:
+          Control: GroupContainer@1.3.0
+          Variant: ManualLayout
+          Properties:
+            BorderThickness: =0
+            DropShadow: =DropShadow.None
+            Fill: =cScrim
+            Height: =sh
+            Visible: =gShowClient
+            Width: =sw
+            X: =0
+            Y: =0
+          Children:
+            - conClientCard:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  BorderColor: =cLine
+                  BorderThickness: =1
+                  DropShadow: =DropShadow.None
+                  Fill: =cSurface
+                  Height: =336
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  Width: =500
+                  X: =(Parent.Width - 500) / 2
+                  Y: =Max(16, (Parent.Height - 336) / 2)
+                Children:
+                  - lblCtH:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Semibold
+                        Height: =28
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =16
+                        Text: ="고객 구분 변경"
+                        Width: =300
+                        X: =24
+                        Y: =18
+                  - lblCtSub:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: =gSel.Company & " · 전체 수정 없이 고객 구분과 파트너사만 바꿉니다."
+                        Width: =452
+                        Wrap: =false
+                        X: =24
+                        Y: =48
+                  - galCtChoice:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        BorderThickness: =0
+                        Height: =80
+                        Items: =["기존 고객사", "신규 고객사", "파트너사 소개 고객", "미분류"]
+                        ShowScrollbar: =false
+                        TemplateFill: =Color.Transparent
+                        TemplatePadding: =0
+                        TemplateSize: =40
+                        Width: =452
+                        WrapCount: =2
+                        X: =24
+                        Y: =82
+                      Children:
+                        - btnCtChoice:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =If((gCtChoice = ThisItem.Value || (ThisItem.Value = "미분류" && IsBlank(gCtChoice))), cPrimary, cLine)
+                              BorderThickness: =1
+                              Color: =If((gCtChoice = ThisItem.Value || (ThisItem.Value = "미분류" && IsBlank(gCtChoice))), cWhite, cInk)
+                              DisabledColor: =cInk3
+                              DisabledFill: =cSoft
+                              Fill: =If((gCtChoice = ThisItem.Value || (ThisItem.Value = "미분류" && IsBlank(gCtChoice))), cPrimary, cSurface)
+                              Font: =Font.'Segoe UI'
+                              Height: =36
+                              HoverColor: =If((gCtChoice = ThisItem.Value || (ThisItem.Value = "미분류" && IsBlank(gCtChoice))), cWhite, cInk)
+                              HoverFill: =If((gCtChoice = ThisItem.Value || (ThisItem.Value = "미분류" && IsBlank(gCtChoice))), cPrimaryHover, cSoft)
+                              OnSelect: =Set(gCtChoice, If(ThisItem.Value = "미분류", "", ThisItem.Value))
+                              PaddingBottom: =0
+                              PaddingLeft: =4
+                              PaddingRight: =4
+                              PaddingTop: =0
+                              PressedColor: =If((gCtChoice = ThisItem.Value || (ThisItem.Value = "미분류" && IsBlank(gCtChoice))), cWhite, cInk)
+                              PressedFill: =If((gCtChoice = ThisItem.Value || (ThisItem.Value = "미분류" && IsBlank(gCtChoice))), cPrimaryHover, cSoft)
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =13
+                              Text: =ThisItem.Value
+                              Width: =222
+                              X: =0
+                              Y: =0
+                  - txtCtPartner:
+                      Control: Classic/TextInput@2.3.2
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        Default: =gCtPartnerDefault
+                        Fill: =cSurface
+                        FocusedBorderColor: =cInk
+                        Font: =Font.'Segoe UI'
+                        Height: =36
+                        HintText: ="소개한 파트너사명"
+                        HoverBorderColor: =cInk3
+                        MaxLength: =40
+                        PaddingLeft: =10
+                        PaddingRight: =10
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Visible: =gCtChoice = "파트너사 소개 고객"
+                        Width: =452
+                        X: =24
+                        Y: =172
+                  - galCtPick:
+                      Control: Gallery@2.15.0
+                      Variant: Horizontal
+                      Properties:
+                        BorderThickness: =0
+                        Height: =26
+                        Items: =FirstN(Filter(Distinct(Filter(SiteReqs, !IsBlank(PartnerName) && PartnerName <> "-"), PartnerName), !IsBlank(Value)), 5)
+                        ShowScrollbar: =false
+                        TemplateFill: =Color.Transparent
+                        TemplatePadding: =0
+                        TemplateSize: =90
+                        Visible: =gCtChoice = "파트너사 소개 고객"
+                        Width: =452
+                        X: =24
+                        Y: =214
+                      Children:
+                        - btnCtPick:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =cLine
+                              BorderThickness: =1
+                              Color: =cInk2
+                              DisabledColor: =cInk3
+                              DisabledFill: =cSoft
+                              Fill: =cSurface
+                              Font: =Font.'Segoe UI'
+                              Height: =24
+                              HoverColor: =cInk2
+                              HoverFill: =cSoft
+                              OnSelect: =Set(gCtPartnerDefault, ThisItem.Value); Reset(txtCtPartner)
+                              PaddingBottom: =0
+                              PaddingLeft: =4
+                              PaddingRight: =4
+                              PaddingTop: =0
+                              PressedColor: =cInk2
+                              PressedFill: =cSoft
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =11
+                              Text: =ThisItem.Value
+                              Width: =86
+                              X: =0
+                              Y: =0
+                  - lblCtNote:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk3
+                        Font: =Font.'Segoe UI'
+                        Height: =18
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =11
+                        Text: ="이미 쓴 이름을 누르면 채워집니다. 같은 파트너사는 같은 이름으로 적어 주세요."
+                        Visible: =gCtChoice = "파트너사 소개 고객"
+                        Width: =452
+                        X: =24
+                        Y: =244
+                  - btnCtClose:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        DisabledColor: =cInk3
+                        DisabledFill: =cSoft
+                        Fill: =cSurface
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Semibold
+                        Height: =40
+                        HoverColor: =cInk
+                        HoverFill: =cSoft
+                        OnSelect: =Set(gShowClient, false)
+                        PaddingBottom: =0
+                        PaddingLeft: =4
+                        PaddingRight: =4
+                        PaddingTop: =0
+                        PressedColor: =cInk
+                        PressedFill: =cSoft
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Text: ="닫기"
+                        Width: =100
+                        X: =260
+                        Y: =276
+                  - btnCtSave:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =Color.Transparent
+                        BorderThickness: =1
+                        Color: =cWhite
+                        DisabledColor: =cInk3
+                        DisabledFill: =cSoft
+                        Fill: =cPrimary
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Semibold
+                        Height: =40
+                        HoverColor: =cWhite
+                        HoverFill: =cPrimaryHover
+                        OnSelect: |-
+                          =If(
+                              gCtChoice = "파트너사 소개 고객" && IsBlank(Trim(txtCtPartner.Text)),
+                              Notify("파트너사명을 입력해 주세요.", NotificationType.Warning),
+                              Patch(VisitRequests, gSel, {ClientType: gCtChoice, PartnerName: If(gCtChoice = "파트너사 소개 고객", Trim(txtCtPartner.Text), "-")});
+                              If(
+                                  IsEmpty(Errors(VisitRequests)),
+                                  Set(gSel, LookUp(VisitRequests, Title = gSel.Title));
+                                  Set(gShowClient, false);
+                                  Notify("고객 구분을 바꿨습니다.", NotificationType.Success),
+                                  Notify("저장하지 못했습니다. 권한을 확인해 주세요.", NotificationType.Error)
+                              )
+                          )
+                        PaddingBottom: =0
+                        PaddingLeft: =4
+                        PaddingRight: =4
+                        PaddingTop: =0
+                        PressedColor: =cWhite
+                        PressedFill: =cPrimaryHover
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Text: ="저장"
+                        Width: =108
+                        X: =368
+                        Y: =276
+      - conEdit:
+          Control: GroupContainer@1.3.0
+          Variant: ManualLayout
+          Properties:
+            BorderThickness: =0
+            DropShadow: =DropShadow.None
+            Fill: =cScrim
+            Height: =sh
+            Visible: =gShowEdit
+            Width: =sw
+            X: =0
+            Y: =0
+          Children:
+            - conEditCard:
+                Control: GroupContainer@1.3.0
+                Variant: ManualLayout
+                Properties:
+                  BorderColor: =cLine
+                  BorderThickness: =1
+                  DropShadow: =DropShadow.None
+                  Fill: =cSurface
+                  Height: =664
+                  RadiusBottomLeft: =0
+                  RadiusBottomRight: =0
+                  RadiusTopLeft: =0
+                  RadiusTopRight: =0
+                  Width: =1000
+                  X: =(Parent.Width - 1000) / 2
+                  Y: =Max(16, (Parent.Height - 664) / 2)
+                Children:
+                  - lblEdH:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Semibold
+                        Height: =28
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =16
+                        Text: =If(gEditMode = "new", "방문 수기 등록", "예약 정보 수정")
+                        Width: =400
+                        X: =24
+                        Y: =16
+                  - lblEdSub:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: =If(gEditMode = "new", "전화 · 메일로 받은 방문이나 지난 방문 기록을 직접 넣습니다. 메일은 가지 않습니다.", gSel.Title & " · 관리자는 당일 · 익일 · 지난 날짜도 고를 수 있습니다. 승인 건은 시간을 바꾸면 달력 자리도 함께 옮겨집니다.")
+                        Width: =952
+                        Wrap: =false
+                        X: =24
+                        Y: =46
+                  - rctEdHead:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =Color.Transparent
+                        Fill: =cLine
+                        Height: =1
+                        Width: =1000
+                        X: =0
+                        Y: =74
+                  - lblEdSec1:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Semibold
+                        Height: =22
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =14
+                        Text: ="일정"
+                        Width: =300
+                        X: =24
+                        Y: =86
+                  - lblEdDate:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="방문일 *"
+                        Width: =300
+                        X: =24
+                        Y: =112
+                  - dpEdit:
+                      Control: Classic/DatePicker@2.6.0
+                      Properties:
+                        BorderColor: =cLine
+                        Color: =cInk
+                        DefaultDate: =If(gEditMode = "edit", gSel.VisitDate, Today())
+                        Font: =Font.'Segoe UI'
+                        Format: =DateTimeFormat.ShortDate
+                        Height: =36
+                        IconBackground: =cSurface
+                        IconFill: =cInk
+                        Size: =14
+                        StartYear: =2019
+                        Width: =300
+                        X: =24
+                        Y: =134
+                  - lblEdTour:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="투어 *"
+                        Width: =300
+                        X: =24
+                        Y: =180
+                  - galEdTour:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        BorderThickness: =0
+                        Height: =144
+                        Items: |-
+                          =Ungroup(Table({t: ForAll(OpenTours As o, {Value: o.Name, Id: o.Id})}, {t: Table({Value: "기타 방문 (수기)", Id: "other"})}), t)
+                        ShowScrollbar: =false
+                        TemplateFill: =Color.Transparent
+                        TemplatePadding: =0
+                        TemplateSize: =36
+                        Width: =304
+                        WrapCount: =1
+                        X: =24
+                        Y: =202
+                      Children:
+                        - btnEdTour:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =If(gEdTour = ThisItem.Id, cPrimary, cLine)
+                              BorderThickness: =1
+                              Color: =If(gEdTour = ThisItem.Id, cWhite, cInk)
+                              DisabledColor: =cInk3
+                              DisabledFill: =cSoft
+                              Fill: =If(gEdTour = ThisItem.Id, cPrimary, cSurface)
+                              Font: =Font.'Segoe UI'
+                              Height: =32
+                              HoverColor: =If(gEdTour = ThisItem.Id, cWhite, cInk)
+                              HoverFill: =If(gEdTour = ThisItem.Id, cPrimaryHover, cSoft)
+                              OnSelect: =Set(gEdTour, ThisItem.Id); Set(gEdSlot, "")
+                              PaddingBottom: =0
+                              PaddingLeft: =4
+                              PaddingRight: =4
+                              PaddingTop: =0
+                              PressedColor: =If(gEdTour = ThisItem.Id, cWhite, cInk)
+                              PressedFill: =If(gEdTour = ThisItem.Id, cPrimaryHover, cSoft)
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =12
+                              Text: =ThisItem.Value
+                              Width: =304
+                              X: =0
+                              Y: =0
+                  - lblEdSlot:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="시간 *"
+                        Width: =300
+                        X: =24
+                        Y: =350
+                  - galEdSlot:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        BorderThickness: =0
+                        Height: =108
+                        Items: |-
+                          =ForAll(Filter(TourSlots, Tour = gEdTour) As z, {Value: z.Show, Slot: z.Slot})
+                        ShowScrollbar: =false
+                        TemplateFill: =Color.Transparent
+                        TemplatePadding: =0
+                        TemplateSize: =36
+                        Visible: =gEdTour <> "other"
+                        Width: =304
+                        WrapCount: =1
+                        X: =24
+                        Y: =372
+                      Children:
+                        - btnEdSlot:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =If(gEdSlot = ThisItem.Slot, cPrimary, cLine)
+                              BorderThickness: =1
+                              Color: =If(gEdSlot = ThisItem.Slot, cWhite, cInk)
+                              DisabledColor: =cInk3
+                              DisabledFill: =cSoft
+                              Fill: =If(gEdSlot = ThisItem.Slot, cPrimary, cSurface)
+                              Font: =Font.'Segoe UI'
+                              Height: =32
+                              HoverColor: =If(gEdSlot = ThisItem.Slot, cWhite, cInk)
+                              HoverFill: =If(gEdSlot = ThisItem.Slot, cPrimaryHover, cSoft)
+                              OnSelect: =Set(gEdSlot, ThisItem.Slot)
+                              PaddingBottom: =0
+                              PaddingLeft: =4
+                              PaddingRight: =4
+                              PaddingTop: =0
+                              PressedColor: =If(gEdSlot = ThisItem.Slot, cWhite, cInk)
+                              PressedFill: =If(gEdSlot = ThisItem.Slot, cPrimaryHover, cSoft)
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =12
+                              Text: =ThisItem.Value
+                              Width: =304
+                              X: =0
+                              Y: =0
+                  - txtEdTime:
+                      Control: Classic/TextInput@2.3.2
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        Default: =If(gEditMode = "edit" && gSel.Tour = "other", gSel.Slot, "")
+                        Fill: =cSurface
+                        FocusedBorderColor: =cInk
+                        Font: =Font.'Segoe UI'
+                        Height: =36
+                        HintText: ="예) 10:00-11:00 · 비우면 시간 미정"
+                        HoverBorderColor: =cInk3
+                        PaddingLeft: =10
+                        PaddingRight: =10
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Visible: =gEdTour = "other"
+                        Width: =300
+                        X: =24
+                        Y: =372
+                  - lblEdStatus:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="상태"
+                        Visible: =gEditMode = "new"
+                        Width: =300
+                        X: =24
+                        Y: =488
+                  - galEdStatus:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        BorderThickness: =0
+                        Height: =38
+                        Items: =["승인", "완료", "대기"]
+                        ShowScrollbar: =false
+                        TemplateFill: =Color.Transparent
+                        TemplatePadding: =0
+                        TemplateSize: =38
+                        Visible: =gEditMode = "new"
+                        Width: =304
+                        WrapCount: =3
+                        X: =24
+                        Y: =510
+                      Children:
+                        - btnEdStatus:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =If(gEdStatus = ThisItem.Value, cPrimary, cLine)
+                              BorderThickness: =1
+                              Color: =If(gEdStatus = ThisItem.Value, cWhite, cInk)
+                              DisabledColor: =cInk3
+                              DisabledFill: =cSoft
+                              Fill: =If(gEdStatus = ThisItem.Value, cPrimary, cSurface)
+                              Font: =Font.'Segoe UI'
+                              Height: =34
+                              HoverColor: =If(gEdStatus = ThisItem.Value, cWhite, cInk)
+                              HoverFill: =If(gEdStatus = ThisItem.Value, cPrimaryHover, cSoft)
+                              OnSelect: =Set(gEdStatus, ThisItem.Value)
+                              PaddingBottom: =0
+                              PaddingLeft: =4
+                              PaddingRight: =4
+                              PaddingTop: =0
+                              PressedColor: =If(gEdStatus = ThisItem.Value, cWhite, cInk)
+                              PressedFill: =If(gEdStatus = ThisItem.Value, cPrimaryHover, cSoft)
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =12
+                              Text: =ThisItem.Value
+                              Width: =98
+                              X: =0
+                              Y: =0
+                  - lblEdStatusNote:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk3
+                        Font: =Font.'Segoe UI'
+                        Height: =36
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =11
+                        Text: ="승인은 달력의 그 시간을 막고, 완료는 지난 방문 기록용입니다."
+                        Visible: =gEditMode = "new"
+                        Width: =300
+                        Wrap: =true
+                        X: =24
+                        Y: =550
+                  - rctEdCol1:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =Color.Transparent
+                        Fill: =cLine
+                        Height: =500
+                        Width: =1
+                        X: =344
+                        Y: =86
+                  - lblEdSec2:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Semibold
+                        Height: =22
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =14
+                        Text: ="방문 정보"
+                        Width: =300
+                        X: =364
+                        Y: =86
+                  - lblEdCat:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="방문 구분"
+                        Width: =300
+                        X: =364
+                        Y: =112
+                  - galEdCat:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        BorderThickness: =0
+                        Height: =38
+                        Items: =["고객 방문", "내부 방문"]
+                        ShowScrollbar: =false
+                        TemplateFill: =Color.Transparent
+                        TemplatePadding: =0
+                        TemplateSize: =38
+                        Width: =304
+                        WrapCount: =2
+                        X: =364
+                        Y: =134
+                      Children:
+                        - btnEdCat:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =If(gEdCat = ThisItem.Value, cPrimary, cLine)
+                              BorderThickness: =1
+                              Color: =If(gEdCat = ThisItem.Value, cWhite, cInk)
+                              DisabledColor: =cInk3
+                              DisabledFill: =cSoft
+                              Fill: =If(gEdCat = ThisItem.Value, cPrimary, cSurface)
+                              Font: =Font.'Segoe UI'
+                              Height: =34
+                              HoverColor: =If(gEdCat = ThisItem.Value, cWhite, cInk)
+                              HoverFill: =If(gEdCat = ThisItem.Value, cPrimaryHover, cSoft)
+                              OnSelect: =Set(gEdCat, ThisItem.Value)
+                              PaddingBottom: =0
+                              PaddingLeft: =4
+                              PaddingRight: =4
+                              PaddingTop: =0
+                              PressedColor: =If(gEdCat = ThisItem.Value, cWhite, cInk)
+                              PressedFill: =If(gEdCat = ThisItem.Value, cPrimaryHover, cSoft)
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =12
+                              Text: =ThisItem.Value
+                              Width: =150
+                              X: =0
+                              Y: =0
+                  - lblEdClient:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="고객 유형"
+                        Visible: =gEdCat = "고객 방문"
+                        Width: =300
+                        X: =364
+                        Y: =176
+                  - galEdClient:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        BorderThickness: =0
+                        Height: =76
+                        Items: =["기존 고객사", "신규 고객사", "파트너사 소개 고객", "미분류"]
+                        ShowScrollbar: =false
+                        TemplateFill: =Color.Transparent
+                        TemplatePadding: =0
+                        TemplateSize: =38
+                        Visible: =gEdCat = "고객 방문"
+                        Width: =304
+                        WrapCount: =2
+                        X: =364
+                        Y: =198
+                      Children:
+                        - btnEdClient:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =If((gEdClient = ThisItem.Value || (ThisItem.Value = "미분류" && IsBlank(gEdClient))), cPrimary, cLine)
+                              BorderThickness: =1
+                              Color: =If((gEdClient = ThisItem.Value || (ThisItem.Value = "미분류" && IsBlank(gEdClient))), cWhite, cInk)
+                              DisabledColor: =cInk3
+                              DisabledFill: =cSoft
+                              Fill: =If((gEdClient = ThisItem.Value || (ThisItem.Value = "미분류" && IsBlank(gEdClient))), cPrimary, cSurface)
+                              Font: =Font.'Segoe UI'
+                              Height: =34
+                              HoverColor: =If((gEdClient = ThisItem.Value || (ThisItem.Value = "미분류" && IsBlank(gEdClient))), cWhite, cInk)
+                              HoverFill: =If((gEdClient = ThisItem.Value || (ThisItem.Value = "미분류" && IsBlank(gEdClient))), cPrimaryHover, cSoft)
+                              OnSelect: =Set(gEdClient, If(ThisItem.Value = "미분류", "", ThisItem.Value))
+                              PaddingBottom: =0
+                              PaddingLeft: =4
+                              PaddingRight: =4
+                              PaddingTop: =0
+                              PressedColor: =If((gEdClient = ThisItem.Value || (ThisItem.Value = "미분류" && IsBlank(gEdClient))), cWhite, cInk)
+                              PressedFill: =If((gEdClient = ThisItem.Value || (ThisItem.Value = "미분류" && IsBlank(gEdClient))), cPrimaryHover, cSoft)
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =12
+                              Text: =ThisItem.Value
+                              Width: =150
+                              X: =0
+                              Y: =0
+                  - lblEdCompany:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="업체명 *"
+                        Visible: =gEdCat = "고객 방문"
+                        Width: =300
+                        X: =364
+                        Y: =278
+                  - txtEdCompany:
+                      Control: Classic/TextInput@2.3.2
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        Default: =If(gEditMode = "edit" && gSel.Category = "고객 방문", gSel.Company, "")
+                        Fill: =cSurface
+                        FocusedBorderColor: =cInk
+                        Font: =Font.'Segoe UI'
+                        Height: =36
+                        HintText: ="방문하는 고객사"
+                        HoverBorderColor: =cInk3
+                        PaddingLeft: =10
+                        PaddingRight: =10
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Visible: =gEdCat = "고객 방문"
+                        Width: =300
+                        X: =364
+                        Y: =300
+                  - lblEdPartner:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="파트너사명 *"
+                        Visible: =gEdCat = "고객 방문" && gEdClient = "파트너사 소개 고객"
+                        Width: =300
+                        X: =364
+                        Y: =342
+                  - txtEdPartner:
+                      Control: Classic/TextInput@2.3.2
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        Default: =gEdPartnerDefault
+                        Fill: =cSurface
+                        FocusedBorderColor: =cInk
+                        Font: =Font.'Segoe UI'
+                        Height: =36
+                        HintText: ="소개한 파트너사"
+                        HoverBorderColor: =cInk3
+                        MaxLength: =40
+                        PaddingLeft: =10
+                        PaddingRight: =10
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Visible: =gEdCat = "고객 방문" && gEdClient = "파트너사 소개 고객"
+                        Width: =300
+                        X: =364
+                        Y: =364
+                  - lblEdHost:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="담당자 이름 · 직책"
+                        Width: =300
+                        X: =364
+                        Y: =410
+                  - txtEdHostName:
+                      Control: Classic/TextInput@2.3.2
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        Default: =If(gEditMode = "edit", gSel.HostName, "")
+                        Fill: =cSurface
+                        FocusedBorderColor: =cInk
+                        Font: =Font.'Segoe UI'
+                        Height: =36
+                        HintText: ="이름"
+                        HoverBorderColor: =cInk3
+                        PaddingLeft: =10
+                        PaddingRight: =10
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Width: =146
+                        X: =364
+                        Y: =432
+                  - txtEdHostTitle:
+                      Control: Classic/TextInput@2.3.2
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        Default: =If(gEditMode = "edit", gSel.HostTitle, "")
+                        Fill: =cSurface
+                        FocusedBorderColor: =cInk
+                        Font: =Font.'Segoe UI'
+                        Height: =36
+                        HintText: ="직책"
+                        HoverBorderColor: =cInk3
+                        PaddingLeft: =10
+                        PaddingRight: =10
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Width: =146
+                        X: =518
+                        Y: =432
+                  - lblEdDivOrg:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="담당(실) · 조직"
+                        Width: =300
+                        X: =364
+                        Y: =474
+                  - txtEdDiv:
+                      Control: Classic/TextInput@2.3.2
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        Default: =If(gEditMode = "edit", gSel.HostDivision, "")
+                        Fill: =cSurface
+                        FocusedBorderColor: =cInk
+                        Font: =Font.'Segoe UI'
+                        Height: =36
+                        HintText: ="담당(실)"
+                        HoverBorderColor: =cInk3
+                        PaddingLeft: =10
+                        PaddingRight: =10
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Width: =146
+                        X: =364
+                        Y: =496
+                  - txtEdOrg:
+                      Control: Classic/TextInput@2.3.2
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        Default: =If(gEditMode = "edit", gSel.HostOrg, "")
+                        Fill: =cSurface
+                        FocusedBorderColor: =cInk
+                        Font: =Font.'Segoe UI'
+                        Height: =36
+                        HintText: ="조직(팀)"
+                        HoverBorderColor: =cInk3
+                        PaddingLeft: =10
+                        PaddingRight: =10
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Width: =146
+                        X: =518
+                        Y: =496
+                  - lblEdContact:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="연락처 · 이메일"
+                        Width: =300
+                        X: =364
+                        Y: =538
+                  - txtEdPhone:
+                      Control: Classic/TextInput@2.3.2
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        Default: =If(gEditMode = "edit", gSel.HostPhone, "")
+                        Fill: =cSurface
+                        FocusedBorderColor: =cInk
+                        Font: =Font.'Segoe UI'
+                        Height: =36
+                        HintText: ="연락처"
+                        HoverBorderColor: =cInk3
+                        PaddingLeft: =10
+                        PaddingRight: =10
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Width: =146
+                        X: =364
+                        Y: =560
+                  - txtEdEmail:
+                      Control: Classic/TextInput@2.3.2
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        Default: =If(gEditMode = "edit", gSel.HostEmail, "")
+                        Fill: =cSurface
+                        FocusedBorderColor: =cInk
+                        Font: =Font.'Segoe UI'
+                        Height: =36
+                        HintText: ="이메일"
+                        HoverBorderColor: =cInk3
+                        PaddingLeft: =10
+                        PaddingRight: =10
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Width: =146
+                        X: =518
+                        Y: =560
+                  - rctEdCol2:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =Color.Transparent
+                        Fill: =cLine
+                        Height: =500
+                        Width: =1
+                        X: =684
+                        Y: =86
+                  - lblEdSec3:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Semibold
+                        Height: =22
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =14
+                        Text: ="업종 · 목적"
+                        Width: =272
+                        X: =704
+                        Y: =86
+                  - lblEdInd:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="업종 (주 업종 하나)"
+                        Visible: =gEdCat = "고객 방문"
+                        Width: =272
+                        X: =704
+                        Y: =112
+                  - galEdInd:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        BorderThickness: =0
+                        Height: =136
+                        Items: =Industries
+                        ShowScrollbar: =false
+                        TemplateFill: =Color.Transparent
+                        TemplatePadding: =0
+                        TemplateSize: =34
+                        Visible: =gEdCat = "고객 방문"
+                        Width: =272
+                        WrapCount: =3
+                        X: =704
+                        Y: =134
+                      Children:
+                        - btnEdInd:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =If(gEdInd = ThisItem.Value, cPrimary, cLine)
+                              BorderThickness: =1
+                              Color: =If(gEdInd = ThisItem.Value, cWhite, cInk)
+                              DisabledColor: =cInk3
+                              DisabledFill: =cSoft
+                              Fill: =If(gEdInd = ThisItem.Value, cPrimary, cSurface)
+                              Font: =Font.'Segoe UI'
+                              Height: =30
+                              HoverColor: =If(gEdInd = ThisItem.Value, cWhite, cInk)
+                              HoverFill: =If(gEdInd = ThisItem.Value, cPrimaryHover, cSoft)
+                              OnSelect: =Set(gEdInd, ThisItem.Value)
+                              PaddingBottom: =0
+                              PaddingLeft: =4
+                              PaddingRight: =4
+                              PaddingTop: =0
+                              PressedColor: =If(gEdInd = ThisItem.Value, cWhite, cInk)
+                              PressedFill: =If(gEdInd = ThisItem.Value, cPrimaryHover, cSoft)
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =11
+                              Text: =ThisItem.Value
+                              Width: =88
+                              X: =0
+                              Y: =0
+                  - lblEdPurpose:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="방문 목적 *"
+                        Width: =272
+                        X: =704
+                        Y: =276
+                  - galEdPurpose:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        BorderThickness: =0
+                        Height: =102
+                        Items: =Purposes
+                        ShowScrollbar: =false
+                        TemplateFill: =Color.Transparent
+                        TemplatePadding: =0
+                        TemplateSize: =34
+                        Width: =272
+                        WrapCount: =2
+                        X: =704
+                        Y: =298
+                      Children:
+                        - btnEdPurpose:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =If((ThisItem.Value = gEdPurpose || (ThisItem.Value = "기타" && StartsWith(gEdPurpose, "기타"))), cPrimary, cLine)
+                              BorderThickness: =1
+                              Color: =If((ThisItem.Value = gEdPurpose || (ThisItem.Value = "기타" && StartsWith(gEdPurpose, "기타"))), cWhite, cInk)
+                              DisabledColor: =cInk3
+                              DisabledFill: =cSoft
+                              Fill: =If((ThisItem.Value = gEdPurpose || (ThisItem.Value = "기타" && StartsWith(gEdPurpose, "기타"))), cPrimary, cSurface)
+                              Font: =Font.'Segoe UI'
+                              Height: =30
+                              HoverColor: =If((ThisItem.Value = gEdPurpose || (ThisItem.Value = "기타" && StartsWith(gEdPurpose, "기타"))), cWhite, cInk)
+                              HoverFill: =If((ThisItem.Value = gEdPurpose || (ThisItem.Value = "기타" && StartsWith(gEdPurpose, "기타"))), cPrimaryHover, cSoft)
+                              OnSelect: =If(!(ThisItem.Value = "기타" && StartsWith(gEdPurpose, "기타")), Set(gEdPurpose, ThisItem.Value))
+                              PaddingBottom: =0
+                              PaddingLeft: =4
+                              PaddingRight: =4
+                              PaddingTop: =0
+                              PressedColor: =If((ThisItem.Value = gEdPurpose || (ThisItem.Value = "기타" && StartsWith(gEdPurpose, "기타"))), cWhite, cInk)
+                              PressedFill: =If((ThisItem.Value = gEdPurpose || (ThisItem.Value = "기타" && StartsWith(gEdPurpose, "기타"))), cPrimaryHover, cSoft)
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =11
+                              Text: =ThisItem.Value
+                              Width: =134
+                              X: =0
+                              Y: =0
+                  - lblEdLang:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="투어 언어"
+                        Width: =272
+                        X: =704
+                        Y: =408
+                  - galEdLang:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        BorderThickness: =0
+                        Height: =38
+                        Items: |-
+                          =ForAll(Languages As g, {Value: g.Name})
+                        ShowScrollbar: =false
+                        TemplateFill: =Color.Transparent
+                        TemplatePadding: =0
+                        TemplateSize: =38
+                        Width: =272
+                        WrapCount: =3
+                        X: =704
+                        Y: =430
+                      Children:
+                        - btnEdLang:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =If(gEdLang = ThisItem.Value, cPrimary, cLine)
+                              BorderThickness: =1
+                              Color: =If(gEdLang = ThisItem.Value, cWhite, cInk)
+                              DisabledColor: =cInk3
+                              DisabledFill: =cSoft
+                              Fill: =If(gEdLang = ThisItem.Value, cPrimary, cSurface)
+                              Font: =Font.'Segoe UI'
+                              Height: =34
+                              HoverColor: =If(gEdLang = ThisItem.Value, cWhite, cInk)
+                              HoverFill: =If(gEdLang = ThisItem.Value, cPrimaryHover, cSoft)
+                              OnSelect: =Set(gEdLang, ThisItem.Value)
+                              PaddingBottom: =0
+                              PaddingLeft: =4
+                              PaddingRight: =4
+                              PaddingTop: =0
+                              PressedColor: =If(gEdLang = ThisItem.Value, cWhite, cInk)
+                              PressedFill: =If(gEdLang = ThisItem.Value, cPrimaryHover, cSoft)
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =12
+                              Text: =ThisItem.Value
+                              Width: =88
+                              X: =0
+                              Y: =0
+                  - lblEdHeads:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="방문 인원 *"
+                        Width: =272
+                        X: =704
+                        Y: =478
+                  - txtEdHeads:
+                      Control: Classic/TextInput@2.3.2
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        Default: =If(gEditMode = "edit", Text(gSel.ExpectedHeadcount), "")
+                        Fill: =cSurface
+                        FocusedBorderColor: =cInk
+                        Font: =Font.'Segoe UI'
+                        Format: =TextFormat.Number
+                        Height: =36
+                        HintText: ="명"
+                        HoverBorderColor: =cInk3
+                        PaddingLeft: =10
+                        PaddingRight: =10
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Width: =120
+                        X: =704
+                        Y: =500
+                  - rctEdFoot:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =Color.Transparent
+                        Fill: =cLine
+                        Height: =1
+                        Width: =1000
+                        X: =0
+                        Y: =596
+                  - btnEdClose:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        DisabledColor: =cInk3
+                        DisabledFill: =cSoft
+                        Fill: =cSurface
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Semibold
+                        Height: =40
+                        HoverColor: =cInk
+                        HoverFill: =cSoft
+                        OnSelect: =Set(gShowEdit, false)
+                        PaddingBottom: =0
+                        PaddingLeft: =4
+                        PaddingRight: =4
+                        PaddingTop: =0
+                        PressedColor: =cInk
+                        PressedFill: =cSoft
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Text: ="닫기"
+                        Width: =104
+                        X: =748
+                        Y: =608
+                  - btnEdSave:
+                      Control: Classic/Button@2.2.0
+                      Properties:
+                        BorderColor: =Color.Transparent
+                        BorderThickness: =1
+                        Color: =cWhite
+                        DisabledColor: =cWhite
+                        DisabledFill: =cInk3
+                        DisplayMode: =If(gEdBusy, DisplayMode.Disabled, DisplayMode.Edit)  // [PA 전용] 저장 중 연속 클릭 잠금 · 웹은 저장 중 버튼 잠금
+                        Fill: =cPrimary
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Semibold
+                        Height: =40
+                        HoverColor: =cWhite
+                        HoverFill: =cPrimaryHover
+                        OnSelect: |-
+                          =// F-04 관리자 정보 수정 · 수기 등록 (웹 RequestModal 수정 · ManualVisitModal). 관리자는 당일 · 익일 · 지난 날짜도 고를 수 있다
+                          If(
+                              IsBlank(dpEdit.SelectedDate), Notify("방문일을 고르세요.", NotificationType.Warning),
+                              IsBlank(gEdTour), Notify("투어를 고르세요.", NotificationType.Warning),
+                              gEdTour <> "other" && IsBlank(gEdSlot), Notify("시간을 고르세요.", NotificationType.Warning),
+                              gEdCat = "고객 방문" && IsBlank(Trim(txtEdCompany.Text)), Notify("업체명을 입력하세요.", NotificationType.Warning),
+                              gEdCat = "고객 방문" && gEdClient = "파트너사 소개 고객" && IsBlank(Trim(txtEdPartner.Text)), Notify("소개한 파트너사명을 입력하세요.", NotificationType.Warning),
+                              IsBlank(gEdPurpose), Notify("방문 목적을 고르세요.", NotificationType.Warning),
+                              !IsNumeric(txtEdHeads.Text) || Value(txtEdHeads.Text) < 1, Notify("방문 인원을 입력하세요.", NotificationType.Warning),
+                              With(
+                                  {
+                                      k: Text(dpEdit.SelectedDate, "yyyy-mm-dd"),
+                                      t: LookUp(Tours, Id = gEdTour),
+                                      sl: LookUp(TourSlots, Tour = gEdTour && Slot = gEdSlot),
+                                      st: If(gEditMode = "new", gEdStatus, gSel.Status),
+                                      no: If(gEditMode = "new", "M" & Text(Now(), "yymmdd-hhmmss"), gSel.Title),
+                                      tm: If(gEdTour = "other", Trim(txtEdTime.Text), gEdSlot)
+                                  },
+                                  With(
+                                      {occ: gEdTour <> "other" && st = "승인"},
+                                      If(
+                                          occ && CountRows(Filter(Filter(TourBusy, DateKey = k) As b, b.Title <> no && ((sl.CFrom < b.CTo && b.CFrom < sl.CTo) || (sl.LFrom < b.LTo && b.LFrom < sl.LTo) || (sl.MFrom < b.MTo && b.MFrom < sl.MTo)))) > 0,
+                                          Notify("같은 시간에 다른 예약이나 막힌 일정이 있습니다. 시간을 바꾸거나 달력에서 먼저 정리해 주세요.", NotificationType.Error),
+                                          Set(gEdBusy, true);
+                                          Patch(
+                                              VisitRequests,
+                                              If(gEditMode = "new", Defaults(VisitRequests), LookUp(VisitRequests, Title = gSel.Title)),
+                                              {
+                                                  Title: no,
+                                                  Tour: gEdTour,
+                                                  TourName: If(gEdTour = "other", "기타 방문", t.Name),
+                                                  VisitDate: dpEdit.SelectedDate,
+                                                  DateKey: k,
+                                                  Slot: tm,
+                                                  ScheduleText: If(gEdTour = "other", If(IsBlank(tm), "시간 미정", Substitute(tm, "-", " – ")), sl.Show),
+                                                  CFrom: Coalesce(sl.CFrom, -1), CTo: Coalesce(sl.CTo, -1), LFrom: Coalesce(sl.LFrom, -1), LTo: Coalesce(sl.LTo, -1), MFrom: Coalesce(sl.MFrom, -1), MTo: Coalesce(sl.MTo, -1),
+                                                  ForMain: If(gEdTour = "other" || t.Main, "Y", "N"),
+                                                  ForMtv: If(gEdTour <> "other" && t.Mtv, "Y", "N"),
+                                                  Category: gEdCat,
+                                                  ClientType: If(gEdCat = "고객 방문", Coalesce(gEdClient, ""), "-"),
+                                                  PartnerName: If(gEdCat = "고객 방문" && gEdClient = "파트너사 소개 고객", Trim(txtEdPartner.Text), "-"),
+                                                  Company: If(gEdCat = "고객 방문", Trim(txtEdCompany.Text), Trim(txtEdDiv.Text & " " & txtEdOrg.Text)),
+                                                  Industry: If(gEdCat = "고객 방문", Coalesce(gEdInd, "-"), "-"),
+                                                  Purpose: gEdPurpose,
+                                                  Language: gEdLang,
+                                                  HostName: Trim(txtEdHostName.Text),
+                                                  HostTitle: Trim(txtEdHostTitle.Text),
+                                                  HostDivision: Trim(txtEdDiv.Text),
+                                                  HostOrg: Trim(txtEdOrg.Text),
+                                                  HostPhone: Trim(txtEdPhone.Text),
+                                                  HostEmail: Trim(txtEdEmail.Text),
+                                                  ExpectedHeadcount: Value(txtEdHeads.Text)
+                                              }
+                                          );
+                                          If(
+                                              gEditMode = "new" && IsEmpty(Errors(VisitRequests)),
+                                              // 수기 등록은 메일을 보내지 않는다: MailedStatus 를 상태와 같게 두면 흐름 TDLVisitDecision 이 건너뛴다.
+                                              // 흐름 TDLVisitSubmitted 는 신청번호가 M 으로 시작하면 건너뛰게 한 줄 추가 (흐름 안내 문서)
+                                              Patch(
+                                                  VisitRequests,
+                                                  LookUp(VisitRequests, Title = no),
+                                                  {
+                                                      Status: st, MailedStatus: st,
+                                                      ApproveMain: If(gEdTour = "other" || t.Main, If(st = "대기", "대기", "승인"), "-"),
+                                                      ApproveMtv: If(gEdTour <> "other" && t.Mtv, If(st = "대기", "대기", "승인"), "-"),
+                                                      ApplicantEmail: Lower(Trim(txtEdEmail.Text)), AttendeeCount: 0, Interpreter: "N", InterpreterLanguage: "-",
+                                                      HostComment: "-", FormsLink: Substitute(FormsPrefillUrl, "REQNO", no), InviteEmails: "", AdminMemo: "수기 등록 · " & User().FullName
+                                                  }
+                                              )
+                                          );
+                                          If(
+                                              !IsEmpty(Errors(VisitRequests)),
+                                              Notify("저장하지 못했습니다. " & First(Errors(VisitRequests)).Message, NotificationType.Error),
+                                              // 달력 자리(TourBusy, Kind 예약)를 새 날짜 · 시간으로 옮김. 대기 · 완료 · 거절 · 취소 · 기타 방문은 자리 없음 (개발자 규칙 그대로)
+                                              Remove(TourBusy, Filter(TourBusy, Title = no, Kind = "예약"));
+                                              If(occ, Patch(TourBusy, Defaults(TourBusy), {Title: no, DateKey: k, MonthKey: Left(k, 7), CFrom: sl.CFrom, CTo: sl.CTo, LFrom: sl.LFrom, LTo: sl.LTo, MFrom: sl.MFrom, MTo: sl.MTo, Kind: "예약", Reason: "-"}));
+                                              Set(gSel, LookUp(VisitRequests, Title = no));
+                                              Set(gAdminFilter, "전체");
+                                              Set(gShowEdit, false);
+                                              Notify(If(gEditMode = "new", "방문 기록을 등록했습니다. 메일은 가지 않습니다.", "예약 정보를 고쳤습니다. 신청자에게 메일은 가지 않으니 필요하면 직접 알려 주세요."), NotificationType.Success)
+                                          );
+                                          Set(gEdBusy, false)
+                                      )
+                                  )
+                              )
+                          )
+                        PaddingBottom: =0
+                        PaddingLeft: =4
+                        PaddingRight: =4
+                        PaddingTop: =0
+                        PressedColor: =cWhite
+                        PressedFill: =cPrimaryHover
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Text: =If(gEdBusy, "저장 중…", If(gEditMode = "new", "등록", "저장"))
+                        Width: =116
+                        X: =860
+                        Y: =608
