@@ -9,7 +9,8 @@
 | `Src/scrBook · scrDone · scrMy · scrAdmin · scrCalendar · scrStats · scrData .pa.yaml` | 기존 화면 7개 수정본 |
 | `Src/scrGuest · scrGuestAdmin · scrGuides .pa.yaml` | 새 화면 3개 (방명록 · 방명록 관리 · 가이드 배정) |
 
-> 공개 저장소라 회사 주소(SharePoint 사이트 · Forms 링크)는 자리표시로 바꿔 두었습니다. `FormsPrefillUrl` 은 개발자 앱의 실제 값을 그대로 두고, `GuestbookListUrl` 은 실제 Guestbook 목록 주소로 바꿔 주세요.
+> 공개 저장소라 회사 주소(SharePoint 사이트 · Forms 링크)는 `Src/` 에서 자리표시로 바꿔 두었습니다. 가져오기 zip(1-A)에는 실제 값이 들어 있습니다.
+> 붙여넣기(1-B)로 할 때는 `FormsPrefillUrl` 을 개발자 앱의 실제 값, `GuestbookListUrl` 을 실제 Guestbook 목록 주소로 바꿔 주세요.
 
 각 파일 맨 위 `#` 주석에 그 화면에서 **바뀐 곳**과 `[PA 전용]` 목록이 있습니다.
 
@@ -17,26 +18,45 @@
 
 ## 1. 적용 순서
 
+### 1-A. 솔루션 가져오기 (권장)
+
+전달한 `TDL_VISITOR_1_0_0_2_import.zip` 은 개발자 솔루션 1.0.0.1 과 **같은 폴더 · 같은 파일 구성**입니다
+(`customizations.xml` · `solution.xml` · `Workflows/` 흐름 4개 · `CanvasApps/crebc_tdl_0bea4_*` · `[Content_Types].xml`).
+바뀐 것은 앱 파일(`.msapp`) 안의 화면 소스, 흐름 2개, 버전(1.0.0.2) 뿐입니다.
+
+1. **백업**: 지금 솔루션을 내보내 둠 (관리되지 않음).
+2. **SharePoint 먼저** (가져오기 전에 해 두면 앱 오류가 줄어듦)
+   - `VisitRequests` 열 추가: `PartnerName`(한 줄 텍스트), `Guides`(여러 줄 텍스트)
+   - 새 목록: `Guestbook` · `GuestbookPublic` · `GuideRoster` — `../1-sharepoint/` 의 CSV 로 만들고 권한은 `../README.md` 3-4절
+   - `TourAdmins`: 데이터 관리 화면을 쓸 사람을 `Title = 메일(소문자)`, `Site = data` 행으로 추가
+3. make.powerapps.com → 솔루션 → **가져오기** → zip 선택 → 연결 참조는 지금 쓰는 SharePoint · Office 365 연결 선택 → 기존 솔루션 업그레이드(1.0.0.1 → 1.0.0.2).
+4. 앱 **편집** 으로 열기 → 데이터 → `Guestbook` · `GuestbookPublic` · `GuideRoster` 추가 → VisitRequests **새로 고침**(새 열 인식).
+   흐름 `TDLGuestbookAdd`(3절)를 만든 뒤 앱에 추가. 이 단계 전에는 방명록 · 가이드 화면 수식에 빨간 줄이 보이는 것이 정상입니다.
+5. 흐름 `TDLVisitDecision` 의 사례 **완료** → 작성 `후기링크` 안의 `https://방명록-Forms-링크를-넣으세요…` 를 방명록 Forms 의 미리 채운 링크로 바꿈
+   (`TOURQ` · `REQNO` 자리는 그대로). 바꾸기 전에는 조건에서 걸러져 **메일이 나가지 않습니다** (깨진 링크 메일 방지).
+6. App → `...` → **OnStart 실행** → 저장 · 게시 → 4절 테스트.
+
+가져오기 파일에서 달라진 점 (붙여넣기 소스 `Src/` 와 동작은 같음)
+- 개발자 앱에 없는 컨트롤 종류(컨테이너 · 타이머)를 쓰지 않도록 풀어 둠: 컨테이너 안 컨트롤은 화면 바로 아래로 옮기고 좌표 · 표시 조건을 합침.
+  바탕 · 테두리가 있던 컨테이너(`conMail`, `conEdit`, `conAdmDetail` 등)는 같은 이름의 사각형으로 남아 `이름.Visible` 참조가 그대로 동작.
+- 본문 스크롤 → **화면 전체 스크롤** (화면 높이 = Max(창 높이, 본문 높이)). 머리말도 함께 올라감.
+- 방명록 흐르는 띠 → **[다음 소감 ›]** 버튼으로 넘김.
+- 설정 '화면에 맞게 크기 조정' · '가로 세로 비율 잠금' 은 꺼진 상태로 들어 있음.
+- 앱 확인 결과(AppCheckerResult)는 빼 둠: Studio 가 열 때 다시 만듦.
+
+### 1-B. 화면별 붙여넣기 (가져오기가 안 될 때)
+
 1. **백업**: 지금 앱을 솔루션째 내보내 두거나 '다른 이름으로 저장'.
 2. **설정 → 표시**: '화면에 맞게 크기 조정' 끄기, '가로 세로 비율 잠금' 끄기.
-   본문은 1366 폭 그대로 두고, 창이 낮으면 본문만 스크롤합니다 (글자가 줄어들지 않음).
-3. **SharePoint** (지금 앱이 쓰는 같은 사이트)
-   - `VisitRequests` 열 추가: `PartnerName`(한 줄 텍스트), `Guides`(여러 줄 텍스트), `FeedbackMailAt`(날짜 및 시간)
-   - 새 목록: `Guestbook` · `GuestbookPublic` · `GuideRoster` — `../1-sharepoint/` 의 CSV 로 만들고 권한은 `../README.md` 3-4절
-     (`Guestbook` 은 관리자만, `GuestbookPublic` 은 전 직원 읽기, `GuideRoster` 는 실제 명단이라 행을 지우지 않음)
-   - `TourAdmins`: 데이터 관리 화면을 쓸 사람을 `Title = 메일(소문자)`, `Site = data` 행으로 추가
-     (지금 App.Formulas 의 varIsDataAdmin 에 적힌 메일 주소를 이 행으로 옮겨 주세요)
+3. **SharePoint**: 1-A 의 2번과 같음.
 4. **데이터 추가**: `Guestbook`, `GuestbookPublic`, `GuideRoster` 연결. 흐름 `TDLGuestbookAdd`(아래 3절)를 만든 뒤 앱에 추가.
 5. **App**: 트리 뷰 App → `Formulas` · `OnStart` 를 `Src/App.pa.yaml` 의 값으로 바꿈 (StartScreen 은 그대로).
-   업종 · 고객 유형 · 디자인 색 · 화면 크기(sw · sh · ox) · 방명록 / 가이드 배정 값이 들어 있습니다.
-6. **기존 화면 7개 교체**: 컨트롤 이름이 앱 전체에서 겹치면 안 되므로, 화면마다 **옛 화면을 지운 뒤** 새 YAML 을 붙여넣습니다.
-   (트리 뷰 빈 곳 오른쪽 클릭 → 붙여넣기, 또는 화면 추가 후 코드 붙여넣기). 순서: scrDone → scrMy → scrCalendar → scrStats → scrData → scrAdmin → scrBook
-7. **새 화면 3개 붙여넣기**: scrGuest → scrGuestAdmin → scrGuides. 화면 순서는 개발자 원본 뒤에.
+6. **기존 화면 7개 교체**: 화면마다 **옛 화면을 지운 뒤** 새 YAML 을 붙여넣음. 순서: scrDone → scrMy → scrCalendar → scrStats → scrData → scrAdmin → scrBook
+7. **새 화면 3개 붙여넣기**: scrGuest → scrGuestAdmin → scrGuides.
 8. **흐름**: 3절대로 고치고 새로 만듦.
 9. App → `...` → **OnStart 실행** 후 4절 테스트.
 
-> 붙여넣을 때 컨트롤 버전 오류가 나면: 개발자 앱에 이미 있는 버전(`Label@2.5.1`, `Classic/Button@2.2.0`, `Gallery@2.15.0` 등)을 그대로 썼고,
-> 새로 쓰는 것은 **컨테이너 `GroupContainer@1.3.0`**(본문 스크롤 · 창)과 **타이머 `Timer@2.1.0`**(방명록 띠) 두 가지입니다.
+> 붙여넣기 소스는 컨테이너 `GroupContainer@1.3.0`(본문만 스크롤 · 창)과 타이머 `Timer@2.1.0`(방명록 띠)을 씁니다.
 > 버전이 다르면 같은 컨트롤을 하나 직접 넣어 '코드 보기'로 번호를 확인하고 바꿔 주세요.
 
 ---
@@ -88,11 +108,15 @@
 | TDLGuestbookForms (신규) | 외부 방문객 방명록 Forms → Guestbook. `flows.md` F |
 | TDLGuestbookPublish (신규) | Guestbook 새 행 → 가명 처리 → GuestbookPublic. `flows.md` G |
 
-**사례 '완료' (방문 후 방명록 요청 메일, F-06)** — 웹 `sendFeedbackMail_` 와 같은 조건
-1. 조건: `FeedbackMailAt` 비어 있음 **그리고** `ConsentAt` 이 2026-10-22 이후 (동의 문구에 이 용도를 넣은 날) **그리고** 방문일이 오늘 이전
-2. `항목 가져오기` VisitAttendees: `RequestNo eq '신청번호'` (Status 가 미매칭인 행 제외) → 이메일 형식이 맞는 주소만, 같은 주소는 1번
-3. 한 사람씩 메일: 한국어 투어는 `../4-power-automate/mail-templates.md` F-1, 외국어 투어는 F-2 (영문 위 · 한국어 아래), 방명록 Forms 링크에 투어 · 신청번호 미리 채움
-4. 한 명이라도 보냈으면 `FeedbackMailAt` = 지금 (같은 예약에 다시 보내지 않음). 실패해도 상태 '완료' 는 유지
+> 가져오기 zip(1-A)에는 TDLVisitSubmitted · TDLVisitDecision 변경이 **이미 들어 있습니다**. 나머지(TDLRetention 추가 · 신규 흐름 3개)는 직접 만듭니다.
+
+**사례 '완료' (방문 후 방명록 요청 메일, F-06)** — 웹 `sendFeedbackMail_` 와 같은 조건 (zip 에 들어 있는 구성)
+1. 작성 `후기링크`: 방명록 Forms 미리 채운 링크 (`TOURQ` = 투어 이름, `REQNO` = 신청번호). 자리표시 그대로면 아래 조건에서 걸러져 보내지 않음
+2. 조건 `보낼조건`: 링크가 `https://forms` 로 시작 **그리고** 수기 등록(M…) 아님 **그리고** `ConsentAt` 있음 **그리고** 신청일(Created)이 2026-10-22 이후 **그리고** 방문일이 오늘(한국 시간) 이전
+3. `후기참석자` VisitAttendees `field_1(RequestNo) eq 신청번호` → `참석확인`(Status 미매칭 제외) → `후기주소`(소문자 · 공백 제거) → `받는사람`(같은 주소 1번, 이메일 형식만)
+4. 한 사람씩 메일: Language = 한국어 → F-1, 그 밖 → F-2 (영문 위 · 한국어 아래). 문구는 `../4-power-automate/mail-templates.md` 와 같음
+5. 다시 보내지 않음: 개발자 방식대로 마지막 `Update_item` 이 `MailedStatus = 완료` 를 남기므로 같은 예약에 두 번 가지 않음.
+   그래서 `FeedbackMailAt` 열은 **만들지 않아도 됩니다** (웹의 '후기메일발송' 역할을 MailedStatus 가 대신함)
 
 ---
 
