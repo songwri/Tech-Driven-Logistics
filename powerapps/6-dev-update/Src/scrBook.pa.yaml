@@ -14,6 +14,8 @@
 # ── [PA 전용] ──
 #   · conBodyBk: 본문만 스크롤 · 아래 버튼 줄은 화면 아래 고정
 #   · btnNext: 대기 자리를 먼저 잡고 먼저 저장된 쪽만 남김 (웹은 서버 잠금)
+#   · btnNext: 신청번호 끝 무작위 4자리 (V261111-143015-7F3A) · 같은 초 신청의 번호 겹침 방지
+#   · 신청 달력: 공휴일 목록(HolidayKeys)이 끝난 해 뒤 날짜는 닫힘 (App.Formulas HolidayLastYear)
 Screens:
   scrBook:
     Properties:
@@ -3541,7 +3543,7 @@ Screens:
               Set(gSaveErr, false);
               With(
                   {
-                      no: "V" & Text(Today(), "yymmdd") & "-" & Text(Now(), "hhmmss"),
+                      no: "V" & Text(Today(), "yymmdd") & "-" & Text(Now(), "hhmmss") & "-" & Concat(Sequence(4), Mid("23456789ABCDEFGHJKLMNPQRSTUVWXYZ", RandBetween(1, 32), 1)),  // [PA 전용] 같은 초 신청의 번호 겹침 방지 무작위 4자리 · 웹은 서버 잠금 안에서 번호를 만듦
                       key: gDateKey,
                       langName: LookUp(Languages, Id = gLang).Name
                   },
