@@ -9,7 +9,7 @@
 App:
   Properties:
     Formulas: |-
-      =FormsPrefillUrl = "https://forms.office.com/Pages/ResponsePage.aspx?id=여기에_폼ID&r여기에_질문ID=REQNO";   // 공개 저장소용 자리표시: 개발자 앱의 실제 값을 그대로 두세요
+      =FormsPrefillUrl = "https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=wzO1SoRySkKBJCfHQgo9kKQlitD7kdlMrEBgjOQg5d9UQzJYVVMwMjQ0MlRUVU1YSVNVUUcxQjExQy4u&rb7f5fe5a6acd4e4a9682af72e5646fd0=REQNO";
       // 시화MTV 예약을 열지 여부 (웹 버전 MTV_ENABLED 와 같은 스위치)
       MtvEnabled = false;
 
@@ -132,7 +132,7 @@ App:
           MtvEnabled || !(Id in ["center_mtv", "mtv", "all3"])
       );
       // 방명록 관리의 '엑셀 (목록)' 버튼이 여는 SharePoint 목록 주소 (목록에서 '내보내기 → CSV')
-      GuestbookListUrl = "https://회사.sharepoint.com/sites/사이트/Lists/Guestbook";
+      GuestbookListUrl = "https://lxpantos.sharepoint.com/sites/Power_Automate/Lists/Guestbook";
 
       // ---------- 6. 공휴일 (해마다 추가: 'YYYY-MM-DD') ----------
       HolidayKeys = [
@@ -214,7 +214,7 @@ App:
                       If(
                           o.Kind = "막힘",
                           "일정 막힘" & If(IsBlank(o.Reason) || o.Reason = "-", "", " · " & If(Len(o.Reason) > 14, Left(o.Reason, 14) & "…", o.Reason)),
-                          "다른 예약과 겹침 · " & Concat(Filter(Table({n: "메가와이즈", hit: s.CFrom < o.CTo && o.CFrom < s.CTo}, {n: "Lab", hit: s.LFrom < o.LTo && o.LFrom < s.LTo}, {n: "MTV", hit: s.MFrom < o.MTo && o.MFrom < s.MTo}), hit), n, "+")
+                          If(o.Kind = "대기", "대기 중인 신청과 겹침 · ", "다른 예약과 겹침 · ") & Concat(Filter(Table({n: "메가와이즈", hit: s.CFrom < o.CTo && o.CFrom < s.CTo}, {n: "Lab", hit: s.LFrom < o.LTo && o.LFrom < s.LTo}, {n: "MTV", hit: s.MFrom < o.MTo && o.MFrom < s.MTo}), hit), n, "+")
                       )
                   )
               )

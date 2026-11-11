@@ -9,6 +9,7 @@
 # scrData — 데이터 관리 (개발자가 만든 화면, TourAdmins 의 Site = data 계정만). 개발자 10/18 버전 기준
 # 바뀐 곳: 머리말(관리자 묶음의 데이터 관리 탭) · 본문 스크롤(conBodyDa) · 각진 모서리 · 색 토큰
 #   접근 계정: 수식의 메일 주소 대신 TourAdmins 목록 (App.Formulas varIsDataAdmin)
+#   달력 자리 동기화(chkDaSync)에 대기 자리 포함 (웹처럼 대기 신청도 시간을 차지)
 #   신청(VisitRequests) 3쪽에 새 열 PartnerName · Guides 칸 추가 (고를 때 · 바뀐 내용 · 저장 · 변경 기록 JSON 모두 반영)
 # ── [PA 전용] ──
 #   · 화면 전체: 웹에는 없음 (웹은 시트를 직접 편집)
@@ -6296,14 +6297,14 @@ Screens:
                                           IsEmpty(Errors(VisitRequests)),
                                           If(
                                               chkDaSync.Value,
-                                              ForAll(Filter(TourBusy, Title = old.Title, Kind = "예약") As t1, Remove(TourBusy, t1));
-                                              If(no <> old.Title, ForAll(Filter(TourBusy, Title = no, Kind = "예약") As t2, Remove(TourBusy, t2)));
+                                              ForAll(Filter(TourBusy, Title = old.Title, Kind <> "막힘") As t1, Remove(TourBusy, t1));
+                                              If(no <> old.Title, ForAll(Filter(TourBusy, Title = no, Kind <> "막힘") As t2, Remove(TourBusy, t2)));
                                               If(
-                                                  st in ["승인", "완료"],
+                                                  st in ["대기", "승인", "완료"],
                                                   Patch(
                                                       TourBusy,
                                                       Defaults(TourBusy),
-                                                      {Title: no, DateKey: Trim(txtEfVDateKey.Text), MonthKey: Left(Trim(txtEfVDateKey.Text), 7), CFrom: If(Len(Trim(txtEfVCFrom.Text)) = 0, -1, Value(Trim(txtEfVCFrom.Text))), CTo: If(Len(Trim(txtEfVCTo.Text)) = 0, -1, Value(Trim(txtEfVCTo.Text))), LFrom: If(Len(Trim(txtEfVLFrom.Text)) = 0, -1, Value(Trim(txtEfVLFrom.Text))), LTo: If(Len(Trim(txtEfVLTo.Text)) = 0, -1, Value(Trim(txtEfVLTo.Text))), MFrom: If(Len(Trim(txtEfVMFrom.Text)) = 0, -1, Value(Trim(txtEfVMFrom.Text))), MTo: If(Len(Trim(txtEfVMTo.Text)) = 0, -1, Value(Trim(txtEfVMTo.Text))), Kind: "예약", Reason: "-"}
+                                                      {Title: no, DateKey: Trim(txtEfVDateKey.Text), MonthKey: Left(Trim(txtEfVDateKey.Text), 7), CFrom: If(Len(Trim(txtEfVCFrom.Text)) = 0, -1, Value(Trim(txtEfVCFrom.Text))), CTo: If(Len(Trim(txtEfVCTo.Text)) = 0, -1, Value(Trim(txtEfVCTo.Text))), LFrom: If(Len(Trim(txtEfVLFrom.Text)) = 0, -1, Value(Trim(txtEfVLFrom.Text))), LTo: If(Len(Trim(txtEfVLTo.Text)) = 0, -1, Value(Trim(txtEfVLTo.Text))), MFrom: If(Len(Trim(txtEfVMFrom.Text)) = 0, -1, Value(Trim(txtEfVMFrom.Text))), MTo: If(Len(Trim(txtEfVMTo.Text)) = 0, -1, Value(Trim(txtEfVMTo.Text))), Kind: If(st = "대기", "대기", "예약"), Reason: "-"}
                                                   )
                                               )
                                           );

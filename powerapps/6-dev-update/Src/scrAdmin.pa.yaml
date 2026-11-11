@@ -2786,13 +2786,14 @@ Screens:
                               With(
                                   {done: (gSel.ForMain = "N" || m = "승인") && (gSel.ForMtv = "N" || v = "승인")},
                                   If(
-                                      done && CountRows(Filter(Filter(TourBusy, DateKey = gSel.DateKey), (gSel.CFrom < CTo && CFrom < gSel.CTo) || (gSel.LFrom < LTo && LFrom < gSel.LTo) || (gSel.MFrom < MTo && MFrom < gSel.MTo))) > 0,
+                                      done && CountRows(Filter(Filter(TourBusy, DateKey = gSel.DateKey), Title <> gSel.Title && ((gSel.CFrom < CTo && CFrom < gSel.CTo) || (gSel.LFrom < LTo && LFrom < gSel.LTo) || (gSel.MFrom < MTo && MFrom < gSel.MTo)))) > 0,
                                       Notify("이미 같은 시간에 승인된 예약이나 막힌 일정이 있어 승인할 수 없습니다.", NotificationType.Error),
                                       Patch(VisitRequests, gSel, {ApproveMain: m, ApproveMtv: v, Status: If(done, "승인", "대기"), AdminMemo: If(IsBlank(Trim(txtMailMsg.Text)), "-", Trim(txtMailMsg.Text))});
                                       If(
                                           IsEmpty(Errors(VisitRequests)),
                                           If(
                                               done,
+                                              Remove(TourBusy, Filter(TourBusy, Title = gSel.Title, Kind = "대기"));
                                               Patch(
                                                   TourBusy,
                                                   Defaults(TourBusy),
@@ -2822,6 +2823,7 @@ Screens:
                               );
                               If(
                                   IsEmpty(Errors(VisitRequests)),
+                                  Remove(TourBusy, Filter(TourBusy, Title = gSel.Title, Kind = "대기"));
                                   Set(gSel, LookUp(VisitRequests, Title = gSel.Title));
                                   Notify("거절했습니다. 거절 메일이 발송됩니다.", NotificationType.Success),
                                   Notify("저장하지 못했습니다. 권한을 확인해 주세요.", NotificationType.Error)
@@ -3469,7 +3471,7 @@ Screens:
                         PaddingRight: =0
                         PaddingTop: =0
                         Size: =11
-                        Text: ="승인은 달력의 그 시간을 막고, 완료는 지난 방문 기록용입니다."
+                        Text: ="승인 · 대기는 달력의 그 시간을 막고, 완료는 지난 방문 기록용입니다."
                         Visible: =gEditMode = "new"
                         Width: =300
                         Wrap: =true
@@ -4207,7 +4209,7 @@ Screens:
                                       tm: If(gEdTour = "other", Trim(txtEdTime.Text), gEdSlot)
                                   },
                                   With(
-                                      {occ: gEdTour <> "other" && st = "승인"},
+                                      {occ: gEdTour <> "other" && st in ["대기", "승인"]},
                                       If(
                                           occ && CountRows(Filter(Filter(TourBusy, DateKey = k) As b, b.Title <> no && ((sl.CFrom < b.CTo && b.CFrom < sl.CTo) || (sl.LFrom < b.LTo && b.LFrom < sl.LTo) || (sl.MFrom < b.MTo && b.MFrom < sl.MTo)))) > 0,
                                           Notify("같은 시간에 다른 예약이나 막힌 일정이 있습니다. 시간을 바꾸거나 달력에서 먼저 정리해 주세요.", NotificationType.Error),
@@ -4261,9 +4263,9 @@ Screens:
                                           If(
                                               !IsEmpty(Errors(VisitRequests)),
                                               Notify("저장하지 못했습니다. " & First(Errors(VisitRequests)).Message, NotificationType.Error),
-                                              // 달력 자리(TourBusy, Kind 예약)를 새 날짜 · 시간으로 옮김. 대기 · 완료 · 거절 · 취소 · 기타 방문은 자리 없음 (개발자 규칙 그대로)
-                                              Remove(TourBusy, Filter(TourBusy, Title = no, Kind = "예약"));
-                                              If(occ, Patch(TourBusy, Defaults(TourBusy), {Title: no, DateKey: k, MonthKey: Left(k, 7), CFrom: sl.CFrom, CTo: sl.CTo, LFrom: sl.LFrom, LTo: sl.LTo, MFrom: sl.MFrom, MTo: sl.MTo, Kind: "예약", Reason: "-"}));
+                                              // 달력 자리(TourBusy)를 새 날짜 · 시간으로 옮김. 대기는 대기 자리, 승인은 예약 자리 (웹과 같음). 완료 · 거절 · 취소 · 기타 방문은 자리 없음
+                                              Remove(TourBusy, Filter(TourBusy, Title = no, Kind <> "막힘"));
+                                              If(occ, Patch(TourBusy, Defaults(TourBusy), {Title: no, DateKey: k, MonthKey: Left(k, 7), CFrom: sl.CFrom, CTo: sl.CTo, LFrom: sl.LFrom, LTo: sl.LTo, MFrom: sl.MFrom, MTo: sl.MTo, Kind: If(st = "대기", "대기", "예약"), Reason: "-"}));
                                               Set(gSel, LookUp(VisitRequests, Title = no));
                                               Set(gAdminFilter, "전체");
                                               Set(gShowEdit, false);

@@ -13,6 +13,7 @@
 #   C-8 신청 담당자 이름 기본값 gMeName (괄호 영문명 · /부서 뗌)
 # ── [PA 전용] ──
 #   · conBodyBk: 본문만 스크롤 · 아래 버튼 줄은 화면 아래 고정
+#   · btnNext: 대기 자리를 먼저 잡고 먼저 저장된 쪽만 남김 (웹은 서버 잠금)
 Screens:
   scrBook:
     Properties:
@@ -3555,57 +3556,69 @@ Screens:
                       ClearCollect(colBusy, Filter(TourBusy, MonthKey = Text(gMonth, "yyyy-mm")));
                       Set(gSlot, NoSlot);
                       Set(gStep, 1),
-                      Patch(
-                          VisitRequests,
-                          Defaults(VisitRequests),
-                          {
-                              Title: no,
-                              Tour: gTour.Id,
-                              TourName: gTour.Name,
-                              VisitDate: gDate,
-                              DateKey: key,
-                              Slot: gSlot.Slot,
-                              ScheduleText: gSlot.Show,
-                              CFrom: gSlot.CFrom, CTo: gSlot.CTo, LFrom: gSlot.LFrom, LTo: gSlot.LTo, MFrom: gSlot.MFrom, MTo: gSlot.MTo,
-                              ForMain: If(gTour.Main, "Y", "N"),
-                              ForMtv: If(gTour.Mtv, "Y", "N"),
-                              ApproveMain: If(gTour.Main, "대기", "-"),
-                              ApproveMtv: If(gTour.Mtv, "대기", "-"),
-                              Status: "대기",
-                              Category: If(gCategory = "external", "고객 방문", "내부 방문"),
-                              ClientType: If(gCategory = "external", gClientType, "-"),
-                              PartnerName: If(gCategory = "external" && gClientType = "파트너사 소개 고객", Trim(txtPartner.Text), "-"),
-                              Company: If(gCategory = "external", Trim(txtCompany.Text), If(ddHostDivision.Selected.Value = "기타", Trim(txtHostDivOther.Text), ddHostDivision.Selected.Value) & " " & Trim(txtHostOrg.Text)),
-                              Industry: If(gCategory = "external", gIndustryTxt, "-"),
-                              Purpose: gPurposeTxt,
-                              Language: langName,
-                              Interpreter: If(chkInterp.Value, "Y", "N"),
-                              InterpreterLanguage: If(chkInterp.Value, Trim(txtInterpLang.Text), "-"),
-                              HostName: Trim(txtHostName.Text),
-                              HostTitle: Trim(txtHostTitle.Text),
-                              HostDivision: If(ddHostDivision.Selected.Value = "기타", Trim(txtHostDivOther.Text), ddHostDivision.Selected.Value),
-                              HostOrg: Trim(txtHostOrg.Text),
-                              HostPhone: Trim(txtHostPhone.Text),
-                              HostEmail: Trim(txtHostEmail.Text),
-                              ApplicantEmail: Lower(User().Email),
-                              HostComment: If(IsBlank(Trim(txtComment.Text)), "-", Trim(txtComment.Text)),
-                              ExpectedHeadcount: Value(txtHeadcount.Text),
-                              AttendeeCount: 0,
-                              FormsLink: Substitute(FormsPrefillUrl, "REQNO", no),
-                              InviteEmails: Trim(txtAttMail.Text),
-                              AdminMemo: "-",
-                              MailedStatus: "",
-                              ConsentAt: Now()
-                          }
-                      );
+                      // [PA 전용] 웹처럼 대기 신청도 그 시간을 차지: 대기 자리(TourBusy Kind 대기)를 먼저 잡고, 동시에 잡힌 자리 중 먼저 저장된(ID 가 작은) 쪽만 남김 · 웹은 Apps Script 잠금 안에서 확인
+                      Set(gClaim, Patch(TourBusy, Defaults(TourBusy), {Title: no, DateKey: key, MonthKey: Left(key, 7), CFrom: gSlot.CFrom, CTo: gSlot.CTo, LFrom: gSlot.LFrom, LTo: gSlot.LTo, MFrom: gSlot.MFrom, MTo: gSlot.MTo, Kind: "대기", Reason: "-"}));
                       If(
-                          IsEmpty(Errors(VisitRequests)),
-                          Set(gNo, no);
-                          Set(gDoneLink, Substitute(FormsPrefillUrl, "REQNO", no));
-                          Set(gDoneInfo, gTour.Name & " · " & Month(gDate) & "월 " & Day(gDate) & "일 (" & Mid("일월화수목금토", Max(1, Weekday(gDate, StartOfWeek.Sunday)), 1) & ")" & " " & gSlot.Show);
-                          Set(gNeedReset, true);
-                          Navigate(scrDone, ScreenTransition.None),
-                          Set(gSaveErr, true)
+                          IsBlank(gClaim) || !IsEmpty(Errors(TourBusy)),
+                          Set(gSaveErr, true),
+                          CountRows(Filter(Filter(TourBusy, DateKey = key), ID < gClaim.ID && ((gSlot.CFrom < CTo && CFrom < gSlot.CTo) || (gSlot.LFrom < LTo && LFrom < gSlot.LTo) || (gSlot.MFrom < MTo && MFrom < gSlot.MTo)))) > 0,
+                          Remove(TourBusy, gClaim);
+                          Notify("방금 다른 신청이 먼저 이 시간을 잡았습니다. 다른 시간을 선택해 주세요.", NotificationType.Error);
+                          ClearCollect(colBusy, Filter(TourBusy, MonthKey = Text(gMonth, "yyyy-mm")));
+                          Set(gSlot, NoSlot);
+                          Set(gStep, 1),
+                          Patch(
+                              VisitRequests,
+                              Defaults(VisitRequests),
+                              {
+                                  Title: no,
+                                  Tour: gTour.Id,
+                                  TourName: gTour.Name,
+                                  VisitDate: gDate,
+                                  DateKey: key,
+                                  Slot: gSlot.Slot,
+                                  ScheduleText: gSlot.Show,
+                                  CFrom: gSlot.CFrom, CTo: gSlot.CTo, LFrom: gSlot.LFrom, LTo: gSlot.LTo, MFrom: gSlot.MFrom, MTo: gSlot.MTo,
+                                  ForMain: If(gTour.Main, "Y", "N"),
+                                  ForMtv: If(gTour.Mtv, "Y", "N"),
+                                  ApproveMain: If(gTour.Main, "대기", "-"),
+                                  ApproveMtv: If(gTour.Mtv, "대기", "-"),
+                                  Status: "대기",
+                                  Category: If(gCategory = "external", "고객 방문", "내부 방문"),
+                                  ClientType: If(gCategory = "external", gClientType, "-"),
+                                  PartnerName: If(gCategory = "external" && gClientType = "파트너사 소개 고객", Trim(txtPartner.Text), "-"),
+                                  Company: If(gCategory = "external", Trim(txtCompany.Text), If(ddHostDivision.Selected.Value = "기타", Trim(txtHostDivOther.Text), ddHostDivision.Selected.Value) & " " & Trim(txtHostOrg.Text)),
+                                  Industry: If(gCategory = "external", gIndustryTxt, "-"),
+                                  Purpose: gPurposeTxt,
+                                  Language: langName,
+                                  Interpreter: If(chkInterp.Value, "Y", "N"),
+                                  InterpreterLanguage: If(chkInterp.Value, Trim(txtInterpLang.Text), "-"),
+                                  HostName: Trim(txtHostName.Text),
+                                  HostTitle: Trim(txtHostTitle.Text),
+                                  HostDivision: If(ddHostDivision.Selected.Value = "기타", Trim(txtHostDivOther.Text), ddHostDivision.Selected.Value),
+                                  HostOrg: Trim(txtHostOrg.Text),
+                                  HostPhone: Trim(txtHostPhone.Text),
+                                  HostEmail: Trim(txtHostEmail.Text),
+                                  ApplicantEmail: Lower(User().Email),
+                                  HostComment: If(IsBlank(Trim(txtComment.Text)), "-", Trim(txtComment.Text)),
+                                  ExpectedHeadcount: Value(txtHeadcount.Text),
+                                  AttendeeCount: 0,
+                                  FormsLink: Substitute(FormsPrefillUrl, "REQNO", no),
+                                  InviteEmails: Trim(txtAttMail.Text),
+                                  AdminMemo: "-",
+                                  MailedStatus: "",
+                                  ConsentAt: Now()
+                              }
+                          );
+                          If(
+                              IsEmpty(Errors(VisitRequests)),
+                              Set(gNo, no);
+                              Set(gDoneLink, Substitute(FormsPrefillUrl, "REQNO", no));
+                              Set(gDoneInfo, gTour.Name & " · " & Month(gDate) & "월 " & Day(gDate) & "일 (" & Mid("일월화수목금토", Max(1, Weekday(gDate, StartOfWeek.Sunday)), 1) & ")" & " " & gSlot.Show);
+                              Set(gNeedReset, true);
+                              Navigate(scrDone, ScreenTransition.None),
+                              Remove(TourBusy, gClaim); Set(gSaveErr, true)
+                          )
                       )
                   )
               );
