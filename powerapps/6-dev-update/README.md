@@ -20,7 +20,7 @@
 
 ### 1-A. 솔루션 가져오기 (권장)
 
-전달한 `TDL_VISITOR_1_0_0_2_import.zip` 은 개발자 솔루션 1.0.0.1 과 **같은 폴더 · 같은 파일 구성**입니다
+전달한 `TDL_VISITOR_1_0_0_2.zip` 은 개발자 솔루션 1.0.0.1 과 **같은 폴더 · 같은 파일 구성**입니다
 (`customizations.xml` · `solution.xml` · `Workflows/` 흐름 4개 · `CanvasApps/crebc_tdl_0bea4_*` · `[Content_Types].xml`).
 바뀐 것은 앱 파일(`.msapp`) 안의 화면 소스, 흐름 2개, 버전(1.0.0.2) 뿐입니다.
 
