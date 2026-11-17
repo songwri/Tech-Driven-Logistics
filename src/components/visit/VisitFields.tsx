@@ -657,6 +657,7 @@ export function PurposeFields({ draft, onChange, errors }: { draft: VisitDraft; 
           value={draft.hostComment}
           onChange={(e) => onChange({ hostComment: e.target.value })}
           maxLength={500}
+          placeholder="예) 취급 물성: 냉동 식품, 파렛트 단위 · 관심 설비: AMR 피킹, 자동 분류기"
         />
       </Field>
     </div>

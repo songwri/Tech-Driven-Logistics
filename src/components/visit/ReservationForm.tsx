@@ -422,7 +422,7 @@ export function ReservationForm({ busy, closedDays, scheduleLoading }: Reservati
           value={draft.note}
           onChange={(e) => patch({ note: e.target.value })}
           maxLength={500}
-          placeholder="관심 기술 영역이나 특별히 보고 싶은 설비가 있다면 남겨주세요."
+          placeholder="그 외 전달할 요청이 있다면 남겨주세요. 예) 휠체어 이용, 주차 문의, 식사 제한"
           aria-label="기타 요청사항"
         />
       </section>
