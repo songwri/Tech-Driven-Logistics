@@ -2322,9 +2322,9 @@ Screens:
                         PaddingRight: =0
                         PaddingTop: =0
                         Size: =12
-                        Text: ="담당자 의견 (선택)"
+                        Text: ="고객사 물성 및 관심 설비 사전 정보 (선택)"
                         Visible: =gStep = 2
-                        Width: =300
+                        Width: =612
                         X: =710
                         Y: =If(gCategory = "external", 570, 390)
                   - txtComment:
@@ -2339,6 +2339,7 @@ Screens:
                         Font: =Font.'Segoe UI'
                         Height: =If(gCategory = "external", 80, 260)
                         HoverBorderColor: =cInk3
+                        HintText: ="취급 물성(품목·포장 형태·보관 온도 등)과 관심 있는 설비를 미리 적어 주시면 투어 가이드 시 참고하겠습니다."
                         Mode: =TextMode.MultiLine
                         PaddingLeft: =10
                         PaddingRight: =10
@@ -2849,7 +2850,7 @@ Screens:
                         PaddingLeft: =0
                         PaddingRight: =0
                         PaddingTop: =0
-                        Text: ="의견"
+                        Text: ="사전 정보"
                         Visible: =gStep = 3
                         Width: =110
                         X: =44

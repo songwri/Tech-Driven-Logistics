@@ -616,7 +616,7 @@ export function CompanyFields({
   )
 }
 
-/** 방문 목적 · 투어 진행 언어 · 담당자 의견 */
+/** 방문 목적 · 투어 진행 언어 · 고객사 물성 및 관심 설비 사전 정보 */
 export function PurposeFields({ draft, onChange, errors }: { draft: VisitDraft; onChange: Patch; errors?: Errors }) {
   return (
     <div className="space-y-6">
@@ -651,7 +651,7 @@ export function PurposeFields({ draft, onChange, errors }: { draft: VisitDraft; 
 
       <LanguageFields draft={draft} onChange={onChange} />
 
-      <Field label="담당자 의견" optional hint="방문 배경, 고객사 니즈 등 안내에 참고할 내용을 적어주세요.">
+      <Field label="고객사 물성 및 관심 설비 사전 정보" optional hint="취급 물성(품목·포장 형태·보관 온도 등)과 관심 있는 설비를 미리 적어 주시면 투어 가이드 시 참고하겠습니다.">
         <Textarea
           rows={3}
           value={draft.hostComment}
