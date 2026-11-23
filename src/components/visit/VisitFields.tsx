@@ -340,7 +340,7 @@ export function PrivacyConsent({
         </p>
         <p className="mt-2 font-semibold text-warm-800">3. 보유 및 이용 기간</p>
         <p>
-          방문일로부터 <b>1년</b>간 보관 후 지체 없이 파기합니다. 단, 관계 법령에 따라 보존이 필요한 경우 해당 기간
+          방문 종료일로부터 <b>3개월</b> 후 지체 없이 파기합니다. 단, 관계 법령에 따라 보존이 필요한 경우 해당 기간
           동안 보관합니다.
         </p>
         <p className="mt-2 font-semibold text-warm-800">4. 제3자 제공</p>
