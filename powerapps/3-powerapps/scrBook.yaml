@@ -4,11 +4,12 @@
 #   · galCal: 공휴일 목록(HolidayKeys)이 끝난 해 뒤 날짜는 닫음
 #   · 신청 담당자 칸: 회사 계정(Office 365)에서 자동 입력
 #   · 참석자 명단 대신 예상 인원 + Forms 링크 (참석자 본인이 입력 · 동의)
+#   · 신청 담당자 본인 개인정보 동의 체크 없음: 보안팀 검토(11/23) 사내 계정 정보라 동의 불필요 · 웹은 동의 체크 유지
 #   · conBBody: 본문만 스크롤 · 폭은 창 폭에 맞춰 kx 배(최대 MaxStretch)로 늘어남 (머리말 · 바닥 버튼 고정)
 #   · hdrBAdmZone · hdrBAdmLabel: 관리자 메뉴(예약 관리 · 달력 · 통계 · 가이드 배정 · 방명록 관리)를 오른쪽 묶음 + 관리자 표시로 구분 (관리자만 보임)
 # 1) 트리 뷰에서 새 화면(빈 화면)을 만들고 이름을 scrBook 으로 바꿉니다.
 # 2) 화면 속성: Fill = cBg, Width = sw, Height = sh
-#    OnVisible = If(gNeedReset, Reset(txtHostName); Reset(txtHostTitle); Reset(txtHostDivision); Reset(txtHostOrg); Reset(txtHostPhone); Reset(txtHostEmail); Reset(txtCompany); Reset(txtPartner); Reset(txtPurposeEtc); Reset(txtInterpLang); Reset(chkInterp); Reset(txtHeadcount); Reset(txtComment); Reset(txtAttendeeEmails); Reset(chkConsent); Set(gNeedReset, false))
+#    OnVisible = If(gNeedReset, Reset(txtHostName); Reset(txtHostTitle); Reset(txtHostDivision); Reset(txtHostOrg); Reset(txtHostPhone); Reset(txtHostEmail); Reset(txtCompany); Reset(txtPartner); Reset(txtPurposeEtc); Reset(txtInterpLang); Reset(chkInterp); Reset(txtHeadcount); Reset(txtComment); Reset(txtAttendeeEmails); Set(gNeedReset, false))
 # 3) 이 파일 내용을 전부 복사 → 트리 뷰에서 scrBook 을 오른쪽 클릭 → '붙여넣기'(Ctrl+V)
 - conBBody:
     Control: GroupContainer@1.3.0
@@ -2108,30 +2109,14 @@
                         Width: =612 + 652 * (kx - 1)
                         Height: =1
                         Fill: =cLine
-                  - chkConsent:
-                      Control: Classic/CheckBox@2.1.0
-                      Properties:
-                        Text: ="[필수] 신청 담당자 본인의 개인정보 수집 · 이용에 동의합니다"
-                        X: =16
-                        Y: =354
-                        Width: =612 + 652 * (kx - 1)
-                        Height: =32
-                        Default: =false
-                        Font: =fnt
-                        Size: =10.5
-                        FontWeight: =FontWeight.Semibold
-                        Color: =cInk
-                        CheckboxBorderColor: =cInk
-                        CheckmarkFill: =cSurface
-                        CheckboxBackgroundFill: =If(Self.Value, cPrimary, cSurface)
-                  - lblConsentBody:
+                  - lblAttNote:
                       Control: Label@2.5.1
                       Properties:
-                        Text: ="수집 항목 · 성함, 직책, 담당(실), 조직명, 연락처, 이메일" & Char(10) & "이용 목적 · 방문 일정 조율, 승인 · 확정 안내" & Char(10) & "보관 · 회사 SharePoint (사내 Microsoft 365) · 방문일로부터 1년 뒤 삭제" & Char(10) & "참석자 개인정보는 참석자 본인이 Forms 에서 따로 동의하고 입력합니다."
+                        Text: ="참석자 개인정보는 참석자 본인이 Forms 에서 수집 · 이용 동의를 하고 직접 입력합니다. (신청 담당자 정보는 사내 계정 정보라 별도 동의를 받지 않습니다.)"
                         X: =20
-                        Y: =392
+                        Y: =354
                         Width: =612 + 652 * (kx - 1)
-                        Height: =150
+                        Height: =56
                         Font: =fnt
                         Size: =9
                         Color: =cInk2
@@ -2536,8 +2521,6 @@
             3, If(
                 locSubmitting,
                 false,
-                !chkConsent.Value,
-                Notify("개인정보 수집 · 이용에 동의해 주세요.", NotificationType.Warning),
                 UpdateContext({locSubmitting: true});
                 With(
                     {no: "V" & Text(Now(), "yymmdd-hhmmss") & "-" & Upper(Left(Substitute(Text(GUID()), "-", ""), 4)), k: Text(gDate, "yyyy-mm-dd")},
@@ -2609,8 +2592,7 @@
                                         AttendeeCount: 0,
                                         Status: "대기",
                                         FormsLink: Substitute(FormsPrefillUrl, "REQNO", no),
-                                        AdminMemo: "",
-                                        ConsentAt: Now()
+                                        AdminMemo: ""
                                     }
                                 )
                             );
