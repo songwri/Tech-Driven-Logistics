@@ -102,8 +102,8 @@
 | --- | --- |
 | TDLVisitSubmitted | 트리거 설정 → 트리거 조건 추가 `@not(startsWith(triggerOutputs()?['body/Title'], 'M'))` — 관리자 **수기 등록**(신청번호 M…)은 접수 메일을 보내지 않음 |
 | TDLVisitDecision | ① 트리거 조건의 `or(...)` 에 `equals(triggerOutputs()?['body/field_17'], '완료')` 추가 ② Switch 에 사례 **완료** 추가 (아래) ③ 마지막 Update_item(MailedStatus) 은 그대로 |
-| TDLRetention | 등록 1년 지난 `Guestbook` 항목 삭제 추가 (`../4-power-automate/flows.md` D) |
-| TDLAttendeeCollect | 변경 없음 |
+| TDLRetention | ① 반복을 **매일**로 ② 참석자(`VisitAttendees`) 삭제 기준을 방문일 1년 → **방문 종료일로부터 3개월** (`addToTime(utcNow(), -3, 'Month', 'yyyy-MM-dd')`) ③ 등록 1년 지난 `Guestbook` 항목 삭제 추가 (`../4-power-automate/flows.md` D) |
+| TDLAttendeeCollect | 트리거 다음에 조건 `동의확인` 추가: 성함이 빈 응답(Forms 에서 '동의하지 않습니다' → 양식 끝)은 저장하지 않고 끝냄 (`flows.md` B 2-1). 이메일이 선택 항목이 되므로 비어 있어도 그대로 저장 |
 | TDLGuestbookAdd (신규) | 앱 방명록 등록 → Guestbook 저장. 입력 순서 Name · Company · Team · Role · Rating(숫자) · Tour · Message (회사 · 팀 · 직책은 비면 앱이 `-` 를 보냄 → 빈 칸으로 저장). `flows.md` E |
 | TDLGuestbookForms (신규) | 외부 방문객 방명록 Forms → Guestbook. `flows.md` F |
 | TDLGuestbookPublish (신규) | Guestbook 새 행 → 가명 처리 → GuestbookPublic. `flows.md` G |
@@ -132,6 +132,9 @@
 - [ ] 달력: 오늘 빨간 원, 화 · 목 · 주말 옅은 바탕 · 통계: 탭 없음, 막대 1위만 빨강 + %, 업종 9종 + 기타
 - [ ] 방명록 남기기(회사 · 직책 비워도 등록) → 띠에 가명 · 방명록 관리 숨기기 / 다시 표시 / 삭제 · 가이드 배정 저장 → Guides 열
 - [ ] 데이터 관리: TourAdmins 에 Site = data 행이 있는 계정만 탭이 보임, 신청 3쪽에 PartnerName · Guides 칸
+- [ ] 신청 3단계에 담당자 동의 체크가 없고 바로 [신청하기] 가능
+- [ ] 참석자 Forms: 동의 질문에 기본 선택 없음 · '동의하지 않습니다' → 바로 양식 끝 → VisitAttendees 에 행이 생기지 않음 · 동의 → 이메일 비워도 제출 · 저장
+- [ ] 흐름 D 를 수동 실행 → 방문일이 3개월 넘은 참석자 행만 삭제
 
 ---
 
