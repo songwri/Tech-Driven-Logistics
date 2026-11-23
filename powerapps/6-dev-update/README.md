@@ -22,7 +22,7 @@
 
 전달한 `TDL_VISITOR_1_0_0_2.zip` 은 개발자 솔루션 1.0.0.1 과 **같은 폴더 · 같은 파일 구성**입니다
 (`customizations.xml` · `solution.xml` · `Workflows/` 흐름 4개 · `CanvasApps/crebc_tdl_0bea4_*` · `[Content_Types].xml`).
-바뀐 것은 앱 파일(`.msapp`) 안의 화면 소스, 흐름 2개, 버전(1.0.0.2) 뿐입니다.
+바뀐 것은 앱 파일(`.msapp`) 안의 화면 소스, 흐름 4개, 버전(1.0.0.2) 뿐입니다. 만드는 방법은 `tools/README.md`.
 
 1. **백업**: 지금 솔루션을 내보내 둠 (관리되지 않음).
 2. **SharePoint 먼저** (가져오기 전에 해 두면 앱 오류가 줄어듦)
@@ -108,7 +108,8 @@
 | TDLGuestbookForms (신규) | 외부 방문객 방명록 Forms → Guestbook. `flows.md` F |
 | TDLGuestbookPublish (신규) | Guestbook 새 행 → 가명 처리 → GuestbookPublic. `flows.md` G |
 
-> 가져오기 zip(1-A)에는 TDLVisitSubmitted · TDLVisitDecision 변경이 **이미 들어 있습니다**. 나머지(TDLRetention 추가 · 신규 흐름 3개)는 직접 만듭니다.
+> 가져오기 zip(1-A)에는 흐름 4개의 변경이 **이미 들어 있습니다** (TDLRetention 의 방명록 1년 삭제만 빼고: Guestbook 목록을 만든 뒤 추가). 신규 흐름 3개는 직접 만듭니다.
+> TDLRetention 의 삭제 필터는 열 내부 이름 `field_9`(VisitAttendees 의 VisitDate, 흐름 B 가 저장하는 열)로 바꿨습니다. 개발자 원본 필터는 표시 이름 `VisitDate` 와 끝 공백이 들어 있어 SharePoint 가 열을 찾지 못할 수 있습니다.
 
 **사례 '완료' (방문 후 방명록 요청 메일, F-06)** — 웹 `sendFeedbackMail_` 와 같은 조건 (zip 에 들어 있는 구성)
 1. 작성 `후기링크`: 방명록 Forms 미리 채운 링크 (`TOURQ` = 투어 이름, `REQNO` = 신청번호). 자리표시 그대로면 아래 조건에서 걸러져 보내지 않음
