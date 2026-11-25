@@ -74,7 +74,7 @@ npm run lint
 
 ## 배포 (GitHub Pages)
 
-`.github/workflows/deploy.yml`이 이 브랜치(`claude/test-coverage-analysis-epu73z`)에 푸시될
+`.github/workflows/deploy.yml`이 기본 브랜치(`master`)에 푸시될
 때마다 lint → build → GitHub Pages 배포를 자동으로 실행합니다. 단, 저장소에서 아래 설정을
 **한 번은 수동으로** 켜줘야 워크플로가 실제로 배포까지 성공합니다.
 
