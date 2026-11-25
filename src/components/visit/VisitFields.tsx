@@ -725,13 +725,17 @@ export function VisitorsFields({
   onChange,
   defaultOrg = '',
   errors,
+  optional = false,
 }: {
   visitors: Visitor[]
   onChange: (visitors: Visitor[]) => void
   /** 새 방문자의 조직명 기본값 (보통 업체명) */
   defaultOrg?: string
   errors?: Errors
+  /** 관리자 수기 등록처럼 성함 외 칸을 필수로 받지 않을 때 (필수 * 표시를 숨긴다) */
+  optional?: boolean
 }) {
+  const star = optional ? '' : ' *'
   const bad = (index: number, key: 'name' | 'title' | 'org' | 'email') => Boolean(errors?.has(`visitor.${index}.${key}`))
   const rowHasError = (index: number) => (['name', 'title', 'org', 'email'] as const).some((key) => bad(index, key))
   const [pasteOpen, setPasteOpen] = useState(false)
@@ -772,13 +776,16 @@ export function VisitorsFields({
           성함<span className="text-brand">*</span>
         </span>
         <span>
-          직책<span className="text-brand">*</span>
+          직책
+          {!optional && <span className="text-brand">*</span>}
         </span>
         <span>
-          조직명<span className="text-brand">*</span>
+          조직명
+          {!optional && <span className="text-brand">*</span>}
         </span>
         <span>
-          이메일<span className="text-brand">*</span>
+          이메일
+          {!optional && <span className="text-brand">*</span>}
         </span>
         <span>
           차량번호 <span className="font-normal text-warm-600">선택</span>
@@ -816,7 +823,7 @@ export function VisitorsFields({
               />
             </label>
             <label>
-              <span className={cellLabel}>직책 *</span>
+              <span className={cellLabel}>직책{star}</span>
               <Input
                 aria-label={`방문자 ${index + 1} 직책`}
                 value={visitor.title}
@@ -828,7 +835,7 @@ export function VisitorsFields({
               />
             </label>
             <label className="col-span-2 md:col-span-1">
-              <span className={cellLabel}>조직명 *</span>
+              <span className={cellLabel}>조직명{star}</span>
               <Input
                 aria-label={`방문자 ${index + 1} 조직명`}
                 value={visitor.org}
@@ -840,7 +847,7 @@ export function VisitorsFields({
               />
             </label>
             <label className="col-span-2 md:col-span-1">
-              <span className={cellLabel}>이메일 *</span>
+              <span className={cellLabel}>이메일{star}</span>
               <Input
                 type="email"
                 inputMode="email"

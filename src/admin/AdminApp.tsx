@@ -596,8 +596,9 @@ function AdminDashboard({ site }: { site: AdminSite }) {
           partnerSuggestions={partnerNames(data.allRequests)}
           onClose={() => setDialog(null)}
           onSubmit={async (input) => {
-            const created = await data.create(input)
-            setNotice(`${formatDateShort(created.date)} ${created.company} 방문을 등록했습니다.`)
+            const { request: created, mail } = await data.create(input)
+            const mailMessage = feedbackMailMessage(mail?.mail, mail?.demo)
+            setNotice(`${formatDateShort(created.date)} ${created.company} 방문을 등록했습니다.${mailMessage ? ` ${mailMessage}` : ''}`)
           }}
         />
       )}
