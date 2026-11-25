@@ -325,7 +325,7 @@ App:
       // 관리자: 메일 미리보기 창 (A-2) · 정보 수정 · 수기 등록 창 (F-04) · 고객 구분 빠른 변경 창 (F-03)
       Set(gMailMode, "");
       Set(gShowEdit, false); Set(gEditMode, ""); Set(gEdTour, ""); Set(gEdSlot, ""); Set(gEdCat, "고객 방문"); Set(gEdClient, "");
-      Set(gEdInd, ""); Set(gEdPurpose, ""); Set(gEdLang, "한국어"); Set(gEdStatus, "승인"); Set(gEdPartnerDefault, ""); Set(gEdBusy, false);
+      Set(gEdInd, ""); Set(gEdPurpose, ""); Set(gEdLang, "한국어"); Set(gEdStatus, "승인"); Set(gEdPartnerDefault, ""); Set(gEdInterp, "통역 없음"); Set(gEdMail, "보내지 않음"); Set(gEdBusy, false);
       Set(gShowClient, false); Set(gCtChoice, ""); Set(gCtPartnerDefault, "");
 
       // 방명록 (N-1 · N-2): 흐르는 띠 · 작성 창 · 관리 화면

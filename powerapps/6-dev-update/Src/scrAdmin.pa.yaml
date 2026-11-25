@@ -12,12 +12,14 @@
 #   A-3 목록 둘째 줄 한 줄(lblAdmSub) · A-4 참석자 표 머리글 선명하게, 구분 → 비고(추가 인원 표시)
 #   C-8 신청자 이름 괄호 영문명 · /부서 뗌(ar3V) · F-02 방문 유형에 파트너사명(ar5V)
 #   F-03 [변경] → conClient 고객 구분 빠른 변경 · F-04 [정보 수정] · [수기 등록] → conEdit
+#   conEdit 는 신청 화면과 같은 순서(일정 → 담당자 · 방문 기관 → 목적 · 언어 · 통역 → 참석자 · 사전 정보)의 4열. 통역 동반 · 사전 정보 · 참석자 이메일 · 방명록 메일 선택 추가
 #   F-06 [방문 완료] → 상태 완료 저장, 흐름 TDLVisitDecision 사례 완료 가 방명록 요청 메일 (흐름 안내 문서)
 #   최적화: 상세 영역 표시 조건을 컨테이너 conAdmDetail 하나로 (컨트롤 약 40개가 각자 계산하던 것)
 #   메일은 개발자 흐름 그대로 상태 변경을 보고 흐름이 보냄. 앱은 상태 · 사유만 저장
 # ── [PA 전용] ──
 #   · conMail: 승인 · 거절 · 일정 취소 · 방문 완료 전 메일 미리보기 + 사유 입력 (웹에는 없음)
 #   · conBodyAd: 본문만 스크롤 · btnEdSave 저장 중 잠금
+#   · conEdit: 수기 등록 참석자 이메일(InviteEmails)로 Forms 링크 발송 · 수기 건 방명록 메일 선택(FeedbackMailOn) · 웹은 수기 등록 창에서 방문자 명단을 직접 입력
 #   · OnVisible: 공휴일 목록이 끝나 가면 알림 · 수기 등록 번호 끝 무작위 4자리
 Screens:
   scrAdmin:
@@ -437,9 +439,10 @@ Screens:
                         OnSelect: |-
                           =Set(gEditMode, "new");
                           Set(gEdTour, ""); Set(gEdSlot, ""); Set(gEdCat, "고객 방문"); Set(gEdClient, ""); Set(gEdInd, ""); Set(gEdPurpose, "");
-                          Set(gEdLang, "한국어"); Set(gEdStatus, "승인"); Set(gEdPartnerDefault, "");
+                          Set(gEdLang, "한국어"); Set(gEdStatus, "승인"); Set(gEdPartnerDefault, ""); Set(gEdInterp, "통역 없음"); Set(gEdMail, "보내지 않음");
                           Reset(dpEdit); Reset(txtEdTime); Reset(txtEdCompany); Reset(txtEdPartner); Reset(txtEdHostName); Reset(txtEdHostTitle);
                           Reset(txtEdDiv); Reset(txtEdOrg); Reset(txtEdPhone); Reset(txtEdEmail); Reset(txtEdHeads);
+                          Reset(txtEdInterpLang); Reset(txtEdComment); Reset(txtEdAttMail);
                           Set(gShowEdit, true)
                         PaddingBottom: =0
                         PaddingLeft: =4
@@ -686,8 +689,10 @@ Screens:
                                 Set(gEdInd, With({t: Trim(gSel.Industry)}, If(IsBlank(t) || t = "-", "", t in Industries.Value, t, Coalesce(LookUp(IndustryLegacy, From = t, To), "기타"))));
                                 Set(gEdPurpose, gSel.Purpose); Set(gEdLang, Coalesce(gSel.Language, "한국어"));
                                 Set(gEdPartnerDefault, If(gSel.PartnerName = "-", "", gSel.PartnerName));
+                                Set(gEdInterp, If(gSel.Interpreter = "Y", "통역 동반", "통역 없음")); Set(gEdMail, If(gSel.FeedbackMailOn = "Y", "보냄", "보내지 않음"));
                                 Reset(dpEdit); Reset(txtEdTime); Reset(txtEdCompany); Reset(txtEdPartner); Reset(txtEdHostName); Reset(txtEdHostTitle);
                                 Reset(txtEdDiv); Reset(txtEdOrg); Reset(txtEdPhone); Reset(txtEdEmail); Reset(txtEdHeads);
+                                Reset(txtEdInterpLang); Reset(txtEdComment); Reset(txtEdAttMail);
                                 Set(gShowEdit, true)
                               PaddingBottom: =0
                               PaddingLeft: =4
@@ -3162,8 +3167,8 @@ Screens:
                   RadiusBottomRight: =0
                   RadiusTopLeft: =0
                   RadiusTopRight: =0
-                  Width: =1000
-                  X: =(Parent.Width - 1000) / 2
+                  Width: =1336
+                  X: =(Parent.Width - 1336) / 2
                   Y: =Max(16, (Parent.Height - 664) / 2)
                 Children:
                   - lblEdH:
@@ -3194,7 +3199,7 @@ Screens:
                         PaddingTop: =0
                         Size: =12
                         Text: =If(gEditMode = "new", "전화 · 메일로 받은 방문이나 지난 방문 기록을 직접 넣습니다. 메일은 가지 않습니다.", gSel.Title & " · 관리자는 당일 · 익일 · 지난 날짜도 고를 수 있습니다. 승인 건은 시간을 바꾸면 달력 자리도 함께 옮겨집니다.")
-                        Width: =952
+                        Width: =1288
                         Wrap: =false
                         X: =24
                         Y: =46
@@ -3204,7 +3209,7 @@ Screens:
                         BorderColor: =Color.Transparent
                         Fill: =cLine
                         Height: =1
-                        Width: =1000
+                        Width: =1336
                         X: =0
                         Y: =74
                   - lblEdSec1:
@@ -3487,7 +3492,7 @@ Screens:
                         Fill: =cLine
                         Height: =500
                         Width: =1
-                        X: =344
+                        X: =340
                         Y: =86
                   - lblEdSec2:
                       Control: Label@2.5.1
@@ -3501,9 +3506,9 @@ Screens:
                         PaddingRight: =0
                         PaddingTop: =0
                         Size: =14
-                        Text: ="방문 정보"
+                        Text: ="담당자 · 방문 기관"
                         Width: =300
-                        X: =364
+                        X: =352
                         Y: =86
                   - lblEdCat:
                       Control: Label@2.5.1
@@ -3518,8 +3523,8 @@ Screens:
                         Size: =12
                         Text: ="방문 구분"
                         Width: =300
-                        X: =364
-                        Y: =112
+                        X: =352
+                        Y: =304
                   - galEdCat:
                       Control: Gallery@2.15.0
                       Variant: Vertical
@@ -3533,8 +3538,8 @@ Screens:
                         TemplateSize: =38
                         Width: =304
                         WrapCount: =2
-                        X: =364
-                        Y: =134
+                        X: =352
+                        Y: =326
                       Children:
                         - btnEdCat:
                             Control: Classic/Button@2.2.0
@@ -3579,8 +3584,8 @@ Screens:
                         Text: ="고객 유형"
                         Visible: =gEdCat = "고객 방문"
                         Width: =300
-                        X: =364
-                        Y: =176
+                        X: =352
+                        Y: =368
                   - galEdClient:
                       Control: Gallery@2.15.0
                       Variant: Vertical
@@ -3595,8 +3600,8 @@ Screens:
                         Visible: =gEdCat = "고객 방문"
                         Width: =304
                         WrapCount: =2
-                        X: =364
-                        Y: =198
+                        X: =352
+                        Y: =390
                       Children:
                         - btnEdClient:
                             Control: Classic/Button@2.2.0
@@ -3641,8 +3646,8 @@ Screens:
                         Text: ="업체명 *"
                         Visible: =gEdCat = "고객 방문"
                         Width: =300
-                        X: =364
-                        Y: =278
+                        X: =352
+                        Y: =472
                   - txtEdCompany:
                       Control: Classic/TextInput@2.3.2
                       Properties:
@@ -3665,8 +3670,8 @@ Screens:
                         Size: =14
                         Visible: =gEdCat = "고객 방문"
                         Width: =300
-                        X: =364
-                        Y: =300
+                        X: =352
+                        Y: =494
                   - lblEdPartner:
                       Control: Label@2.5.1
                       Properties:
@@ -3681,8 +3686,8 @@ Screens:
                         Text: ="파트너사명 *"
                         Visible: =gEdCat = "고객 방문" && gEdClient = "파트너사 소개 고객"
                         Width: =300
-                        X: =364
-                        Y: =342
+                        X: =352
+                        Y: =536
                   - txtEdPartner:
                       Control: Classic/TextInput@2.3.2
                       Properties:
@@ -3706,8 +3711,8 @@ Screens:
                         Size: =14
                         Visible: =gEdCat = "고객 방문" && gEdClient = "파트너사 소개 고객"
                         Width: =300
-                        X: =364
-                        Y: =364
+                        X: =352
+                        Y: =558
                   - lblEdHost:
                       Control: Label@2.5.1
                       Properties:
@@ -3721,8 +3726,8 @@ Screens:
                         Size: =12
                         Text: ="담당자 이름 · 직책"
                         Width: =300
-                        X: =364
-                        Y: =410
+                        X: =352
+                        Y: =112
                   - txtEdHostName:
                       Control: Classic/TextInput@2.3.2
                       Properties:
@@ -3744,8 +3749,8 @@ Screens:
                         RadiusTopRight: =0
                         Size: =14
                         Width: =146
-                        X: =364
-                        Y: =432
+                        X: =352
+                        Y: =134
                   - txtEdHostTitle:
                       Control: Classic/TextInput@2.3.2
                       Properties:
@@ -3767,8 +3772,8 @@ Screens:
                         RadiusTopRight: =0
                         Size: =14
                         Width: =146
-                        X: =518
-                        Y: =432
+                        X: =506
+                        Y: =134
                   - lblEdDivOrg:
                       Control: Label@2.5.1
                       Properties:
@@ -3782,8 +3787,8 @@ Screens:
                         Size: =12
                         Text: ="담당(실) · 조직"
                         Width: =300
-                        X: =364
-                        Y: =474
+                        X: =352
+                        Y: =176
                   - txtEdDiv:
                       Control: Classic/TextInput@2.3.2
                       Properties:
@@ -3805,8 +3810,8 @@ Screens:
                         RadiusTopRight: =0
                         Size: =14
                         Width: =146
-                        X: =364
-                        Y: =496
+                        X: =352
+                        Y: =198
                   - txtEdOrg:
                       Control: Classic/TextInput@2.3.2
                       Properties:
@@ -3828,8 +3833,8 @@ Screens:
                         RadiusTopRight: =0
                         Size: =14
                         Width: =146
-                        X: =518
-                        Y: =496
+                        X: =506
+                        Y: =198
                   - lblEdContact:
                       Control: Label@2.5.1
                       Properties:
@@ -3843,8 +3848,8 @@ Screens:
                         Size: =12
                         Text: ="연락처 · 이메일"
                         Width: =300
-                        X: =364
-                        Y: =538
+                        X: =352
+                        Y: =240
                   - txtEdPhone:
                       Control: Classic/TextInput@2.3.2
                       Properties:
@@ -3866,8 +3871,8 @@ Screens:
                         RadiusTopRight: =0
                         Size: =14
                         Width: =146
-                        X: =364
-                        Y: =560
+                        X: =352
+                        Y: =262
                   - txtEdEmail:
                       Control: Classic/TextInput@2.3.2
                       Properties:
@@ -3889,8 +3894,8 @@ Screens:
                         RadiusTopRight: =0
                         Size: =14
                         Width: =146
-                        X: =518
-                        Y: =560
+                        X: =506
+                        Y: =262
                   - rctEdCol2:
                       Control: Rectangle@2.3.0
                       Properties:
@@ -3898,7 +3903,16 @@ Screens:
                         Fill: =cLine
                         Height: =500
                         Width: =1
-                        X: =684
+                        X: =668
+                        Y: =86
+                  - rctEdCol3:
+                      Control: Rectangle@2.3.0
+                      Properties:
+                        BorderColor: =Color.Transparent
+                        Fill: =cLine
+                        Height: =500
+                        Width: =1
+                        X: =996
                         Y: =86
                   - lblEdSec3:
                       Control: Label@2.5.1
@@ -3912,9 +3926,9 @@ Screens:
                         PaddingRight: =0
                         PaddingTop: =0
                         Size: =14
-                        Text: ="업종 · 목적"
-                        Width: =272
-                        X: =704
+                        Text: ="방문 목적 · 언어"
+                        Width: =304
+                        X: =680
                         Y: =86
                   - lblEdInd:
                       Control: Label@2.5.1
@@ -3930,7 +3944,7 @@ Screens:
                         Text: ="업종 (주 업종 하나)"
                         Visible: =gEdCat = "고객 방문"
                         Width: =272
-                        X: =704
+                        X: =680
                         Y: =112
                   - galEdInd:
                       Control: Gallery@2.15.0
@@ -3946,7 +3960,7 @@ Screens:
                         Visible: =gEdCat = "고객 방문"
                         Width: =272
                         WrapCount: =3
-                        X: =704
+                        X: =680
                         Y: =134
                       Children:
                         - btnEdInd:
@@ -3991,7 +4005,7 @@ Screens:
                         Size: =12
                         Text: ="방문 목적 *"
                         Width: =272
-                        X: =704
+                        X: =680
                         Y: =276
                   - galEdPurpose:
                       Control: Gallery@2.15.0
@@ -4006,7 +4020,7 @@ Screens:
                         TemplateSize: =34
                         Width: =272
                         WrapCount: =2
-                        X: =704
+                        X: =680
                         Y: =298
                       Children:
                         - btnEdPurpose:
@@ -4051,7 +4065,7 @@ Screens:
                         Size: =12
                         Text: ="투어 언어"
                         Width: =272
-                        X: =704
+                        X: =680
                         Y: =408
                   - galEdLang:
                       Control: Gallery@2.15.0
@@ -4067,7 +4081,7 @@ Screens:
                         TemplateSize: =38
                         Width: =272
                         WrapCount: =3
-                        X: =704
+                        X: =680
                         Y: =430
                       Children:
                         - btnEdLang:
@@ -4099,6 +4113,90 @@ Screens:
                               Width: =88
                               X: =0
                               Y: =0
+                  - lblEdInterp:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="고객사 통역 동반"
+                        Width: =304
+                        X: =680
+                        Y: =476
+                  - galEdInterp:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        BorderThickness: =0
+                        Height: =38
+                        Items: =["통역 없음", "통역 동반"]
+                        ShowScrollbar: =false
+                        TemplateFill: =Color.Transparent
+                        TemplatePadding: =0
+                        TemplateSize: =38
+                        Width: =272
+                        WrapCount: =2
+                        X: =680
+                        Y: =498
+                      Children:
+                        - btnEdInterp:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =If(gEdInterp = ThisItem.Value, cPrimary, cLine)
+                              BorderThickness: =1
+                              Color: =If(gEdInterp = ThisItem.Value, cWhite, cInk)
+                              DisabledColor: =cInk3
+                              DisabledFill: =cSoft
+                              Fill: =If(gEdInterp = ThisItem.Value, cPrimary, cSurface)
+                              Font: =Font.'Segoe UI'
+                              Height: =34
+                              HoverColor: =If(gEdInterp = ThisItem.Value, cWhite, cInk)
+                              HoverFill: =If(gEdInterp = ThisItem.Value, cPrimaryHover, cSoft)
+                              OnSelect: =Set(gEdInterp, ThisItem.Value)
+                              PaddingBottom: =0
+                              PaddingLeft: =4
+                              PaddingRight: =4
+                              PaddingTop: =0
+                              PressedColor: =If(gEdInterp = ThisItem.Value, cWhite, cInk)
+                              PressedFill: =If(gEdInterp = ThisItem.Value, cPrimaryHover, cSoft)
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =12
+                              Text: =ThisItem.Value
+                              Width: =134
+                              X: =0
+                              Y: =0
+                  - txtEdInterpLang:
+                      Control: Classic/TextInput@2.3.2
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        Default: =If(gEditMode = "edit" && gSel.Interpreter = "Y" && gSel.InterpreterLanguage <> "-", gSel.InterpreterLanguage, "")
+                        Fill: =cSurface
+                        FocusedBorderColor: =cInk
+                        Font: =Font.'Segoe UI'
+                        Height: =36
+                        HintText: ="통역 언어 (선택)"
+                        HoverBorderColor: =cInk3
+                        PaddingLeft: =10
+                        PaddingRight: =10
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Visible: =gEdInterp = "통역 동반"
+                        Width: =272
+                        X: =680
+                        Y: =540
                   - lblEdHeads:
                       Control: Label@2.5.1
                       Properties:
@@ -4112,8 +4210,8 @@ Screens:
                         Size: =12
                         Text: ="방문 인원 *"
                         Width: =272
-                        X: =704
-                        Y: =478
+                        X: =1008
+                        Y: =112
                   - txtEdHeads:
                       Control: Classic/TextInput@2.3.2
                       Properties:
@@ -4136,15 +4234,192 @@ Screens:
                         RadiusTopRight: =0
                         Size: =14
                         Width: =120
-                        X: =704
-                        Y: =500
+                        X: =1008
+                        Y: =134
+                  - lblEdSec4:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk
+                        Font: =Font.'Segoe UI'
+                        FontWeight: =FontWeight.Semibold
+                        Height: =22
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =14
+                        Text: ="참석자 · 메모"
+                        Width: =304
+                        X: =1008
+                        Y: =86
+                  - lblEdComment:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="고객사 물성 및 관심 설비 사전 정보 (선택)"
+                        Width: =304
+                        X: =1008
+                        Y: =176
+                  - txtEdComment:
+                      Control: Classic/TextInput@2.3.2
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        Default: =If(gEditMode = "edit" && gSel.HostComment <> "-", gSel.HostComment, "")
+                        Fill: =cSurface
+                        FocusedBorderColor: =cInk
+                        Font: =Font.'Segoe UI'
+                        Height: =84
+                        HintText: ="취급 물성 · 관심 설비를 미리 적어 둡니다."
+                        HoverBorderColor: =cInk3
+                        Mode: =TextMode.MultiLine
+                        PaddingLeft: =10
+                        PaddingRight: =10
+                        PaddingTop: =8
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Width: =304
+                        X: =1008
+                        Y: =198
+                  - lblEdAttMail:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="참석자 이메일 (선택, ; 로 구분)"
+                        Visible: =gEditMode = "new"
+                        Width: =304
+                        X: =1008
+                        Y: =288
+                  - txtEdAttMail:
+                      Control: Classic/TextInput@2.3.2
+                      Properties:
+                        BorderColor: =cLine
+                        BorderThickness: =1
+                        Color: =cInk
+                        Default: =""
+                        Fill: =cSurface
+                        FocusedBorderColor: =cInk
+                        Font: =Font.'Segoe UI'
+                        Height: =64
+                        HintText: ="kim@hanbitfood.co.kr; lee@hanbitfood.co.kr"
+                        HoverBorderColor: =cInk3
+                        Mode: =TextMode.MultiLine
+                        PaddingLeft: =10
+                        PaddingRight: =10
+                        PaddingTop: =8
+                        RadiusBottomLeft: =0
+                        RadiusBottomRight: =0
+                        RadiusTopLeft: =0
+                        RadiusTopRight: =0
+                        Size: =14
+                        Visible: =gEditMode = "new"
+                        Width: =304
+                        X: =1008
+                        Y: =310
+                  - lblEdMail:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk2
+                        Font: =Font.'Segoe UI'
+                        Height: =20
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =12
+                        Text: ="방문 완료 시 방명록 메일"
+                        Visible: =gEditMode = "new" || Left(gSel.Title, 1) = "M"
+                        Width: =304
+                        X: =1008
+                        Y: =382
+                  - galEdMail:
+                      Control: Gallery@2.15.0
+                      Variant: Vertical
+                      Properties:
+                        BorderThickness: =0
+                        Height: =38
+                        Items: =["보내지 않음", "보냄"]
+                        ShowScrollbar: =false
+                        TemplateFill: =Color.Transparent
+                        TemplatePadding: =0
+                        TemplateSize: =38
+                        Visible: =gEditMode = "new" || Left(gSel.Title, 1) = "M"
+                        Width: =304
+                        WrapCount: =2
+                        X: =1008
+                        Y: =404
+                      Children:
+                        - btnEdMail:
+                            Control: Classic/Button@2.2.0
+                            Properties:
+                              BorderColor: =If(gEdMail = ThisItem.Value, cPrimary, cLine)
+                              BorderThickness: =1
+                              Color: =If(gEdMail = ThisItem.Value, cWhite, cInk)
+                              DisabledColor: =cInk3
+                              DisabledFill: =cSoft
+                              Fill: =If(gEdMail = ThisItem.Value, cPrimary, cSurface)
+                              Font: =Font.'Segoe UI'
+                              Height: =34
+                              HoverColor: =If(gEdMail = ThisItem.Value, cWhite, cInk)
+                              HoverFill: =If(gEdMail = ThisItem.Value, cPrimaryHover, cSoft)
+                              OnSelect: =Set(gEdMail, ThisItem.Value)
+                              PaddingBottom: =0
+                              PaddingLeft: =4
+                              PaddingRight: =4
+                              PaddingTop: =0
+                              PressedColor: =If(gEdMail = ThisItem.Value, cWhite, cInk)
+                              PressedFill: =If(gEdMail = ThisItem.Value, cPrimaryHover, cSoft)
+                              RadiusBottomLeft: =0
+                              RadiusBottomRight: =0
+                              RadiusTopLeft: =0
+                              RadiusTopRight: =0
+                              Size: =12
+                              Text: =ThisItem.Value
+                              Width: =150
+                              X: =0
+                              Y: =0
+                  - lblEdMailNote:
+                      Control: Label@2.5.1
+                      Properties:
+                        Color: =cInk3
+                        Font: =Font.'Segoe UI'
+                        Height: =140
+                        PaddingBottom: =0
+                        PaddingLeft: =0
+                        PaddingRight: =0
+                        PaddingTop: =0
+                        Size: =11
+                        Text: ="참석자 이메일을 넣으면 각자에게 정보 입력 Forms 링크가 갑니다(참석자가 직접 동의 · 입력). 방명록 메일은 그 Forms 로 받은 이메일로만, 승인 건을 [방문 완료]로 바꿀 때 한 번 갑니다. 처음부터 완료로 등록하면 보내지 않습니다."
+                        Visible: =gEditMode = "new"
+                        Width: =304
+                        Wrap: =true
+                        X: =1008
+                        Y: =446
                   - rctEdFoot:
                       Control: Rectangle@2.3.0
                       Properties:
                         BorderColor: =Color.Transparent
                         Fill: =cLine
                         Height: =1
-                        Width: =1000
+                        Width: =1336
                         X: =0
                         Y: =596
                   - btnEdClose:
@@ -4175,7 +4450,7 @@ Screens:
                         Size: =14
                         Text: ="닫기"
                         Width: =104
-                        X: =748
+                        X: =1084
                         Y: =608
                   - btnEdSave:
                       Control: Classic/Button@2.2.0
@@ -4244,7 +4519,13 @@ Screens:
                                                   HostOrg: Trim(txtEdOrg.Text),
                                                   HostPhone: Trim(txtEdPhone.Text),
                                                   HostEmail: Trim(txtEdEmail.Text),
-                                                  ExpectedHeadcount: Value(txtEdHeads.Text)
+                                                  ExpectedHeadcount: Value(txtEdHeads.Text),
+                                                  Interpreter: If(gEdInterp = "통역 동반", "Y", "N"),  // [PA 전용] 수기 등록 · 수정에도 통역 동반 입력 · 웹은 수기 등록 창에서 입력
+                                                  InterpreterLanguage: If(gEdInterp = "통역 동반" && !IsBlank(Trim(txtEdInterpLang.Text)), Trim(txtEdInterpLang.Text), "-"),
+                                                  HostComment: If(IsBlank(Trim(txtEdComment.Text)), "-", Trim(txtEdComment.Text)),
+                                                  FormsLink: Substitute(FormsPrefillUrl, "REQNO", no),
+                                                  InviteEmails: If(gEditMode = "new", Trim(txtEdAttMail.Text), Coalesce(gSel.InviteEmails, "")),  // [PA 전용] 수기 등록 참석자에게 Forms 링크 발송 (흐름 TDLVisitSubmitted) · 웹은 수기 등록 창에서 명단 직접 입력
+                                                  FeedbackMailOn: If(Left(no, 1) = "M" && gEdMail = "보냄", "Y", "N")  // [PA 전용] 수기 건의 방문 완료 방명록 메일 여부 (흐름 TDLVisitDecision) · 웹은 수기 등록 창의 체크
                                               }
                                           );
                                           If(
@@ -4258,8 +4539,8 @@ Screens:
                                                       Status: st, MailedStatus: st,
                                                       ApproveMain: If(gEdTour = "other" || t.Main, If(st = "대기", "대기", "승인"), "-"),
                                                       ApproveMtv: If(gEdTour <> "other" && t.Mtv, If(st = "대기", "대기", "승인"), "-"),
-                                                      ApplicantEmail: Lower(Trim(txtEdEmail.Text)), AttendeeCount: 0, Interpreter: "N", InterpreterLanguage: "-",
-                                                      HostComment: "-", FormsLink: Substitute(FormsPrefillUrl, "REQNO", no), InviteEmails: "", AdminMemo: "수기 등록 · " & User().FullName
+                                                      ApplicantEmail: Lower(Trim(txtEdEmail.Text)), AttendeeCount: 0,
+                                                      AdminMemo: "수기 등록 · " & User().FullName
                                                   }
                                               )
                                           );
@@ -4272,7 +4553,7 @@ Screens:
                                               Set(gSel, LookUp(VisitRequests, Title = no));
                                               Set(gAdminFilter, "전체");
                                               Set(gShowEdit, false);
-                                              Notify(If(gEditMode = "new", "방문 기록을 등록했습니다. 메일은 가지 않습니다.", "예약 정보를 고쳤습니다. 신청자에게 메일은 가지 않으니 필요하면 직접 알려 주세요."), NotificationType.Success)
+                                              Notify(If(gEditMode = "new", If(IsBlank(Trim(txtEdAttMail.Text)), "방문 기록을 등록했습니다. 메일은 가지 않습니다.", "방문 기록을 등록했습니다. 참석자에게 정보 입력 Forms 링크가 갑니다(약 1분 뒤). 신청 담당자에게는 메일이 가지 않습니다."), "예약 정보를 고쳤습니다. 신청자에게 메일은 가지 않으니 필요하면 직접 알려 주세요."), NotificationType.Success)
                                           );
                                           Set(gEdBusy, false)
                                       )
@@ -4292,5 +4573,5 @@ Screens:
                         Size: =14
                         Text: =If(gEdBusy, "저장 중…", If(gEditMode = "new", "등록", "저장"))
                         Width: =116
-                        X: =860
+                        X: =1196
                         Y: =608
