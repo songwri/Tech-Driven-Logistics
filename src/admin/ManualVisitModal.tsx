@@ -1,26 +1,25 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Field, Input, Textarea } from '@/components/ui/Field'
+import { RelaxedFormContext } from '@/components/ui/relaxed'
 import { TimeField } from '@/components/ui/TimeField'
-import { VisitorsFields } from '@/components/visit/VisitFields'
+import { CompanyFields, HostFields, PurposeFields, SectionTitle, VisitorsFields } from '@/components/visit/VisitFields'
 import { cn } from '@/lib/utils'
 import {
-  INDUSTRIES,
-  MAIN_DIVISIONS,
-  OTHER,
   normalizeIndustry,
   STATUS_LABEL,
   toursForSite,
   type AdminSite,
   formatDateShort,
   type Visitor,
+  type VisitDraft,
   type VisitRequest,
   type VisitStatus,
 } from '@/lib/visit'
 import type { ManualInput } from './importLegacy'
 import { feedbackRecipientCount } from './feedbackMail'
-import { opsFromRequest, opsToRequest, splitComma, type OpsValue } from './opsRecord'
+import { opsFromRequest, opsToRequest, type OpsValue } from './opsRecord'
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -58,9 +57,6 @@ function Segmented<T extends string>({
     </div>
   )
 }
-
-const selectClass =
-  'w-full border border-warm-300/60 bg-white px-3 py-2 text-sm text-warm-800 outline-none transition focus:border-brand'
 
 export function OpsFields({
   value,
@@ -104,18 +100,12 @@ export function OpsFields({
   )
 }
 
-function Group({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section>
-      <h3 className="mb-3 border-b border-warm-300/40 pb-1.5 font-mono text-[11px] uppercase tracking-[0.2em] text-warm-600">{title}</h3>
-      {children}
-    </section>
-  )
-}
+const blankHost = { name: '', title: '', division: '', org: '', phone: '', email: '' }
 
 /**
  * 수기 등록 · 수기 기록 수정.
- * 웹 예약 규칙(월 · 수 · 금, 정해진 시간대, 방문자 명단, 개인정보 동의)을 적용하지 않는다.
+ * 신청 화면(reserve)과 같은 순서 · 같은 입력 칸(투어 · 일정 → 담당자 → 방문 기관 → 방문 목적 · 언어 → 방문자 명단)으로 입력한다.
+ * 다른 점: 요일 · 시간 제한이 없고(시간 미정 가능), 업체(기관)명과 방문일 외에는 필수가 아니며, 개인정보 동의는 받지 않는다.
  */
 export function ManualVisitModal({
   site,
@@ -133,41 +123,44 @@ export function ManualVisitModal({
   onClose: () => void
   onSubmit: (input: ManualInput) => Promise<void>
 }) {
-  const [date, setDate] = useState(initial?.date ?? '')
+  const tours = toursForSite(site)
+  const [draft, setDraft] = useState<VisitDraft>(() => ({
+    tour: initial?.tour ?? (site === 'mtv' ? 'mtv' : 'other'),
+    date: initial?.date ?? '',
+    slot: initial?.slot ?? '',
+    category: initial?.category ?? 'external',
+    clientType: initial?.clientType,
+    partnerName: initial?.partnerName ?? '',
+    language: initial?.language ?? 'ko',
+    foreignLanguage: initial?.foreignLanguage ?? '',
+    interpreter: initial?.interpreter ?? false,
+    interpreterLanguage: initial?.interpreterLanguage ?? '',
+    company: initial?.company ?? '',
+    // 업종: 예전 값은 현재 분류로 옮겨 보여 준다.
+    industries: initial?.industries[0] ? [normalizeIndustry(initial.industries[0])] : [],
+    purposes: initial?.purposes ?? [],
+    host: { ...blankHost, ...initial?.host },
+    hostComment: initial?.hostComment ?? '',
+    visitors: initial?.visitors ?? [],
+    note: initial?.note ?? '',
+    consent: false,
+  }))
+  const patch = (change: Partial<VisitDraft>) => setDraft((current) => ({ ...current, ...change }))
   const [start, setStart] = useState(initial?.slot.split('-')[0] ?? '')
   const [end, setEnd] = useState(initial?.slot.split('-')[1] ?? '')
-  const tours = toursForSite(site)
-  const [tour, setTour] = useState(initial?.tour ?? (site === 'mtv' ? 'mtv' : 'other'))
   const [status, setStatus] = useState<VisitStatus>(initial?.status ?? 'approved')
-  const [category, setCategory] = useState(initial?.category ?? 'external')
-  const [partnerName, setPartnerName] = useState(initial?.partnerName ?? '')
-  const [clientType, setClientType] = useState<'none' | 'existing' | 'new' | 'partner'>(initial?.clientType ?? 'none')
-  const [company, setCompany] = useState(initial?.company ?? '')
-  const [purposes, setPurposes] = useState((initial?.purposes ?? []).join(', '))
-  // 업종: 목록에서만 고른다. 예전 업종 값은 현재 분류로 옮겨 보여 준다.
-  const [industry, setIndustry] = useState(normalizeIndustry(initial?.industries[0] ?? ''))
   const [headcount, setHeadcount] = useState(initial?.headcount != null ? String(initial.headcount) : '')
-  // 진행 언어: 한국어 · 영어 · 중국어. 이전 기록의 다른 외국어(예: '기타: 태국어')는 고치지 않으면 그대로 둔다.
-  const initialForeign = initial?.language === 'foreign' ? initial.foreignLanguage : ''
-  const [language, setLanguage] = useState<string>(
-    initial?.language !== 'foreign' ? 'ko' : initialForeign === '중국어' ? 'zh' : initialForeign === '영어' || !initialForeign ? 'en' : 'keep',
-  )
-  const [interpreter, setInterpreter] = useState(initial?.interpreter ?? false)
-  const [interpreterLanguage, setInterpreterLanguage] = useState(initial?.interpreterLanguage ?? '')
-  const [hostName, setHostName] = useState(initial?.host.name ?? '')
-  const [hostDivision, setHostDivision] = useState(initial?.host.division ?? '')
-  const [hostOrg, setHostOrg] = useState(initial?.host.org ?? '')
-  const [visitors, setVisitors] = useState<Visitor[]>(initial?.visitors ?? [])
   // 방문 완료로 바꿀 때 방문자 명단 이메일로 방명록(만족도 · 개선 의견) 요청 메일을 보낼지. 기본은 보내지 않음.
   const [feedbackMail, setFeedbackMail] = useState(initial?.feedbackMail ?? false)
   const [ops, setOps] = useState(() => opsFromRequest(initial ?? {}))
   const [memo, setMemo] = useState(initial?.adminMemo ?? '')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const visitors: Visitor[] = draft.visitors
 
   const submit = async () => {
-    if (!date) return setError('방문일을 입력해 주세요.')
-    if (!company.trim()) return setError('업체(기관)명을 입력해 주세요.')
+    if (!draft.date) return setError('방문일을 입력해 주세요.')
+    if (!draft.company.trim()) return setError(`${draft.category === 'internal' ? '방문 조직' : '업체(기관)'}명을 입력해 주세요.`)
     if ((start && !end) || (!start && end)) return setError('시작 · 종료 시간을 모두 입력하거나 둘 다 비워 두세요. (비우면 시간 미정)')
     if (start && end && start >= end) return setError('종료 시간이 시작 시간보다 늦어야 합니다.')
     const count = headcount.trim() === '' ? undefined : Number(headcount)
@@ -184,35 +177,36 @@ export function ManualVisitModal({
       return setError('방명록 메일을 보내려면 방문자 명단에 이메일이 있는 사람이 한 명 이상 필요합니다.')
     }
 
+    const external = draft.category === 'external'
     const input: ManualInput = {
-      tour,
-      date,
+      tour: draft.tour,
+      date: draft.date,
       slot: start && end ? `${start}-${end}` : '',
       status,
       source: 'manual',
-      category,
-      clientType: category === 'external' && clientType !== 'none' ? clientType : undefined,
-      partnerName: category === 'external' && clientType === 'partner' ? partnerName.trim().replace(/,/g, ' ') : '',
-      language: language === 'ko' ? 'ko' : 'foreign',
-      foreignLanguage: language === 'en' ? '영어' : language === 'zh' ? '중국어' : language === 'keep' ? initialForeign : '',
-      interpreter,
-      interpreterLanguage: interpreter ? interpreterLanguage.trim() : '',
-      company: company.trim(),
-      industries: category === 'external' && industry ? [industry] : [],
-      purposes: splitComma(purposes).slice(0, 1),
+      category: draft.category,
+      clientType: external ? draft.clientType : undefined,
+      partnerName: external && draft.clientType === 'partner' ? (draft.partnerName ?? '').trim().replace(/,/g, ' ') : '',
+      language: draft.language,
+      foreignLanguage: draft.language === 'foreign' ? draft.foreignLanguage : '',
+      interpreter: draft.interpreter,
+      interpreterLanguage: draft.interpreter ? (draft.interpreterLanguage ?? '').trim() : '',
+      company: draft.company.trim(),
+      industries: external ? draft.industries.slice(0, 1) : [],
+      purposes: draft.purposes.slice(0, 1),
       host: {
-        name: hostName.trim(),
-        title: initial?.host.title ?? '',
-        division: hostDivision.trim(),
-        org: hostOrg.trim(),
-        phone: initial?.host.phone ?? '',
-        email: initial?.host.email ?? '',
+        name: draft.host.name.trim(),
+        title: draft.host.title.trim(),
+        division: draft.host.division.trim(),
+        org: draft.host.org.trim(),
+        phone: draft.host.phone.trim(),
+        email: draft.host.email.trim(),
       },
-      hostComment: initial?.hostComment ?? '',
+      hostComment: draft.hostComment.trim(),
       visitors: trimmedVisitors,
       feedbackMail,
       headcount: count,
-      note: initial?.note ?? '',
+      note: draft.note.trim(),
       consent: false,
       adminMemo: memo.trim(),
       ...opsToRequest(ops),
@@ -236,219 +230,166 @@ export function ManualVisitModal({
       description={
         initial
           ? `${formatDateShort(initial.date)} · ${initial.company}`
-          : '전화 · 메일로 잡힌 방문이나 지난 방문을 직접 기록합니다. 요일 · 시간 제한이 없고, 같은 시간에 다른 예약이 있어도 등록됩니다(공동 진행).'
+          : '전화 · 메일로 잡힌 방문이나 지난 방문을 직접 기록합니다. 신청 화면과 같은 순서로 입력하며, 요일 · 시간 제한이 없고 같은 시간에 다른 예약이 있어도 등록됩니다(공동 진행).'
       }
       onClose={onClose}
-      className="max-w-4xl"
+      className="max-w-5xl"
     >
-      <form
-        className="space-y-7"
-        onSubmit={(event) => {
-          event.preventDefault()
-          void submit()
-        }}
-      >
-        <Group title="일정">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Field label="방문일" required>
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-            </Field>
-            <Field label="시작 시간" hint="비우면 시간 미정">
-              <TimeField value={start} onChange={setStart} aria-label="시작 시간" />
-            </Field>
-            <Field label="종료 시간">
-              <TimeField value={end} onChange={setEnd} aria-label="종료 시간" />
-            </Field>
-            <Field label="투어">
-              <select className={selectClass} value={tour} onChange={(e) => setTour(e.target.value as VisitRequest['tour'])}>
-                {tours.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </div>
-          {!initial && (
-            <div className="mt-4">
-              <p className="mb-1.5 font-mono text-[11px] uppercase tracking-wider text-warm-600">상태</p>
-              <Segmented
-                label="상태"
-                value={status}
-                onChange={setStatus}
-                options={MANUAL_STATUSES.map((item) => [item, STATUS_LABEL[item]] as const)}
-              />
-            </div>
-          )}
-        </Group>
-
-        <Group title="방문 정보">
-          <div className="flex flex-wrap items-end gap-4">
-            <div>
-              <p className="mb-1.5 font-mono text-[11px] uppercase tracking-wider text-warm-600">구분</p>
-              <Segmented
-                label="방문 구분"
-                value={category}
-                onChange={setCategory}
-                options={[
-                  ['external', '외부 (고객)'],
-                  ['internal', '내부'],
-                ]}
-              />
-            </div>
-            {category === 'external' && (
+      <RelaxedFormContext.Provider value>
+        <form
+          noValidate
+          className="space-y-12"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void submit()
+          }}
+        >
+          <section>
+            <SectionTitle index="1" aside="요일 · 시간 제한 없음 · 시간은 비워 두면 미정">
+              투어 · 일정
+            </SectionTitle>
+            <div className="grid gap-6 md:grid-cols-2">
               <div>
-                <p className="mb-1.5 font-mono text-[11px] uppercase tracking-wider text-warm-600">고객 구분</p>
-                <Segmented
-                  label="고객 구분"
-                  value={clientType}
-                  onChange={setClientType}
-                  options={[
-                    ['none', '미분류'],
-                    ['existing', '기존'],
-                    ['new', '신규'],
-                    ['partner', '파트너사'],
-                  ]}
-                />
-                {clientType === 'partner' && (
-                  <Input
-                    className="mt-2"
-                    value={partnerName}
-                    onChange={(e) => setPartnerName(e.target.value)}
-                    placeholder="소개한 파트너사명"
-                    maxLength={40}
-                    aria-label="파트너사명"
-                    list="tdl-manual-partner-options"
-                  />
-                )}
-                {clientType === 'partner' && (
-                  <datalist id="tdl-manual-partner-options">
-                    {(partnerSuggestions ?? []).map((item) => (
-                      <option key={item} value={item} />
-                    ))}
-                  </datalist>
+                <p className="mb-2 text-[13px] font-semibold text-warm-800">투어 종류</p>
+                <div className="grid gap-2" role="radiogroup" aria-label="투어 종류">
+                  {tours.map((item) => {
+                    const active = item.id === draft.tour
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => patch({ tour: item.id })}
+                        className={cn(
+                          'flex items-center gap-3 border px-3.5 py-3 text-left transition',
+                          active ? 'border-brand bg-brand/5' : 'border-warm-300/70 hover:border-brand/60',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-[1.5px]',
+                            active ? 'border-brand' : 'border-warm-300',
+                          )}
+                          aria-hidden
+                        >
+                          {active && <span className="h-2.5 w-2.5 rounded-full bg-brand" />}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className={cn('block text-[15px] font-bold', active ? 'text-brand' : 'text-ink')}>{item.label}</span>
+                          {item.description && (
+                            <span className={cn('mt-0.5 block text-[13px] font-medium', active ? 'text-brand/90' : 'text-warm-800')}>
+                              {item.description}
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              <div className="space-y-4">
+                <Field label="방문일" required strict>
+                  <Input type="date" value={draft.date} onChange={(e) => patch({ date: e.target.value })} />
+                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="시작 시간" hint="비우면 시간 미정">
+                    <TimeField value={start} onChange={setStart} aria-label="시작 시간" />
+                  </Field>
+                  <Field label="종료 시간">
+                    <TimeField value={end} onChange={setEnd} aria-label="종료 시간" />
+                  </Field>
+                </div>
+                {!initial && (
+                  <div>
+                    <p className="mb-1.5 text-[13px] font-semibold text-warm-800">상태</p>
+                    <Segmented
+                      label="상태"
+                      value={status}
+                      onChange={setStatus}
+                      options={MANUAL_STATUSES.map((item) => [item, STATUS_LABEL[item]] as const)}
+                    />
+                  </div>
                 )}
               </div>
-            )}
-            <div>
-              <p className="mb-1.5 font-mono text-[11px] uppercase tracking-wider text-warm-600">투어 언어</p>
-              <Segmented
-                label="투어 언어"
-                value={language}
-                onChange={setLanguage}
-                options={[
-                  ['ko', '한국어'],
-                  ['en', '영어'],
-                  ['zh', '중국어'],
-                  ...(initialForeign && language !== 'ko' && !['영어', '중국어'].includes(initialForeign)
-                    ? [['keep', initialForeign.replace(/^기타:\s*/, '')] as [string, string]]
-                    : []),
-                ]}
-              />
             </div>
-            <label className="flex items-center gap-2 pb-2 text-sm text-warm-800">
-              <input type="checkbox" checked={interpreter} onChange={(e) => setInterpreter(e.target.checked)} className="accent-brand" />
-              고객사 통역 동반
-            </label>
-            {interpreter && (
-              <input
-                value={interpreterLanguage}
-                onChange={(e) => setInterpreterLanguage(e.target.value)}
-                maxLength={40}
-                placeholder="방문객 사용 언어 (선택)"
-                aria-label="방문객 사용 언어"
-                className="mb-1 w-44 border border-warm-300/60 bg-white px-2 py-1.5 text-sm"
-              />
-            )}
-          </div>
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <Field label="업체(기관)명" required>
-              <Input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="예: 풀필먼트영업팀, ACME" />
-            </Field>
-            <Field label="방문 인원수" hint={visitors.some((v) => v.name.trim()) ? '아래 방문자 명단이 있으면 명단 인원으로 집계됩니다' : '비우면 미정 · 명단을 입력하면 명단 인원으로 집계'}>
-              <Input inputMode="numeric" value={headcount} onChange={(e) => setHeadcount(e.target.value.replace(/[^\d]/g, ''))} placeholder="6" />
-            </Field>
-            <Field label="방문 목적" hint="한 가지만 입력 (예: 투어). 여러 개를 쓰면 첫 번째만 저장됩니다">
-              <Input value={purposes} onChange={(e) => setPurposes(e.target.value)} />
-            </Field>
-            {category === 'external' && (
-              <Field label="업종" hint="목록에서 하나 선택 · 공공, 대학교처럼 속하지 않으면 기타">
-                <select value={industry} onChange={(e) => setIndustry(e.target.value)} aria-label="업종" className={selectClass}>
-                  <option value="">선택 안 함</option>
-                  {INDUSTRIES.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                  <option value={OTHER}>{OTHER}</option>
-                </select>
+          </section>
+
+          <section>
+            <SectionTitle index="2" aside="모두 선택 입력 · 통계의 담당별 집계에는 담당(실)을 씁니다">
+              신청 담당자
+            </SectionTitle>
+            <HostFields host={draft.host} onChange={(host) => patch({ host })} />
+          </section>
+
+          <section>
+            <SectionTitle index="3">방문 기관</SectionTitle>
+            <CompanyFields draft={draft} onChange={patch} partnerSuggestions={partnerSuggestions} />
+          </section>
+
+          <section>
+            <SectionTitle index="4">방문 목적 · 언어</SectionTitle>
+            <PurposeFields draft={draft} onChange={patch} />
+          </section>
+
+          <section>
+            <SectionTitle index="5" aside="선택 사항 · 이메일을 넣으면 방문 완료 시 방명록 메일을 보낼 수 있습니다">
+              방문자 명단
+            </SectionTitle>
+            <div className="mb-4 max-w-xs">
+              <Field
+                label="방문 인원수"
+                hint={visitors.some((v) => v.name.trim()) ? '아래 명단이 있으면 명단 인원으로 집계됩니다' : '명단 없이 인원만 기록할 때 · 비우면 미정'}
+              >
+                <Input inputMode="numeric" value={headcount} onChange={(e) => setHeadcount(e.target.value.replace(/[^\d]/g, ''))} placeholder="6" />
               </Field>
-            )}
-            <Field label="담당자 (선택)">
-              <Input value={hostName} onChange={(e) => setHostName(e.target.value)} placeholder="홍길동 책임" />
-            </Field>
-            <Field label="담당(실) (선택)" hint="방문 통계의 담당별 집계에 쓰입니다">
-              <Input
-                value={hostDivision}
-                onChange={(e) => setHostDivision(e.target.value)}
-                list="tdl-manual-division-options"
-                placeholder="CL운영담당"
+            </div>
+            <VisitorsFields visitors={visitors} onChange={(next) => patch({ visitors: next })} defaultOrg={draft.company.trim()} optional />
+            <label className="mt-4 flex items-start gap-2 border border-warm-300/60 bg-white px-3 py-3 text-sm text-warm-800">
+              <input
+                type="checkbox"
+                checked={feedbackMail}
+                onChange={(e) => setFeedbackMail(e.target.checked)}
+                disabled={Boolean(initial?.feedbackMailAt)}
+                className="mt-0.5 accent-brand"
               />
-              <datalist id="tdl-manual-division-options">
-                {MAIN_DIVISIONS.map((division) => (
-                  <option key={division} value={division} />
-                ))}
-              </datalist>
-            </Field>
-            <Field label="담당 조직(팀) (선택)">
-              <Input value={hostOrg} onChange={(e) => setHostOrg(e.target.value)} />
-            </Field>
-          </div>
-        </Group>
-
-        <Group title="방문자 명단 · 방명록 메일">
-          <p className="mb-3 text-[13px] leading-relaxed text-warm-600">
-            선택 사항입니다. 방문자별 이메일을 넣어 두면 방문 완료 시 방명록(만족도 · 개선 의견) 요청 메일을 보낼 수 있습니다. 성함만 입력해도 됩니다.
-          </p>
-          <VisitorsFields visitors={visitors} onChange={setVisitors} defaultOrg={company.trim()} optional />
-          <label className="mt-4 flex items-start gap-2 border border-warm-300/60 bg-white px-3 py-3 text-sm text-warm-800">
-            <input
-              type="checkbox"
-              checked={feedbackMail}
-              onChange={(e) => setFeedbackMail(e.target.checked)}
-              disabled={Boolean(initial?.feedbackMailAt)}
-              className="mt-0.5 accent-brand"
-            />
-            <span>
-              <span className="font-semibold">방문 완료 시 방명록 요청 메일 보내기</span>
-              <span className="mt-0.5 block text-[12px] leading-relaxed text-warm-600">
-                {initial?.feedbackMailAt
-                  ? '이미 발송한 예약입니다. 같은 예약에는 다시 보내지 않습니다.'
-                  : `상태를 '방문 완료'로 바꾸는 순간 명단 전체(이메일이 있는 ${feedbackRecipientCount({ visitors })}명)에게 한 번만 발송합니다. 방문자에게 안내하고 동의를 받은 경우에만 켜 주세요. 이미 '방문 완료'로 등록하면 저장 직후 발송됩니다.`}
+              <span>
+                <span className="font-semibold">방문 완료 시 방명록 요청 메일 보내기</span>
+                <span className="mt-0.5 block text-[12px] leading-relaxed text-warm-600">
+                  {initial?.feedbackMailAt
+                    ? '이미 발송한 예약입니다. 같은 예약에는 다시 보내지 않습니다.'
+                    : `상태를 '방문 완료'로 바꾸는 순간 명단 전체(이메일이 있는 ${feedbackRecipientCount({ visitors })}명)에게 한 번만 발송합니다. 방문자에게 안내하고 동의를 받은 경우에만 켜 주세요. 이미 '방문 완료'로 등록하면 저장 직후 발송됩니다.`}
+                </span>
               </span>
-            </span>
-          </label>
-        </Group>
+            </label>
+          </section>
 
-        <Group title="운영 기록">
-          <OpsFields value={ops} onChange={setOps} />
-          <div className="mt-4">
-            <Field label="관리자 메모">
-              <Textarea rows={2} value={memo} onChange={(e) => setMemo(e.target.value)} />
-            </Field>
+          <section>
+            <SectionTitle index="6" aside="관리자만 보는 기록 · 웹 신청에는 없는 항목">
+              운영 기록 · 메모
+            </SectionTitle>
+            <OpsFields value={ops} onChange={setOps} />
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <Field label="기타 요청사항" optional>
+                <Textarea rows={2} value={draft.note} onChange={(e) => patch({ note: e.target.value })} maxLength={1000} />
+              </Field>
+              <Field label="관리자 메모" optional>
+                <Textarea rows={2} value={memo} onChange={(e) => setMemo(e.target.value)} />
+              </Field>
+            </div>
+          </section>
+
+          {error && <p className="border border-brand/40 bg-brand/5 px-3 py-2 text-sm text-brand">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose}>
+              취소
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? '저장 중…' : initial ? '저장' : '등록'}
+            </Button>
           </div>
-        </Group>
-
-        {error && <p className="border border-brand/40 bg-brand/5 px-3 py-2 text-sm text-brand">{error}</p>}
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose}>
-            취소
-          </Button>
-          <Button type="submit" disabled={pending}>
-            {pending ? '저장 중…' : initial ? '저장' : '등록'}
-          </Button>
-        </div>
-      </form>
+        </form>
+      </RelaxedFormContext.Provider>
     </Modal>
   )
 }
