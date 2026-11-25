@@ -11,9 +11,12 @@
 #   B-1 선택일 빨강 · B-2 선택 카드 빨간 테두리 + 초록 배지 · B-3 가능일 강조 + lblMonthAvail · B-4 lblMultiWarn
 #   F-01 업종 9종(기타 직접 입력 칸 lblIndOther · txtIndOther 삭제) · F-02 btnClientPartner + txtPartner(PartnerName 저장)
 #   C-8 신청 담당자 이름 기본값 gMeName (괄호 영문명 · /부서 뗌)
+#   보안팀 검토(11/23): 신청 담당자 본인 개인정보 수집 · 이용 동의 체크 삭제 (사내 계정 정보라 동의 불필요). ConsentAt 저장 안 함. 웹은 동의 유지
 # ── [PA 전용] ──
 #   · conBodyBk: 본문만 스크롤 · 아래 버튼 줄은 화면 아래 고정
 #   · btnNext: 대기 자리를 먼저 잡고 먼저 저장된 쪽만 남김 (웹은 서버 잠금)
+#   · btnNext: 신청번호 끝 무작위 4자리 (V261111-143015-7F3A) · 같은 초 신청의 번호 겹침 방지
+#   · 신청 달력: 공휴일 목록(HolidayKeys)이 끝난 해 뒤 날짜는 닫힘 (App.Formulas HolidayLastYear)
 Screens:
   scrBook:
     Properties:
@@ -23,7 +26,7 @@ Screens:
             gNeedReset,
             Reset(txtHostName); Reset(txtHostTitle); Reset(ddHostDivision); Reset(txtHostDivOther); Reset(txtHostOrg); Reset(txtHostPhone); Reset(txtHostEmail);
             Reset(txtCompany); Reset(txtPartner); Reset(txtHeadcount); Reset(txtPurOther); Reset(chkInterp); Reset(txtInterpLang);
-            Reset(txtComment); Reset(txtAttMail); Reset(chkConsent);
+            Reset(txtComment); Reset(txtAttMail);
             Set(gStep, 1); Set(gTour, First(OpenTours)); Set(gDate, Blank()); Set(gDateKey, ""); Set(gSlot, NoSlot);
             Set(gCategory, "external"); Set(gClientType, "신규 고객사"); Set(gIndustry, ""); Set(gPurpose, ""); Set(gLang, "ko");
             Set(gMonth, Date(Year(EarliestBase), Month(EarliestBase), 1));
@@ -3131,51 +3134,23 @@ Screens:
                         Width: =612
                         X: =710
                         Y: =460
-                  - chkConsent:
-                      Control: Classic/CheckBox@2.1.0
-                      Properties:
-                        CheckboxBackgroundFill: =If(Self.Value, cPrimary, cWhite)
-                        CheckboxBorderColor: =cInk3
-                        CheckmarkFill: =cWhite
-                        Color: =cInk
-                        Font: =Font.'Segoe UI'
-                        FontWeight: =FontWeight.Semibold
-                        Height: =28
-                        HoverColor: =cInk
-                        PressedColor: =cInk
-                        Size: =14
-                        Text: ="[필수] 신청 담당자 본인의 개인정보 수집 · 이용에 동의합니다"
-                        Visible: =gStep = 3
-                        Width: =612
-                        X: =710
-                        Y: =476
-                  - recConsent:
-                      Control: Rectangle@2.3.0
-                      Properties:
-                        BorderColor: =Color.Transparent
-                        Fill: =cBg
-                        Height: =150
-                        Visible: =gStep = 3
-                        Width: =612
-                        X: =710
-                        Y: =512
-                  - lblConsent:
+                  - lblAttNote:
                       Control: Label@2.5.1
                       Properties:
                         Color: =cInk2
                         Font: =Font.'Segoe UI'
-                        Height: =126
+                        Height: =40
                         PaddingBottom: =0
                         PaddingLeft: =0
                         PaddingRight: =0
                         PaddingTop: =0
                         Size: =12
-                        Text: ="수집 항목 · 성함, 직책, 담당(실), 조직명, 연락처, 이메일" & Char(10) & "이용 목적 · 방문 일정 조율, 승인 · 확정 안내" & Char(10) & "보관 · 회사 SharePoint (사내 Microsoft 365) · 방문일로부터 1년 뒤 삭제" & Char(10) & "참석자 개인정보는 참석자 본인이 Forms 에서 따로 동의하고 입력합니다."
+                        Text: ="참석자 개인정보는 참석자 본인이 Forms 에서 수집 · 이용 동의를 하고 직접 입력합니다. (신청 담당자 정보는 사내 계정 정보라 별도 동의를 받지 않습니다.)"
                         VerticalAlign: =VerticalAlign.Top
                         Visible: =gStep = 3
                         Width: =580
                         X: =726
-                        Y: =524
+                        Y: =476
                   - lblVer_scrBook:
                       Control: Label@2.5.1
                       Properties:
@@ -3525,7 +3500,7 @@ Screens:
             Color: =cWhite
             DisabledColor: =cWhite
             DisabledFill: =cInk3
-            DisplayMode: =If(Switch(gStep, 1, !IsBlank(gDate) && !IsBlank(gSlot.Slot) && Left(gDateKey, 7) = Text(gMonth, "yyyy-mm") && !LookUp(SlotRows, Slot = gSlot.Slot).Busy, 2, Len(Trim(txtHostName.Text)) > 0 && Len(Trim(txtHostTitle.Text)) > 0 && ddHostDivision.Selected.Value <> "선택하세요" && (ddHostDivision.Selected.Value <> "기타" || Len(Trim(txtHostDivOther.Text)) > 0) && Len(Trim(txtHostOrg.Text)) > 0 && Len(Trim(txtHostPhone.Text)) > 0 && Len(Trim(txtHostEmail.Text)) > 0 && IsNumeric(txtHeadcount.Text) && Value(txtHeadcount.Text) >= 1 && Value(txtHeadcount.Text) <= 50 && (gCategory = "internal" || (Len(Trim(txtCompany.Text)) > 0 && !IsBlank(gClientType) && (gClientType <> "파트너사 소개 고객" || Len(Trim(txtPartner.Text)) > 0) && !IsBlank(gIndustry))) && !IsBlank(gPurpose) && (gPurpose <> "기타" || Len(Trim(txtPurOther.Text)) > 0) && (!chkInterp.Value || Len(Trim(txtInterpLang.Text)) > 0), 3, chkConsent.Value && !gSaving, false), DisplayMode.Edit, DisplayMode.Disabled)
+            DisplayMode: =If(Switch(gStep, 1, !IsBlank(gDate) && !IsBlank(gSlot.Slot) && Left(gDateKey, 7) = Text(gMonth, "yyyy-mm") && !LookUp(SlotRows, Slot = gSlot.Slot).Busy, 2, Len(Trim(txtHostName.Text)) > 0 && Len(Trim(txtHostTitle.Text)) > 0 && ddHostDivision.Selected.Value <> "선택하세요" && (ddHostDivision.Selected.Value <> "기타" || Len(Trim(txtHostDivOther.Text)) > 0) && Len(Trim(txtHostOrg.Text)) > 0 && Len(Trim(txtHostPhone.Text)) > 0 && Len(Trim(txtHostEmail.Text)) > 0 && IsNumeric(txtHeadcount.Text) && Value(txtHeadcount.Text) >= 1 && Value(txtHeadcount.Text) <= 50 && (gCategory = "internal" || (Len(Trim(txtCompany.Text)) > 0 && !IsBlank(gClientType) && (gClientType <> "파트너사 소개 고객" || Len(Trim(txtPartner.Text)) > 0) && !IsBlank(gIndustry))) && !IsBlank(gPurpose) && (gPurpose <> "기타" || Len(Trim(txtPurOther.Text)) > 0) && (!chkInterp.Value || Len(Trim(txtInterpLang.Text)) > 0), 3, !gSaving, false), DisplayMode.Edit, DisplayMode.Disabled)
             Fill: =cPrimary
             Font: =Font.'Segoe UI'
             HoverColor: =cWhite
@@ -3542,7 +3517,7 @@ Screens:
               Set(gSaveErr, false);
               With(
                   {
-                      no: "V" & Text(Today(), "yymmdd") & "-" & Text(Now(), "hhmmss"),
+                      no: "V" & Text(Today(), "yymmdd") & "-" & Text(Now(), "hhmmss") & "-" & Concat(Sequence(4), Mid("23456789ABCDEFGHJKLMNPQRSTUVWXYZ", RandBetween(1, 32), 1)),  // [PA 전용] 같은 초 신청의 번호 겹침 방지 무작위 4자리 · 웹은 서버 잠금 안에서 번호를 만듦
                       key: gDateKey,
                       langName: LookUp(Languages, Id = gLang).Name
                   },
@@ -3607,8 +3582,7 @@ Screens:
                                   FormsLink: Substitute(FormsPrefillUrl, "REQNO", no),
                                   InviteEmails: Trim(txtAttMail.Text),
                                   AdminMemo: "-",
-                                  MailedStatus: "",
-                                  ConsentAt: Now()
+                                  MailedStatus: ""
                               }
                           );
                           If(

@@ -83,7 +83,7 @@ powerapps/
 │ VisitRequests (신청)   VisitAttendees (참석자 · 관리자만)   TourBusy (점유 · 막기)   │
 │ TourAdmins (관리자 명단)   CenterGuides (센터별 오시는 길 · 약도)                  │
 └──────────────────────────────────────────────────────────────────────────────────┘
-       ▲ ⑥ 관리자가 승인 · 거절 → 흐름 C 결과 메일          흐름 D: 1년 지난 참석자 정보 자동 삭제
+       ▲ ⑥ 관리자가 승인 · 거절 → 흐름 C 결과 메일          흐름 D: 3개월 지난 참석자 정보 자동 삭제
 ```
 
 > **시화MTV 는 현재 닫혀 있습니다** (웹 배포 2026-10-12, `MTV_ENABLED = false`).
@@ -404,9 +404,9 @@ App → `...` → **OnStart 실행** 을 누르면 대부분 사라집니다.
 - [ ] `VisitAttendees` 는 관리자만 접근, 신청자는 **인원 수만** 봄
 - [ ] 참석자 이메일(앱에서 입력한 것)은 **저장하지 않고** 메일 발송에만 사용
 - [ ] 예약 겹침 판정용 `TourBusy` 에는 신청번호 · 시간만 (이름 · 연락처 없음)
-- [ ] 흐름 D 로 방문일 1년 뒤 참석자 정보 자동 삭제, Forms 응답은 월 1회 삭제
+- [ ] 흐름 D 로 방문 종료일로부터 3개월 뒤 참석자 정보 자동 삭제(매일 실행), Forms 응답은 월 1회 삭제
 - [ ] 흐름 · 앱 공동 소유자 지정 (담당자 이동 대비)
-- [ ] 보관 기간(1년)은 회사 개인정보 처리 방침에 맞춰 법무 · 정보보호 담당과 확인 후 동의문 · 흐름 D 를 함께 수정
+- [x] 보관 기간: 보안팀 검토(11/23)로 방문 종료일로부터 3개월 후 파기. 참석자 Forms 동의문(필수 · 선택 구분, 보유기간 강조, 동의하지 않음 선택지) · 흐름 D 반영
 
 ## 11. 문제 해결
 
@@ -444,8 +444,9 @@ App → `...` → **OnStart 실행** 을 누르면 대부분 사라집니다.
 - 3번은 잠금이 아니라 '먼저 저장된 쪽 우선' 방식입니다. 두 사람이 같은 순간에 눌러도 한 건만 남지만, 진 쪽은 저장 직후 '다른 시간을 골라 주세요' 안내를 받습니다.
 - 웹 기능 중 옮기지 않은 것: **엑셀 이력 가져오기**(앱 대신 SharePoint 목록에 붙여 넣기, `1-sharepoint/history-import.md`),
   통계 막대를 눌러 그 건 목록 보기 · 통계 엑셀 내려받기, 파트너사별 실적에서 줄을 눌러 소개 방문 목록 보기,
-  관리자 수정 창의 주요 인원 · 유관 부서 · 후속 진행 칸,
+  관리자 수정 창의 운영 기록(실제 방문 인원 · 주요 인원 · 유관 부서 · 후속 진행) 칸 (개발자 버전도 같음, 11/11 반영하지 않기로 결정),
   수기 등록 창의 방문자별 명단(이름 · 직책 · 조직 · 이메일)과 '방문 완료 시 방명록 메일 보내기' 선택(수기 등록 건은 완료해도 메일이 가지 않음).
+- 신청 담당자 본인 개인정보 수집 · 이용 동의 체크: 웹에는 있고 Power Apps 에는 없습니다. 보안팀 검토(11/23)에서 사내 계정 정보라 동의가 필요 없다고 해 Power Apps 에서 뺐습니다. 웹은 담당자가 방문자 명단을 대신 입력하므로 그대로 둡니다.
 - 방명록에서 웹과 다른 점: 웹의 로봇 · 컨베이어 그림과 작성 전후 연출(로봇이 용지를 집어 듦)은 없고 오른쪽에 평균 만족도 카드가 있습니다.
   관리자가 '미분류' 글에 투어를 지정하는 기능, 화면에서 바로 받는 엑셀 파일은 없습니다(SharePoint 목록 → 내보내기).
   외부 방문객이 쓰는 방명록 Forms 는 별점이 1점 단위입니다(앱 · 웹은 0.5점). 띠는 마우스를 올려도 멈추지 않고 [멈춤] 버튼으로 멈춥니다.
@@ -496,11 +497,11 @@ YAML 구조 · 컨트롤 이름 중복 · 수식 괄호는 스크립트로 검�
 | 가이드 명단을 SharePoint `GuideRoster` 목록으로 (인사 이동 때 앱 수정 불필요) | `scrGuides` OnVisible `colRoster`, `1-sharepoint/GuideRoster.csv` | 코드 `guideRoster.ts` 에 고정 |
 | 머리말에서 관리자 메뉴(예약 관리 · 달력 · 통계 · 가이드 배정 · 방명록 관리)를 오른쪽 묶음 + 빨간 '관리자' 표시로 구분 | 모든 화면 `hdr?AdmZone` · `hdr?AdmLabel` | 관리자 페이지(/admin)가 따로 있음 |
 | 참석자 Forms 직접 입력 · 동의 (흐름 B) | `App.Formulas` `FormsPrefillUrl`, `scrDone`, `flows.md` B | 신청자가 명단 대리 입력 |
-| 참석자 정보 1년 뒤 자동 삭제 (흐름 D) | `flows.md` D | 없음 |
+| 참석자 정보 방문 종료일로부터 3개월 뒤 자동 삭제 (흐름 D, 매일) | `flows.md` D | 없음 (보유기간 문구만 3개월) |
 | 내 신청 화면 · 신청자 본인 취소 | `scrMy` | 없음 |
 | 연속 클릭 잠금 | `scrBook` btnNext, `scrAdmin` 승인 · 거절 · 취소 · 완료 | 없음 |
 | 신청 직전 재확인 + 먼저 저장된 쪽만 남김 | `scrBook` btnNext | 서버 잠금(LockService) 안에서 확인 |
-| 신청번호 · 막기 번호 무작위 4자리 | `scrBook` btnNext, `scrAdmin` btnBlockSave | 내부 ID 는 UUID |
+| 신청번호 · 막기 번호 무작위 4자리 | `scrBook` btnNext, `scrAdmin` btnBlockSave (개발자 버전: `scrBook` btnNext, `scrAdmin` 수기 등록 번호) | 내부 ID 는 UUID |
 | 누르는 순간 최신 상태 재확인 · 복합 투어 동시 승인 보정 | `scrAdmin` btnApprove · btnReject | 서버 잠금 안에서 처리 |
 | 메일 흐름 실패 경고 · 흐름 실패 알림 메일 | `scrBook` · `scrAdmin` 수식, `flows.md` | Apps Script 오류로 표시 |
 | 통계를 해마다 나눠 읽기 | `scrStats` OnVisible | 시트 전체 읽기 |
@@ -512,5 +513,5 @@ YAML 구조 · 컨트롤 이름 중복 · 수식 괄호는 스크립트로 검�
 | 외부 방문객 방명록을 Forms 로 받기 (흐름 F) | `2-forms/guestbook-form.md`, `flows.md` F | 공개 웹 페이지에서 바로 작성 |
 | 방명록 화면 오른쪽 평균 만족도 카드 · [멈춤] 버튼 | `scrGuest` conGbSummary · btnGbPlay | 로봇 · 컨베이어 그림, 마우스를 올리면 멈춤 |
 | 방명록 엑셀은 SharePoint 목록 내보내기로 | `scrGuestAdmin` btnGbAdmExcel, `App.Formulas` `GuestbookListUrl` | 화면에서 바로 엑셀 파일 |
-| 공휴일 목록이 끝난 해 뒤 날짜 닫기 · 관리자 알림 | `App.Formulas` `HolidayLastYear`, `scrBook` galCal, `scrAdmin` OnVisible | 공휴일 자동 계산 |
+| 공휴일 목록이 끝난 해 뒤 날짜 닫기 · 관리자 알림 | `App.Formulas` `HolidayLastYear`, `scrBook` galCal, `scrAdmin` OnVisible (개발자 버전: `App.Formulas` `CalDays` 와 `HolidayLastYear`, `scrAdmin` OnVisible) | 공휴일 자동 계산 |
 | (개발자 버전) 데이터 관리 화면 · 변경 기록 · 접근 계정은 `TourAdmins` 의 Site = data | `6-dev-update/Src/scrData.pa.yaml`, `DataAdminLog` 목록, App `varIsDataAdmin` | 시트를 직접 편집 |

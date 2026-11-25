@@ -34,7 +34,7 @@
   <p style="margin:0 0 20px;color:#736662">{{TourName}} · {{DateKey}} {{ScheduleText}}</p>
   <p style="margin:0 0 12px">출입 등록을 위해 아래 링크에서 참석자 정보를 입력해 주세요. 1분 정도 걸립니다.</p>
   <p style="margin:0 0 20px"><a href="{{FormsLink}}" style="display:inline-block;background:#A72B2B;color:#FFFFFF;text-decoration:none;padding:10px 18px;border-radius:0">참석자 정보 입력</a></p>
-  <p style="font-size:12px;color:#ACA8A7;margin:0">입력하신 정보는 출입 등록과 방문 안내에만 쓰이며 방문일로부터 1년 뒤 삭제됩니다.</p>
+  <p style="font-size:12px;color:#ACA8A7;margin:0">입력하신 정보는 참석자 확인 · 출입 등록 · 방문 안내 · 방문 후 만족도 조사 안내에만 쓰이며 <b><u>방문 종료일로부터 3개월 후 파기</u></b>됩니다.</p>
 </div>
 ```
 

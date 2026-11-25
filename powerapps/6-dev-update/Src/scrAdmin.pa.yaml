@@ -18,6 +18,7 @@
 # ── [PA 전용] ──
 #   · conMail: 승인 · 거절 · 일정 취소 · 방문 완료 전 메일 미리보기 + 사유 입력 (웹에는 없음)
 #   · conBodyAd: 본문만 스크롤 · btnEdSave 저장 중 잠금
+#   · OnVisible: 공휴일 목록이 끝나 가면 알림 · 수기 등록 번호 끝 무작위 4자리
 Screens:
   scrAdmin:
     Properties:
@@ -37,7 +38,9 @@ Screens:
             Set(gAdminFilter, "전체");
             Set(gDeepDone, true)
         );
-        ClearCollect(colBusy, Filter(TourBusy, MonthKey = Text(gMonth, "yyyy-mm")))
+        ClearCollect(colBusy, Filter(TourBusy, MonthKey = Text(gMonth, "yyyy-mm")));
+        // [PA 전용] 공휴일 목록이 끝나 가면 알림 · 웹은 공휴일 자동 계산
+        If(Year(Today()) + 1 > HolidayLastYear, Notify("공휴일 목록(App.Formulas 의 HolidayKeys)이 " & HolidayLastYear & "년까지만 있습니다. 그 뒤 날짜는 신청 달력에서 닫혀 있으니 다음 해 공휴일을 추가해 주세요.", NotificationType.Warning))
     Children:
       - conBodyAd:
           Control: GroupContainer@1.3.0
@@ -4205,7 +4208,7 @@ Screens:
                                       t: LookUp(Tours, Id = gEdTour),
                                       sl: LookUp(TourSlots, Tour = gEdTour && Slot = gEdSlot),
                                       st: If(gEditMode = "new", gEdStatus, gSel.Status),
-                                      no: If(gEditMode = "new", "M" & Text(Now(), "yymmdd-hhmmss"), gSel.Title),
+                                      no: If(gEditMode = "new", "M" & Text(Now(), "yymmdd-hhmmss") & "-" & Concat(Sequence(4), Mid("23456789ABCDEFGHJKLMNPQRSTUVWXYZ", RandBetween(1, 32), 1)), gSel.Title),  // [PA 전용] 수기 등록 번호 무작위 4자리 · 웹은 내부 ID
                                       tm: If(gEdTour = "other", Trim(txtEdTime.Text), gEdSlot)
                                   },
                                   With(
