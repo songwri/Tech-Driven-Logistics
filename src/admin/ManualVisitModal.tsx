@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Modal } from '@/components/ui/Modal'
+import { DISCARD_MESSAGE, Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Field, Input, Textarea } from '@/components/ui/Field'
 import { RelaxedFormContext } from '@/components/ui/relaxed'
@@ -158,6 +158,11 @@ export function ManualVisitModal({
   const [error, setError] = useState<string | null>(null)
   const visitors: Visitor[] = draft.visitors
 
+  // 열었을 때와 달라졌으면 입력 중으로 본다 (실수로 닫히지 않게 Modal 이 확인을 받는다).
+  const snapshot = JSON.stringify([draft, start, end, status, headcount, feedbackMail, ops, memo])
+  const [openedWith] = useState(snapshot)
+  const dirty = snapshot !== openedWith
+
   const submit = async () => {
     if (!draft.date) return setError('방문일을 입력해 주세요.')
     if (!draft.company.trim()) return setError(`${draft.category === 'internal' ? '방문 조직' : '업체(기관)'}명을 입력해 주세요.`)
@@ -233,6 +238,7 @@ export function ManualVisitModal({
           : '전화 · 메일로 잡힌 방문이나 지난 방문을 직접 기록합니다. 신청 화면과 같은 순서로 입력하며, 요일 · 시간 제한이 없고 같은 시간에 다른 예약이 있어도 등록됩니다(공동 진행).'
       }
       onClose={onClose}
+      dirty={dirty}
       className="max-w-5xl"
     >
       <RelaxedFormContext.Provider value>
@@ -381,7 +387,7 @@ export function ManualVisitModal({
 
           {error && <p className="border border-brand/40 bg-brand/5 px-3 py-2 text-sm text-brand">{error}</p>}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={() => (!dirty || window.confirm(DISCARD_MESSAGE)) && onClose()}>
               취소
             </Button>
             <Button type="submit" disabled={pending}>

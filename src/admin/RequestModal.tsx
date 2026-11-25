@@ -122,7 +122,13 @@ export function RequestModal({ site, readOnly, request, requests, onClose, onSet
 
   if (editing) {
     return (
-      <Modal eyebrow="Edit Reservation" title="예약 정보 수정" onClose={() => setEditing(false)} className="max-w-6xl">
+      <Modal
+        eyebrow="Edit Reservation"
+        title="예약 정보 수정"
+        onClose={() => setEditing(false)}
+        dirty={JSON.stringify(draft) !== JSON.stringify({ ...request, consent: true }) || memo !== request.adminMemo}
+        className="max-w-6xl"
+      >
         <div className="space-y-8">
           <div className="grid gap-8 md:grid-cols-[320px_1fr]">
             <section>
