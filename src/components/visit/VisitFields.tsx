@@ -566,6 +566,7 @@ export function CompanyFields({
             <Field
               label={external ? '업체명' : '방문 조직명'}
               required
+              strict
               error={errors?.has('company') ? (external ? '업체명을 입력해 주세요.' : '방문 조직명을 입력해 주세요.') : null}
             >
               <Input
