@@ -46,10 +46,23 @@ def save(n, d):
     files[n] = json.dumps(d, ensure_ascii=False).encode('utf-8')
 
 
-# 2-1 접수: 관리자 수기 등록(신청번호 M...)은 접수 메일 없음
+# 2-1 접수: 관리자 수기 등록(신청번호 M...)은 신청 담당자 접수 메일 · 센터 관리자 알림 없음.
+#      단, 참석자 이메일(InviteEmails = field_39)을 넣은 수기 등록은 참석자 정보 입력 Forms 링크 메일만 보낸다.
 n, d = flow('TDLVisitSubmitted')
-for t in d['properties']['definition']['triggers'].values():
-    t['conditions'] = [{'expression': "@not(startsWith(triggerOutputs()?['body/Title'], 'M'))"}]
+df = d['properties']['definition']
+INVITE = "trim(coalesce(triggerOutputs()?['body/field_39'], ''))"
+for t in df['triggers'].values():
+    t['conditions'] = [{'expression': "@or(not(startsWith(triggerOutputs()?['body/Title'], 'M')), and(not(equals(" + INVITE + ", '')), not(equals(" + INVITE + ", '-'))))"}]
+acts = df['actions']
+moved = {k: acts.pop(k) for k in ['Send_an_email_(V2)', '관리자목록', '해당관리자', '관리자메일', 'Debug_001', 'Condition_2']}
+invite = acts.pop('Condition')                                    # 참석자 초대 (field_39 가 비어 있지 않으면)
+moved['Send_an_email_(V2)']['runAfter'] = {}
+moved['관리자목록']['runAfter'] = {'Send_an_email_(V2)': ['Succeeded']}
+acts['접수와알림'] = {'type': 'If', 'runAfter': {},
+                   'expression': {'and': [{'not': {'startsWith': ["@triggerBody()?['Title']", 'M']}}]},
+                   'actions': moved, 'else': {'actions': {}}}
+invite['runAfter'] = {'접수와알림': ['Succeeded', 'Skipped']}
+acts['참석자초대'] = invite
 save(n, d)
 
 # 2-2 참석자 응답: 동의하지 않은 응답(Forms 분기로 성함 없이 끝남)은 저장하지 않음 (보안팀 검토)
@@ -123,7 +136,9 @@ cases['완료'] = {'case': '완료', 'actions': {
     '보낼조건': {'type': 'If', 'runAfter': {'후기링크': ['Succeeded']},
              'expression': {'and': [
                  {'startsWith': ["@outputs('후기링크')", 'https://forms']},
-                 {'not': {'startsWith': ["@triggerBody()?['Title']", 'M']}},
+                 # 수기 등록(M...)은 FeedbackMailOn = Y 로 정한 건만 (VisitRequests 의 FeedbackMailOn 열, 앱 수기 등록 창의 '방문 완료 시 방명록 메일')
+                 {'or': [{'not': {'startsWith': ["@triggerBody()?['Title']", 'M']}},
+                         {'equals': ["@coalesce(triggerBody()?['FeedbackMailOn'], 'N')", 'Y']}]},
                  {'greaterOrEquals': ["@formatDateTime(triggerBody()?['Created'], 'yyyy-MM-dd')", '2026-10-22']},
                  {'lessOrEquals': ["@formatDateTime(triggerBody()?['field_3'], 'yyyy-MM-dd')", "@formatDateTime(convertFromUtc(utcNow(), 'Korea Standard Time'), 'yyyy-MM-dd')"]}]},
              'actions': {

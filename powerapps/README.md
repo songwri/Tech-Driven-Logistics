@@ -34,7 +34,7 @@ powerapps/
 ├─ README.md                  ← 지금 이 가이드
 ├─ mockup/index.html          ← 1366×768 화면 설계 (브라우저로 열어 보기)
 ├─ mockup/screens.html        ← 화면 12장 한눈에 보기 (이미지는 mockup/screens/*.png)
-├─ 6-dev-update/              ← 개발자 버전(TDL_VISITOR 1.0.0.1, 10/18)에 수정 요청서를 반영한 화면 YAML · 적용 안내 (README.md)
+├─ 6-dev-update/              ← ★ 실제 산출물: 개발자 버전(TDL_VISITOR 1.0.0.1, 10/18) 구조 그대로 수정 요청서를 반영한 화면 YAML(Src/) · 가져오기 zip 만드는 도구(tools/) · 적용 안내(README.md). Power Apps 변경은 항상 여기를 기준으로 합니다
 ├─ 1-sharepoint/
 │  ├─ VisitRequests.csv       ← 목록 만들기용 (CSV 로 목록 만들기)
 │  ├─ VisitAttendees.csv
@@ -48,7 +48,7 @@ powerapps/
 │  └─ provision.ps1           ← (선택) IT 팀용 한 번에 만들기 스크립트
 ├─ 2-forms/attendee-form.md   ← 참석자 Forms 질문 · 설정
 ├─ 2-forms/guestbook-form.md  ← 외부 방문객용 방명록 Forms (방문 완료 메일의 링크)
-├─ 3-powerapps/
+├─ 3-powerapps/               ← 개발자에게 구조를 설명하려고 처음 만든 참고용 소스 (실제 적용 대상 아님, 이후 변경은 반영하지 않음)
 │  ├─ App.Formulas.txt        ← 색 · 투어 · 시간표 · 공휴일 (App.Formulas 에 붙여넣기)
 │  ├─ App.OnStart.txt         ← 앱 시작 시 실행 (App.OnStart 에 붙여넣기)
 │  ├─ scrBook.yaml            ← 방문 신청 3단계 화면
@@ -445,8 +445,7 @@ App → `...` → **OnStart 실행** 을 누르면 대부분 사라집니다.
 - 웹 기능 중 옮기지 않은 것: **엑셀 이력 가져오기**(앱 대신 SharePoint 목록에 붙여 넣기, `1-sharepoint/history-import.md`),
   통계 막대를 눌러 그 건 목록 보기 · 통계 엑셀 내려받기, 파트너사별 실적에서 줄을 눌러 소개 방문 목록 보기,
   관리자 수정 창의 운영 기록(실제 방문 인원 · 주요 인원 · 유관 부서 · 후속 진행) 칸 (개발자 버전도 같음, 11/11 반영하지 않기로 결정),
-  수기 등록 · 수정 창을 신청 화면과 같은 순서 · 같은 입력 칸(투어 · 일정 → 담당자 → 방문 기관 → 방문 목적 · 언어 → 방문자 명단)으로 입력하는 구성,
-  방문자별 명단(이름 · 직책 · 조직 · 이메일)과 '방문 완료 시 방명록 메일 보내기' 선택(Power Apps 수기 등록 건은 완료해도 메일이 가지 않음).
+  수기 등록 창의 방문자 명단 직접 입력(Power Apps 는 같은 자리에 참석자 이메일을 넣어 Forms 링크를 보내고, 참석자가 직접 동의 · 입력합니다. 11/23 보안팀 결정).
 - 신청 담당자 본인 개인정보 수집 · 이용 동의 체크: 웹에는 있고 Power Apps 에는 없습니다. 보안팀 검토(11/23)에서 사내 계정 정보라 동의가 필요 없다고 해 Power Apps 에서 뺐습니다. 웹은 담당자가 방문자 명단을 대신 입력하므로 그대로 둡니다.
 - 방명록에서 웹과 다른 점: 웹의 로봇 · 컨베이어 그림과 작성 전후 연출(로봇이 용지를 집어 듦)은 없고 오른쪽에 평균 만족도 카드가 있습니다.
   관리자가 '미분류' 글에 투어를 지정하는 기능, 화면에서 바로 받는 엑셀 파일은 없습니다(SharePoint 목록 → 내보내기).
@@ -513,6 +512,7 @@ YAML 구조 · 컨트롤 이름 중복 · 수식 괄호는 스크립트로 검�
 | 방명록 공개용 목록(가명 값만) · 흐름 G 로 가명 행 만들기 · 숨기기/다시 표시 때 공개 행 지우기/다시 만들기 | `GuestbookPublic`, `flows.md` G, `scrGuestAdmin` btnGbAdmToggle | 시트 한 장 + 서버가 가명 값만 내려 줌 |
 | 외부 방문객 방명록을 Forms 로 받기 (흐름 F) | `2-forms/guestbook-form.md`, `flows.md` F | 공개 웹 페이지에서 바로 작성 |
 | 방명록 화면 오른쪽 평균 만족도 카드 · [멈춤] 버튼 | `scrGuest` conGbSummary · btnGbPlay | 로봇 · 컨베이어 그림, 마우스를 올리면 멈춤 |
+| 수기 등록 참석자: 이메일을 넣으면 참석자에게 Forms 링크 발송(참석자가 직접 동의 · 입력) · 방명록 메일은 수기 건마다 보냄/보내지 않음 선택(`FeedbackMailOn`) | `6-dev-update` scrAdmin `conEdit` `txtEdAttMail` · `galEdMail`, 흐름 TDLVisitSubmitted · TDLVisitDecision | 수기 등록 창에서 방문자 명단 직접 입력 + 체크 |
 | 방명록 엑셀은 SharePoint 목록 내보내기로 | `scrGuestAdmin` btnGbAdmExcel, `App.Formulas` `GuestbookListUrl` | 화면에서 바로 엑셀 파일 |
 | 공휴일 목록이 끝난 해 뒤 날짜 닫기 · 관리자 알림 | `App.Formulas` `HolidayLastYear`, `scrBook` galCal, `scrAdmin` OnVisible (개발자 버전: `App.Formulas` `CalDays` 와 `HolidayLastYear`, `scrAdmin` OnVisible) | 공휴일 자동 계산 |
 | (개발자 버전) 데이터 관리 화면 · 변경 기록 · 접근 계정은 `TourAdmins` 의 Site = data | `6-dev-update/Src/scrData.pa.yaml`, `DataAdminLog` 목록, App `varIsDataAdmin` | 시트를 직접 편집 |

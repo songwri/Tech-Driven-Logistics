@@ -26,7 +26,7 @@
 
 1. **백업**: 지금 솔루션을 내보내 둠 (관리되지 않음).
 2. **SharePoint 먼저** (가져오기 전에 해 두면 앱 오류가 줄어듦)
-   - `VisitRequests` 열 추가: `PartnerName`(한 줄 텍스트), `Guides`(여러 줄 텍스트)
+   - `VisitRequests` 열 추가: `PartnerName`(한 줄 텍스트), `Guides`(여러 줄 텍스트), `FeedbackMailOn`(한 줄 텍스트, 기본값 `N` — 수기 등록 건의 '방문 완료 시 방명록 메일' 선택)
    - 새 목록: `Guestbook` · `GuestbookPublic` · `GuideRoster` — `../1-sharepoint/` 의 CSV 로 만들고 권한은 `../README.md` 3-4절
    - `TourAdmins`: 데이터 관리 화면을 쓸 사람을 `Title = 메일(소문자)`, `Site = data` 행으로 추가
 3. make.powerapps.com → 솔루션 → **가져오기** → zip 선택 → 연결 참조는 지금 쓰는 SharePoint · Office 365 연결 선택 → 기존 솔루션 업그레이드(1.0.0.1 → 1.0.0.2).
@@ -81,7 +81,7 @@
 | A-4 | 참석자 표 머리글 선명하게, '구분' → '비고'(추가 인원 표시) | scrAdmin `th0~th6` |
 | F-06 | [방문 완료] → 후기(방명록) 요청 메일 | scrAdmin `btnComplete` (상태 완료 저장) + 흐름 C 사례 완료 (3절) |
 | F-03 | 고객 구분 빠른 변경, 통계 파트너사별 실적 | scrAdmin `btnOpenClient` · `conClient`, scrStats `galPartner` |
-| F-04 | 관리자 정보 수정 · 수기 등록 (당일 · 익일 · 지난 날짜 허용, 승인 건은 달력 자리 이동 · 겹치면 저장 안 함) | scrAdmin `btnOpenEdit` · `btnOpenManual` · `conEdit` |
+| F-04 | 관리자 정보 수정 · 수기 등록 (당일 · 익일 · 지난 날짜 허용, 승인 건은 달력 자리 이동 · 겹치면 저장 안 함). 입력 칸 순서는 신청 화면과 같음: 일정 → 담당자 · 방문 기관 → 목적 · 언어 · 통역 → 참석자 · 사전 정보. 통역 동반 · 사전 정보 · 참석자 이메일(Forms 링크 발송) · 방문 완료 시 방명록 메일 선택 포함 | scrAdmin `btnOpenEdit` · `btnOpenManual` · `conEdit` (`galEdInterp` · `txtEdInterpLang` · `txtEdComment` · `txtEdAttMail` · `galEdMail`), 저장 `FeedbackMailOn` · `InviteEmails` |
 | K-1 · K-4 | 칩 바탕 = 상태 · 왼쪽 띠 = 투어 색, '대기 n' 배지 (개발자 구현 유지, 색만 웹과 같게), 운영 안 하는 날 옅은 바탕 | scrCalendar `galCalMonth`(Op) · `recDay` |
 | K-2 | 약칭 센터 · Lab · 센터+Lab | App `Tours.Short`, 막기 칩 |
 | K-3 | 오늘 = 빨간 원, 선택 칸 = 빨간 테두리 | scrCalendar `btnDayNo` (예전 `lblDayNo`) · `recDay` |
@@ -100,8 +100,8 @@
 
 | 흐름 | 변경 |
 | --- | --- |
-| TDLVisitSubmitted | 트리거 설정 → 트리거 조건 추가 `@not(startsWith(triggerOutputs()?['body/Title'], 'M'))` — 관리자 **수기 등록**(신청번호 M…)은 접수 메일을 보내지 않음 |
-| TDLVisitDecision | ① 트리거 조건의 `or(...)` 에 `equals(triggerOutputs()?['body/field_17'], '완료')` 추가 ② Switch 에 사례 **완료** 추가 (아래) ③ 마지막 Update_item(MailedStatus) 은 그대로 |
+| TDLVisitSubmitted | 관리자 **수기 등록**(신청번호 M…)은 신청 담당자 접수 메일 · 센터 관리자 알림을 보내지 않음. 단, 수기 등록 창에 **참석자 이메일**을 넣은 건은 참석자에게 Forms 링크 메일만 보냄. ① 트리거 조건 `@or(not(startsWith(Title,'M')), 참석자 이메일(field_39) 있음)` ② 접수 메일 · 관리자 알림 단계를 조건 `접수와알림`(M 아님) 안으로, 참석자 초대는 그 밖 `참석자초대` 로 분리 |
+| TDLVisitDecision | ① 트리거 조건의 `or(...)` 에 `equals(triggerOutputs()?['body/field_17'], '완료')` 추가 ② Switch 에 사례 **완료** 추가 (아래) ③ 마지막 Update_item(MailedStatus) 은 그대로. 수기 등록(M…) 건은 `FeedbackMailOn = Y` 로 정했을 때만 완료 메일을 보냄 |
 | TDLRetention | ① 반복을 **매일**로 ② 참석자(`VisitAttendees`) 삭제 기준을 방문일 1년 → **방문 종료일로부터 3개월** (`addToTime(utcNow(), -3, 'Month', 'yyyy-MM-dd')`) ③ 등록 1년 지난 `Guestbook` 항목 삭제 추가 (`../4-power-automate/flows.md` D) |
 | TDLAttendeeCollect | 트리거 다음에 조건 `동의확인` 추가: 성함이 빈 응답(Forms 에서 '동의하지 않습니다' → 양식 끝)은 저장하지 않고 끝냄 (`flows.md` B 2-1). 이메일이 선택 항목이 되므로 비어 있어도 그대로 저장 |
 | TDLGuestbookAdd (신규) | 앱 방명록 등록 → Guestbook 저장. 입력 순서 Name · Company · Team · Role · Rating(숫자) · Tour · Message (회사 · 팀 · 직책은 비면 앱이 `-` 를 보냄 → 빈 칸으로 저장). `flows.md` E |
@@ -113,7 +113,7 @@
 
 **사례 '완료' (방문 후 방명록 요청 메일, F-06)** — 웹 `sendFeedbackMail_` 와 같은 조건 (zip 에 들어 있는 구성)
 1. 작성 `후기링크`: 방명록 Forms 미리 채운 링크 (`TOURQ` = 투어 이름, `REQNO` = 신청번호). 자리표시 그대로면 아래 조건에서 걸러져 보내지 않음
-2. 조건 `보낼조건`: 링크가 `https://forms` 로 시작 **그리고** 수기 등록(M…) 아님 **그리고** 신청일(Created)이 2026-10-22 이후 **그리고** 방문일이 오늘(한국 시간) 이전
+2. 조건 `보낼조건`: 링크가 `https://forms` 로 시작 **그리고** (수기 등록(M…) 아님 **또는** `FeedbackMailOn = Y`) **그리고** 신청일(Created)이 2026-10-22 이후 **그리고** 방문일이 오늘(한국 시간) 이전
 3. `후기참석자` VisitAttendees `field_1(RequestNo) eq 신청번호` → `참석확인`(Status 미매칭 제외) → `후기주소`(소문자 · 공백 제거) → `받는사람`(같은 주소 1번, 이메일 형식만)
 4. 한 사람씩 메일: Language = 한국어 → F-1, 그 밖 → F-2 (영문 위 · 한국어 아래). 문구는 `../4-power-automate/mail-templates.md` 와 같음
 5. 다시 보내지 않음: 개발자 방식대로 마지막 `Update_item` 이 `MailedStatus = 완료` 를 남기므로 같은 예약에 두 번 가지 않음.
@@ -129,6 +129,7 @@
 - [ ] 신청: 경고 줄, 가능한 날 빨간 테두리, 'n월 예약 가능 n일', 업종 10칸(기타 입력 칸 없음), [파트너사 소개] → 파트너사명 비우면 [다음] 잠김 → 저장 후 PartnerName 확인
 - [ ] 관리자: [승인] → 미리보기 창 → [보내기] → 확정 메일 (흐름) · [거절] 사유 비우면 [보내기] 잠김 · 승인 건 [일정 취소] · 지난 승인 건 [방문 완료] → 참석자에게 방명록 요청 메일 1통
 - [ ] 관리자 [정보 수정] 으로 승인 건을 다른 날 · 시간으로 → 신청 달력에서 옛 시간 풀리고 새 시간 마감 · [수기 등록] 으로 지난 '완료' 1건 → 메일 안 감
+- [ ] [수기 등록]: 창이 신청 화면과 같은 순서(일정 → 담당자 · 방문 기관 → 목적 · 언어 · 통역 → 참석자 · 사전 정보)로 보임 · 승인으로 등록 + 참석자 이메일 입력 → 참석자에게만 Forms 링크 메일(신청 담당자 · 센터 관리자 메일 없음) · 참석자가 Forms 제출 후 [방문 완료] → '방문 완료 시 방명록 메일 = 보냄' 일 때만 방명록 메일 · '보내지 않음' 이면 안 감 · 수기 건 [정보 수정] 에서 통역 · 사전 정보 · 방명록 메일 선택 수정
 - [ ] 방문 유형 [변경] → 파트너사 소개 + 이름 → 통계 맨 아래 파트너사별 실적
 - [ ] 달력: 오늘 빨간 원, 화 · 목 · 주말 옅은 바탕 · 통계: 탭 없음, 막대 1위만 빨강 + %, 업종 9종 + 기타
 - [ ] 방명록 남기기(회사 · 직책 비워도 등록) → 띠에 가명 · 방명록 관리 숨기기 / 다시 표시 / 삭제 · 가이드 배정 저장 → Guides 열
