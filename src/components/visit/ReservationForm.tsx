@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { Check, CircleAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '../ui/Button'
-import { Textarea } from '../ui/Field'
 import { SchedulePicker } from './SchedulePicker'
 import { CompanyFields, HostFields, PrivacyConsent, PurposeFields, SectionTitle, VisitorsFields } from './VisitFields'
 import { submitReservation, isLiveBackend } from '@/lib/labApi'
@@ -413,23 +412,9 @@ export function ReservationForm({ busy, closedDays, scheduleLoading }: Reservati
         )}
       </section>
 
-      <section>
-        <SectionTitle index="6" aside="선택 입력">
-          기타 요청사항
-        </SectionTitle>
-        <Textarea
-          rows={3}
-          value={draft.note}
-          onChange={(e) => patch({ note: e.target.value })}
-          maxLength={500}
-          placeholder="관심 기술 영역이나 특별히 보고 싶은 설비가 있다면 남겨주세요."
-          aria-label="기타 요청사항"
-        />
-      </section>
-
       {/* 입력을 모두 마친 뒤 동의하도록 폼 맨 끝, 신청 버튼 바로 위에 둔다. */}
       <section id={sectionId('consent')} className="scroll-mt-24">
-        <SectionTitle index="7" done={problems.consent === null}>
+        <SectionTitle index="6" done={problems.consent === null}>
           개인정보 수집 · 이용 동의
         </SectionTitle>
         <PrivacyConsent

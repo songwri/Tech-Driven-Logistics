@@ -476,6 +476,8 @@ export interface VisitRequest extends VisitDraft {
   actualHeadcount?: number
   /** 방문 완료 후 만족도 · 개선 의견(방명록) 요청 메일을 보낸 시각 (ISO). 없으면 아직 안 보냄 */
   feedbackMailAt?: string
+  /** 수기 등록 건: 방문 완료로 바꿀 때 방문자 명단 이메일로 방명록(만족도 · 개선 의견) 요청 메일을 보낼지 (관리자가 정함) */
+  feedbackMail?: boolean
   /** 주요 인원 (예: '홍길동 상무, 김철수 이사') */
   keyPersons?: string
   /** 안내 가이드 (줄바꿈 구분) */

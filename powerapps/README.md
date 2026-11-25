@@ -34,6 +34,7 @@ powerapps/
 ├─ README.md                  ← 지금 이 가이드
 ├─ mockup/index.html          ← 1366×768 화면 설계 (브라우저로 열어 보기)
 ├─ mockup/screens.html        ← 화면 12장 한눈에 보기 (이미지는 mockup/screens/*.png)
+├─ 6-dev-update/              ← 개발자 버전(TDL_VISITOR 1.0.0.1, 10/18)에 수정 요청서를 반영한 화면 YAML · 적용 안내 (README.md)
 ├─ 1-sharepoint/
 │  ├─ VisitRequests.csv       ← 목록 만들기용 (CSV 로 목록 만들기)
 │  ├─ VisitAttendees.csv
@@ -443,7 +444,8 @@ App → `...` → **OnStart 실행** 을 누르면 대부분 사라집니다.
 - 3번은 잠금이 아니라 '먼저 저장된 쪽 우선' 방식입니다. 두 사람이 같은 순간에 눌러도 한 건만 남지만, 진 쪽은 저장 직후 '다른 시간을 골라 주세요' 안내를 받습니다.
 - 웹 기능 중 옮기지 않은 것: **엑셀 이력 가져오기**(앱 대신 SharePoint 목록에 붙여 넣기, `1-sharepoint/history-import.md`),
   통계 막대를 눌러 그 건 목록 보기 · 통계 엑셀 내려받기, 파트너사별 실적에서 줄을 눌러 소개 방문 목록 보기,
-  관리자 수정 창의 주요 인원 · 유관 부서 · 후속 진행 칸.
+  관리자 수정 창의 주요 인원 · 유관 부서 · 후속 진행 칸,
+  수기 등록 창의 방문자별 명단(이름 · 직책 · 조직 · 이메일)과 '방문 완료 시 방명록 메일 보내기' 선택(수기 등록 건은 완료해도 메일이 가지 않음).
 - 방명록에서 웹과 다른 점: 웹의 로봇 · 컨베이어 그림과 작성 전후 연출(로봇이 용지를 집어 듦)은 없고 오른쪽에 평균 만족도 카드가 있습니다.
   관리자가 '미분류' 글에 투어를 지정하는 기능, 화면에서 바로 받는 엑셀 파일은 없습니다(SharePoint 목록 → 내보내기).
   외부 방문객이 쓰는 방명록 Forms 는 별점이 1점 단위입니다(앱 · 웹은 0.5점). 띠는 마우스를 올려도 멈추지 않고 [멈춤] 버튼으로 멈춥니다.
@@ -511,3 +513,4 @@ YAML 구조 · 컨트롤 이름 중복 · 수식 괄호는 스크립트로 검�
 | 방명록 화면 오른쪽 평균 만족도 카드 · [멈춤] 버튼 | `scrGuest` conGbSummary · btnGbPlay | 로봇 · 컨베이어 그림, 마우스를 올리면 멈춤 |
 | 방명록 엑셀은 SharePoint 목록 내보내기로 | `scrGuestAdmin` btnGbAdmExcel, `App.Formulas` `GuestbookListUrl` | 화면에서 바로 엑셀 파일 |
 | 공휴일 목록이 끝난 해 뒤 날짜 닫기 · 관리자 알림 | `App.Formulas` `HolidayLastYear`, `scrBook` galCal, `scrAdmin` OnVisible | 공휴일 자동 계산 |
+| (개발자 버전) 데이터 관리 화면 · 변경 기록 · 접근 계정은 `TourAdmins` 의 Site = data | `6-dev-update/Src/scrData.pa.yaml`, `DataAdminLog` 목록, App `varIsDataAdmin` | 시트를 직접 편집 |
