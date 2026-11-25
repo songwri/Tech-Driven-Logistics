@@ -3,6 +3,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Field, Input, Textarea } from '@/components/ui/Field'
 import { TimeField } from '@/components/ui/TimeField'
+import { VisitorsFields } from '@/components/visit/VisitFields'
 import { cn } from '@/lib/utils'
 import {
   INDUSTRIES,
@@ -13,11 +14,15 @@ import {
   toursForSite,
   type AdminSite,
   formatDateShort,
+  type Visitor,
   type VisitRequest,
   type VisitStatus,
 } from '@/lib/visit'
 import type { ManualInput } from './importLegacy'
+import { feedbackRecipientCount } from './feedbackMail'
 import { opsFromRequest, opsToRequest, splitComma, type OpsValue } from './opsRecord'
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const MANUAL_STATUSES: VisitStatus[] = ['approved', 'completed', 'pending', 'cancelled', 'rejected']
 
@@ -152,6 +157,9 @@ export function ManualVisitModal({
   const [hostName, setHostName] = useState(initial?.host.name ?? '')
   const [hostDivision, setHostDivision] = useState(initial?.host.division ?? '')
   const [hostOrg, setHostOrg] = useState(initial?.host.org ?? '')
+  const [visitors, setVisitors] = useState<Visitor[]>(initial?.visitors ?? [])
+  // 방문 완료로 바꿀 때 방문자 명단 이메일로 방명록(만족도 · 개선 의견) 요청 메일을 보낼지. 기본은 보내지 않음.
+  const [feedbackMail, setFeedbackMail] = useState(initial?.feedbackMail ?? false)
   const [ops, setOps] = useState(() => opsFromRequest(initial ?? {}))
   const [memo, setMemo] = useState(initial?.adminMemo ?? '')
   const [pending, setPending] = useState(false)
@@ -164,6 +172,17 @@ export function ManualVisitModal({
     if (start && end && start >= end) return setError('종료 시간이 시작 시간보다 늦어야 합니다.')
     const count = headcount.trim() === '' ? undefined : Number(headcount)
     if (count !== undefined && !(Number.isInteger(count) && count >= 0)) return setError('방문 인원수는 0 이상의 숫자로 입력해 주세요.')
+
+    // 완전히 빈 줄은 버리고, 성함 없이 다른 칸만 채운 줄과 형식이 틀린 이메일은 알려 준다.
+    const listed = visitors.filter((v) => v.name.trim() || v.title.trim() || v.org.trim() || v.email.trim() || v.car.trim() || v.jobs.length > 0)
+    const noName = listed.findIndex((v) => !v.name.trim())
+    if (noName >= 0) return setError(`방문자 ${noName + 1}의 성함을 입력해 주세요. (이름이 없는 줄은 저장되지 않습니다)`)
+    const badEmail = listed.findIndex((v) => v.email.trim() && !EMAIL.test(v.email.trim()))
+    if (badEmail >= 0) return setError(`방문자 ${badEmail + 1}의 이메일 형식이 올바르지 않습니다.`)
+    const trimmedVisitors = listed.map((v) => ({ ...v, name: v.name.trim(), title: v.title.trim(), org: v.org.trim(), email: v.email.trim(), car: v.car.trim() }))
+    if (feedbackMail && feedbackRecipientCount({ visitors: trimmedVisitors }) === 0) {
+      return setError('방명록 메일을 보내려면 방문자 명단에 이메일이 있는 사람이 한 명 이상 필요합니다.')
+    }
 
     const input: ManualInput = {
       tour,
@@ -190,7 +209,8 @@ export function ManualVisitModal({
         email: initial?.host.email ?? '',
       },
       hostComment: initial?.hostComment ?? '',
-      visitors: initial?.visitors ?? [],
+      visitors: trimmedVisitors,
+      feedbackMail,
       headcount: count,
       note: initial?.note ?? '',
       consent: false,
@@ -345,7 +365,7 @@ export function ManualVisitModal({
             <Field label="업체(기관)명" required>
               <Input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="예: 풀필먼트영업팀, ACME" />
             </Field>
-            <Field label="방문 인원수" hint="비우면 미정">
+            <Field label="방문 인원수" hint={visitors.some((v) => v.name.trim()) ? '아래 방문자 명단이 있으면 명단 인원으로 집계됩니다' : '비우면 미정 · 명단을 입력하면 명단 인원으로 집계'}>
               <Input inputMode="numeric" value={headcount} onChange={(e) => setHeadcount(e.target.value.replace(/[^\d]/g, ''))} placeholder="6" />
             </Field>
             <Field label="방문 목적" hint="한 가지만 입력 (예: 투어). 여러 개를 쓰면 첫 번째만 저장됩니다">
@@ -384,6 +404,30 @@ export function ManualVisitModal({
               <Input value={hostOrg} onChange={(e) => setHostOrg(e.target.value)} />
             </Field>
           </div>
+        </Group>
+
+        <Group title="방문자 명단 · 방명록 메일">
+          <p className="mb-3 text-[13px] leading-relaxed text-warm-600">
+            선택 사항입니다. 방문자별 이메일을 넣어 두면 방문 완료 시 방명록(만족도 · 개선 의견) 요청 메일을 보낼 수 있습니다. 성함만 입력해도 됩니다.
+          </p>
+          <VisitorsFields visitors={visitors} onChange={setVisitors} defaultOrg={company.trim()} optional />
+          <label className="mt-4 flex items-start gap-2 border border-warm-300/60 bg-white px-3 py-3 text-sm text-warm-800">
+            <input
+              type="checkbox"
+              checked={feedbackMail}
+              onChange={(e) => setFeedbackMail(e.target.checked)}
+              disabled={Boolean(initial?.feedbackMailAt)}
+              className="mt-0.5 accent-brand"
+            />
+            <span>
+              <span className="font-semibold">방문 완료 시 방명록 요청 메일 보내기</span>
+              <span className="mt-0.5 block text-[12px] leading-relaxed text-warm-600">
+                {initial?.feedbackMailAt
+                  ? '이미 발송한 예약입니다. 같은 예약에는 다시 보내지 않습니다.'
+                  : `상태를 '방문 완료'로 바꾸는 순간 명단 전체(이메일이 있는 ${feedbackRecipientCount({ visitors })}명)에게 한 번만 발송합니다. 방문자에게 안내하고 동의를 받은 경우에만 켜 주세요. 이미 '방문 완료'로 등록하면 저장 직후 발송됩니다.`}
+              </span>
+            </span>
+          </label>
         </Group>
 
         <Group title="운영 기록">

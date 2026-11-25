@@ -340,7 +340,7 @@ export function PrivacyConsent({
         </p>
         <p className="mt-2 font-semibold text-warm-800">3. 보유 및 이용 기간</p>
         <p>
-          방문일로부터 <b>1년</b>간 보관 후 지체 없이 파기합니다. 단, 관계 법령에 따라 보존이 필요한 경우 해당 기간
+          방문 종료일로부터 <b>3개월</b> 후 지체 없이 파기합니다. 단, 관계 법령에 따라 보존이 필요한 경우 해당 기간
           동안 보관합니다.
         </p>
         <p className="mt-2 font-semibold text-warm-800">4. 제3자 제공</p>
@@ -616,7 +616,7 @@ export function CompanyFields({
   )
 }
 
-/** 방문 목적 · 투어 진행 언어 · 담당자 의견 */
+/** 방문 목적 · 투어 진행 언어 · 고객사 물성 및 관심 설비 사전 정보 */
 export function PurposeFields({ draft, onChange, errors }: { draft: VisitDraft; onChange: Patch; errors?: Errors }) {
   return (
     <div className="space-y-6">
@@ -651,12 +651,13 @@ export function PurposeFields({ draft, onChange, errors }: { draft: VisitDraft; 
 
       <LanguageFields draft={draft} onChange={onChange} />
 
-      <Field label="담당자 의견" optional hint="방문 배경, 고객사 니즈 등 안내에 참고할 내용을 적어주세요.">
+      <Field label="고객사 물성 및 관심 설비 사전 정보" optional hint="취급 물성(품목·포장 형태·보관 온도 등)과 관심 있는 설비를 미리 적어 주시면 투어 가이드 시 참고하겠습니다.">
         <Textarea
           rows={3}
           value={draft.hostComment}
           onChange={(e) => onChange({ hostComment: e.target.value })}
           maxLength={500}
+          placeholder="예) 취급 물성: 냉동 식품, 파렛트 단위 · 관심 설비: AMR 피킹, 자동 분류기"
         />
       </Field>
     </div>
@@ -724,13 +725,17 @@ export function VisitorsFields({
   onChange,
   defaultOrg = '',
   errors,
+  optional = false,
 }: {
   visitors: Visitor[]
   onChange: (visitors: Visitor[]) => void
   /** 새 방문자의 조직명 기본값 (보통 업체명) */
   defaultOrg?: string
   errors?: Errors
+  /** 관리자 수기 등록처럼 성함 외 칸을 필수로 받지 않을 때 (필수 * 표시를 숨긴다) */
+  optional?: boolean
 }) {
+  const star = optional ? '' : ' *'
   const bad = (index: number, key: 'name' | 'title' | 'org' | 'email') => Boolean(errors?.has(`visitor.${index}.${key}`))
   const rowHasError = (index: number) => (['name', 'title', 'org', 'email'] as const).some((key) => bad(index, key))
   const [pasteOpen, setPasteOpen] = useState(false)
@@ -771,13 +776,16 @@ export function VisitorsFields({
           성함<span className="text-brand">*</span>
         </span>
         <span>
-          직책<span className="text-brand">*</span>
+          직책
+          {!optional && <span className="text-brand">*</span>}
         </span>
         <span>
-          조직명<span className="text-brand">*</span>
+          조직명
+          {!optional && <span className="text-brand">*</span>}
         </span>
         <span>
-          이메일<span className="text-brand">*</span>
+          이메일
+          {!optional && <span className="text-brand">*</span>}
         </span>
         <span>
           차량번호 <span className="font-normal text-warm-600">선택</span>
@@ -815,7 +823,7 @@ export function VisitorsFields({
               />
             </label>
             <label>
-              <span className={cellLabel}>직책 *</span>
+              <span className={cellLabel}>직책{star}</span>
               <Input
                 aria-label={`방문자 ${index + 1} 직책`}
                 value={visitor.title}
@@ -827,7 +835,7 @@ export function VisitorsFields({
               />
             </label>
             <label className="col-span-2 md:col-span-1">
-              <span className={cellLabel}>조직명 *</span>
+              <span className={cellLabel}>조직명{star}</span>
               <Input
                 aria-label={`방문자 ${index + 1} 조직명`}
                 value={visitor.org}
@@ -839,7 +847,7 @@ export function VisitorsFields({
               />
             </label>
             <label className="col-span-2 md:col-span-1">
-              <span className={cellLabel}>이메일 *</span>
+              <span className={cellLabel}>이메일{star}</span>
               <Input
                 type="email"
                 inputMode="email"
