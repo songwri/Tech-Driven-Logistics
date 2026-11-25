@@ -49,6 +49,7 @@ const GUIDE: Record<Header, [string, string]> = {
   방문자동의확인: ['비워 두세요 (웹 예약에서 신청자가 방문자 동의를 확인한 기록, 자동)', ''],
   파트너사명: ['고객구분이 파트너사 소개 고객일 때 소개한 파트너사 이름', ''],
   후기메일발송: ['비워 두세요 (방문 완료 후 만족도 요청 메일을 보낸 시각, 자동)', ''],
+  후기메일요청: ['비워 두세요 (수기 등록에서 방문 완료 시 방명록 메일을 보내도록 정한 기록, 자동)', ''],
 }
 
 const WIDTHS: Partial<Record<Header, number>> = {
@@ -128,6 +129,7 @@ function toSheetRow(request: VisitRequest): CellValue[] {
     방문자동의확인: request.visitorConsent ? '확인' : '',
     파트너사명: request.clientType === 'partner' ? (request.partnerName ?? '') : '',
     후기메일발송: request.feedbackMailAt ?? '',
+    후기메일요청: request.feedbackMail ? '발송' : '',
   }
   return VISIT_SHEET_HEADERS.map((header) => values[header])
 }

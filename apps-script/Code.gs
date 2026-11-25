@@ -238,7 +238,7 @@ var VISIT_HEADERS = [
   '방문인원', '방문자명단', '요청사항', '개인정보동의', '관리자메모', '토큰', '수정일시', '방문자JSON',
   '투어언어', '외국어', '통역동반', '출처', '주요인원', '가이드', '유관부서', '후속진행',
   // 새 열은 기존 시트와 맞도록 맨 뒤에 붙인다 (시트를 열면 제목이 자동으로 추가된다).
-  '담당(실)', '통역언어', '실제방문인원', '센터별승인', '방문자동의확인', '파트너사명', '후기메일발송',
+  '담당(실)', '통역언어', '실제방문인원', '센터별승인', '방문자동의확인', '파트너사명', '후기메일발송', '후기메일요청',
 ];
 var BLOCKED_HEADERS = ['날짜', '시간대(비우면 종일)', '사유', '대상(all/center/lab/mtv)', 'id'];
 
@@ -898,6 +898,7 @@ function rowToRequest_(row, col) {
     actualHeadcount: headcountFromCell_(get('실제방문인원')),
     partnerName: String(get('파트너사명')).trim(),
     feedbackMailAt: String(get('후기메일발송')).trim(),
+    feedbackMail: String(get('후기메일요청')).trim() === '발송',
     approvals: approvalsFromText_(get('센터별승인')),
   };
 }
@@ -1007,6 +1008,7 @@ function fillVisitRow_(values, col, request, extra) {
   set('센터별승인', needsSiteApproval_(request) ? approvalsText_(request.approvals) : '');
   set('파트너사명', request.clientType === 'partner' ? (request.partnerName || '') : '');
   set('후기메일발송', request.feedbackMailAt || '');
+  set('후기메일요청', request.source === 'manual' && request.feedbackMail === true ? '발송' : '');
   for (var key in (extra || {})) set(key, extra[key]);
 }
 
@@ -1353,6 +1355,9 @@ function sanitizeManual_(payload) {
     };
   }).filter(function (v) { return v.name; });
   var headcount = Number(payload.headcount);
+  if (payload.feedbackMail === true && feedbackTargets_({ visitors: visitors }).length === 0) {
+    throw new Error('방명록 메일을 보내려면 방문자 명단에 올바른 이메일이 한 명 이상 있어야 합니다.');
+  }
   return {
     tour: tour,
     date: date,
@@ -1377,6 +1382,8 @@ function sanitizeManual_(payload) {
     },
     hostComment: optionalText_(payload.hostComment, 500),
     visitors: visitors,
+    // 방문 완료 시 방명록 요청 메일을 보낼지 (관리자가 정함). 보낼 이메일이 하나도 없으면 켤 수 없다.
+    feedbackMail: payload.feedbackMail === true,
     headcount: payload.headcount === '' || payload.headcount == null || !(headcount >= 0 && headcount <= 9999)
       ? undefined : Math.floor(headcount),
     note: optionalText_(payload.note, 1000),
@@ -1440,6 +1447,21 @@ function createManual_(payload) {
     appendVisits_([request]);
     return { request: request };
   });
+}
+
+/** 수기 등록 + 곧바로 '방문 완료'이고 방명록 메일을 켠 건은 등록 직후 보낸다 (그 밖에는 방문 완료로 바꿀 때 보낸다). */
+function createManualAndMail_(payload) {
+  var created = createManual_(payload);
+  var request = created.request;
+  var mail = null;
+  if (request.status === 'completed' && request.feedbackMail === true) {
+    try {
+      mail = sendFeedbackMail_(request);
+    } catch (error) {
+      mail = { sent: 0, failed: 0, reason: 'error' };
+    }
+  }
+  return { request: publicRequest_(request), feedbackMail: mail };
 }
 
 /** 기존 방문 이력 일괄 가져오기. 이미 있는 방문(날짜+업체+시간)은 건너뛴다. */
@@ -1556,7 +1578,7 @@ function admin_(payload) {
     var manualTour = String((payload.request || {}).tour || 'other');
     if (!inSite_(TOURS[manualTour] ? manualTour : 'other', role)) throw new Error('이 관리자 페이지에서 등록할 수 없는 투어입니다.');
     if (!tourOpen_(manualTour)) throw new Error('시화MTV 투어는 아직 운영하지 않습니다.');
-    return createManual_(payload.request);
+    return createManualAndMail_(payload.request);
   }
   if (payload.action === 'import') return importManual_(payload.requests, payload.importKey);
 
@@ -2027,14 +2049,15 @@ function feedbackMailHtml_(r, name) {
 
 /**
  * 방문 완료 시 방문자 명단의 이메일로 후기(방명록) 요청 메일을 한 사람씩 따로 보낸다.
- * 보내지 않는 경우: 이미 보냄 · 수기 등록 · 개인정보 동의 기록 없음 · 동의 문구 변경 이전 신청 · 아직 오지 않은 날짜 · 이메일 없음 · 일일 발송 한도 부족.
+ * 보내지 않는 경우: 이미 보냄 · 수기 등록인데 발송을 켜지 않음 · 개인정보 동의 기록 없음 · 동의 문구 변경 이전 신청 · 아직 오지 않은 날짜 · 이메일 없음 · 일일 발송 한도 부족.
  * 한 건이라도 보내면 '후기메일발송' 열에 시각을 남겨 같은 예약에는 다시 보내지 않는다.
  * 반환: { sent, failed, reason? } (reason 이 있으면 보내지 않은 이유)
  */
 function sendFeedbackMail_(r) {
   if (r.feedbackMailAt) return { sent: 0, failed: 0, reason: 'already' };
-  if (r.source === 'manual' || !r.consent) return { sent: 0, failed: 0, reason: 'noConsent' };
-  if (String(r.createdAt || '') < feedbackMailFrom_()) return { sent: 0, failed: 0, reason: 'before' };
+  // 수기 등록은 관리자가 발송을 켠 건만 보낸다 (방문자 동의는 관리자가 받은 것으로 본다). 웹 예약은 개인정보 동의 기록이 있어야 한다.
+  if (r.source === 'manual' ? r.feedbackMail !== true : !r.consent) return { sent: 0, failed: 0, reason: 'noConsent' };
+  if (r.source !== 'manual' && String(r.createdAt || '') < feedbackMailFrom_()) return { sent: 0, failed: 0, reason: 'before' };
   var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
   if (r.date > today) return { sent: 0, failed: 0, reason: 'future' };
   var targets = feedbackTargets_(r);

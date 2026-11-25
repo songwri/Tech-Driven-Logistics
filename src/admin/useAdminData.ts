@@ -335,15 +335,27 @@ export function useAdminData(site: AdminSite) {
         throw new Error('이미 승인된 다른 예약과 시간이 겹칩니다. 시간을 확인해 주세요.')
       }
       await requireServer()
-      const created = isLiveBackend
-        ? normalizeRequest((await adminRequest<{ request: unknown }>(key, 'create', { request: input })).request)
-        : { ...input, source: 'manual' as const, id: newId(), createdAt: new Date().toISOString() }
+      let created: VisitRequest
+      let mail: StatusOutcome | undefined
+      if (isLiveBackend) {
+        const data = await adminRequest<{ request: unknown; feedbackMail?: FeedbackMailResult | null }>(key, 'create', { request: input })
+        created = normalizeRequest(data.request)
+        if (data.feedbackMail) mail = { mail: data.feedbackMail, demo: false }
+      } else {
+        created = { ...input, source: 'manual' as const, id: newId(), createdAt: new Date().toISOString() }
+        // 데모: 바로 '방문 완료'로 등록하고 방명록 메일을 켠 건은 서버와 같은 규칙으로 보낸 것처럼 표시한다 (실제 메일은 없음).
+        if (created.status === 'completed' && created.feedbackMail) {
+          const result = simulateFeedbackMail(created, toDateKey(new Date()))
+          if (result.sent > 0) created = { ...created, feedbackMailAt: new Date().toISOString() }
+          mail = { mail: result, demo: true }
+        }
+      }
       setRequests((current) => {
         const next = [...current, created]
         if (!isLiveBackend) writeDemo(next)
         return next
       })
-      return created
+      return { request: created, mail }
     },
     [allRequests, guard, key, requireServer],
   )

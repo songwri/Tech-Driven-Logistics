@@ -24,7 +24,7 @@ export function feedbackRecipientCount(request: Pick<VisitRequest, 'visitors'>) 
 /** 데모 화면용: 서버 없이 같은 규칙으로 결과를 흉내 낸다 (실제 메일은 보내지 않는다). */
 export function simulateFeedbackMail(request: VisitRequest, today: string): FeedbackMailResult {
   if (request.feedbackMailAt) return { sent: 0, failed: 0, reason: 'already' }
-  if (request.source === 'manual') return { sent: 0, failed: 0, reason: 'noConsent' }
+  if (request.source === 'manual' && !request.feedbackMail) return { sent: 0, failed: 0, reason: 'noConsent' }
   if (request.date > today) return { sent: 0, failed: 0, reason: 'future' }
   const count = feedbackRecipientCount(request)
   return count === 0 ? { sent: 0, failed: 0, reason: 'noRecipients' } : { sent: count, failed: 0 }
@@ -42,7 +42,7 @@ export function feedbackMailMessage(result: FeedbackMailResult | null | undefine
     case 'already':
       return '이미 만족도 요청 메일을 보낸 예약입니다.'
     case 'noConsent':
-      return '수기 등록 예약이라(개인정보 동의 기록 없음) 만족도 요청 메일은 보내지 않았습니다.'
+      return '방명록 메일 발송을 켜지 않은 수기 등록 예약이거나 개인정보 동의 기록이 없어 만족도 요청 메일은 보내지 않았습니다.'
     case 'before':
       return '개인정보 동의 문구에 이 용도를 넣기 전에 신청한 예약이라 만족도 요청 메일은 보내지 않았습니다.'
     case 'future':

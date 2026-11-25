@@ -53,6 +53,7 @@ export function normalizeRequest(value: unknown): VisitRequest {
     headcount: r.headcount === null || r.headcount === undefined || r.headcount === '' || !Number.isFinite(headcount) ? undefined : headcount,
     actualHeadcount: wholeNumber(r.actualHeadcount),
     feedbackMailAt: text(r.feedbackMailAt) || undefined,
+    feedbackMail: r.feedbackMail === true,
     keyPersons: text(r.keyPersons),
     guides: text(r.guides),
     departments: list(r.departments),

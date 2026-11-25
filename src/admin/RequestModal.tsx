@@ -336,9 +336,13 @@ export function RequestModal({ site, readOnly, request, requests, onClose, onSet
           <Row label="방문 목적">{request.purposes.join(', ')}</Row>
           <Row label="담당자 의견">{request.hostComment}</Row>
           <Row label="요청사항">{request.note}</Row>
-          {(request.status === 'completed' || request.feedbackMailAt) && (
+          {(request.status === 'completed' || request.feedbackMailAt || (manual && request.feedbackMail)) && (
             <Row label="만족도 메일">
-              {request.feedbackMailAt ? `방문자에게 발송됨 · ${formatDateShort(request.feedbackMailAt.slice(0, 10))}` : '보내지 않음'}
+              {request.feedbackMailAt
+                ? `방문자에게 발송됨 · ${formatDateShort(request.feedbackMailAt.slice(0, 10))}`
+                : manual && request.feedbackMail && request.status !== 'completed'
+                  ? '방문 완료로 바꾸면 방문자에게 발송'
+                  : '보내지 않음'}
             </Row>
           )}
         </div>
